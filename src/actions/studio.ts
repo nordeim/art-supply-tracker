@@ -18,10 +18,10 @@ import {
 } from "@/lib/result";
 import {
   chatMessageSchema,
-  importPayloadSchema,
   projectInputSchema,
   supplyInputSchema,
 } from "@/lib/validation";
+import { normalizeImportPayload, resolveImportedAssignments } from "@/lib/export-payload";
 import type {
   ChatMessageDto,
   ProjectDto,
@@ -81,7 +81,7 @@ function toSupplyDto(row: {
     id: row.id,
     name: row.name,
     category: row.category,
-    type: row.type,
+    subcategory: row.type,
     quantity: row.quantity,
     condition: row.condition,
     location: row.location,
@@ -257,7 +257,7 @@ export async function createSupply(
         userId: user.id,
         name: data.name,
         category: data.category,
-        type: data.type ?? null,
+        type: data.subcategory ?? null,
         quantity: data.quantity,
         condition: data.condition,
         location: data.location ?? null,
@@ -298,7 +298,7 @@ export async function updateSupply(
       data: {
         name: data.name,
         category: data.category,
-        type: data.type ?? null,
+        type: data.subcategory ?? null,
         quantity: data.quantity,
         condition: data.condition,
         location: data.location ?? null,
@@ -329,6 +329,49 @@ export async function deleteSupply(id: string): Promise<ActionResult<true>> {
     return { ok: true, data: true };
   } catch (error) {
     console.error("[supplies:delete] failed", { userId: user.id, id, error });
+    return internalError();
+  }
+}
+
+/**
+ * Assign a supply to one of the user's projects (or back to studio
+ * inventory with null). Backs the project detail panel's "Pick supply…
+ * Assign" control and the × remove button. The project's ownership is
+ * re-checked so one user cannot pin supplies onto another's project.
+ */
+export async function setSupplyAssignment(
+  supplyId: string,
+  projectId: string | null,
+): Promise<ActionResult<SupplyDto>> {
+  const user = await requireUser();
+  if (!user) return unauthorized();
+  if (typeof supplyId !== "string" || supplyId.length === 0) {
+    return validationError("Invalid supply reference.");
+  }
+  if (projectId !== null && (typeof projectId !== "string" || projectId.length === 0)) {
+    return validationError("Invalid project reference.");
+  }
+
+  try {
+    const supply = await db.supply.findFirst({
+      where: { id: supplyId, userId: user.id },
+    });
+    if (!supply) return notFound("Supply not found.");
+
+    if (projectId !== null) {
+      const project = await db.project.findFirst({
+        where: { id: projectId, userId: user.id },
+      });
+      if (!project) return notFound("Project not found.");
+    }
+
+    const row = await db.supply.update({
+      where: { id: supplyId },
+      data: { assignedProjectId: projectId },
+    });
+    return { ok: true, data: toSupplyDto(row) };
+  } catch (error) {
+    console.error("[supplies:assign] failed", { userId: user.id, supplyId, projectId, error });
     return internalError();
   }
 }
@@ -390,14 +433,14 @@ export async function importStudioData(
   const user = await requireUser();
   if (!user) return unauthorized();
 
-  const parsed = importPayloadSchema.safeParse(input);
-  if (!parsed.success) {
+  // Both dialects — the live app's export shape and the clone's legacy
+  // shape — normalize onto one internal payload before it is stored.
+  const normalized = normalizeImportPayload(input);
+  if (!normalized) {
     return validationError(
-      parsed.error.issues[0]?.message ??
-        "This file is not a valid AST Studio export. Expected the JSON downloaded from Export Data.",
+      "This file is not a valid AST Studio export. Expected the JSON downloaded from Export Data.",
     );
   }
-  const payload = parsed.data;
 
   try {
     // Replace the user's studio content wholesale — import is a restore, and
@@ -405,37 +448,47 @@ export async function importStudioData(
     await db.$transaction([
       db.supply.deleteMany({ where: { userId: user.id } }),
       db.project.deleteMany({ where: { userId: user.id } }),
-      ...payload.projects.map((p) =>
-        db.project.create({
-          data: {
-            userId: user.id,
-            name: p.name,
-            status: p.status,
-            budget: p.budget ?? null,
-            notes: p.notes ?? null,
-            photos: p.photos?.length ? JSON.stringify(p.photos) : null,
-          },
-        }),
-      ),
-      ...payload.supplies.map((s) =>
-        db.supply.create({
-          data: {
-            userId: user.id,
-            name: s.name,
-            category: s.category,
-            type: s.type ?? null,
-            quantity: s.quantity,
-            condition: s.condition,
-            location: s.location ?? null,
-            notes: s.notes ?? null,
-            barcode: s.barcode ?? null,
-            photo: s.photo ?? null,
-            assignedProjectId: s.assignedProjectId ?? null,
-          },
-        }),
-      ),
     ]);
-    return { ok: true, data: { projects: payload.projects.length, supplies: payload.supplies.length } };
+
+    const createdProjectIds: string[] = [];
+    for (const project of normalized.projects) {
+      const row = await db.project.create({
+        data: {
+          userId: user.id,
+          name: project.name,
+          status: project.status,
+          budget: project.budget,
+          notes: project.notes,
+          photos: project.photos.length ? JSON.stringify(project.photos) : null,
+        },
+      });
+      createdProjectIds.push(row.id);
+    }
+
+    resolveImportedAssignments(normalized, createdProjectIds);
+
+    for (const supply of normalized.supplies) {
+      await db.supply.create({
+        data: {
+          userId: user.id,
+          name: supply.name,
+          category: supply.category,
+          type: supply.subcategory,
+          quantity: supply.quantity,
+          condition: supply.condition,
+          location: supply.location,
+          notes: supply.notes,
+          barcode: supply.barcode,
+          photo: supply.photo,
+          assignedProjectId: supply.assignedProjectId,
+        },
+      });
+    }
+
+    return {
+      ok: true,
+      data: { projects: normalized.projects.length, supplies: normalized.supplies.length },
+    };
   } catch (error) {
     console.error("[import] failed", { userId: user.id, error });
     return internalError();

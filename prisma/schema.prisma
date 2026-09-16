@@ -60,13 +60,14 @@ model Supply {
   userId            String
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name              String
-  // paint | brushes-tools | pastels | paper | canvas-board | mediums | other
-  category          String   @default("paint")
-  // watercolor | acrylic | oil | gouache | ink | encaustic | other | none
+  // Paint | Brush | Pastel | Paper | Canvas | Medium | Other (live-app tokens)
+  category          String   @default("Paint")
+  // Per-category subcategory value (e.g. Watercolor, Palette knives) —
+  // exported as `subcategory`; see src/lib/studio-domain.ts SUPPLY_TYPE_LISTS
   type              String?
-  // Free-form like the original ("2", "1.5", "1/2")
+  // Free-form like the original ("2", "1.5", "1/2") — parsed for export
   quantity          String   @default("1")
-  // ok | low | critical-out
+  // ok | low | critical (live-app tokens; exported as `status`)
   condition         String   @default("ok")
   location          String?
   notes             String?

@@ -7,7 +7,8 @@
  *
  * Layout contract: lg+ renders the original three fixed-height columns with
  * independent scroll; below lg the page flows naturally with the community
- * panel stacked under the main view (matching the live app's mobile order).
+ * panel toggled by the header's "Chat ☰" button (the live app's mobile
+ * pattern — the panel is hidden until toggled, not stacked under the view).
  * Projects/supplies state is seeded from the server render and mutated
  * exclusively through Server Actions.
  */
@@ -17,9 +18,9 @@ import Image from "next/image";
 
 import { signOutAction } from "@/actions/auth";
 import { importStudioData } from "@/actions/studio";
+import { buildExportPayload } from "@/lib/export-payload";
 import type {
   ChatMessageDto,
-  ExportPayload,
   InspirationEntryDto,
   ProjectDto,
   SupplyDto,
@@ -56,8 +57,10 @@ export function StudioApp({
   const [projectList, setProjectList] = useState(projects);
   const [supplyList, setSupplyList] = useState(supplies);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [chatPanelOpen, setChatPanelOpen] = useState(false);
   const [memoryOpen, setMemoryOpen] = useState(false);
   const [importNotice, setImportNotice] = useState<string | null>(null);
+  const [supplyListNavToken, setSupplyListNavToken] = useState(0);
   const [projectModal, setProjectModal] = useState<
     { mode: "create" } | { mode: "edit"; project: ProjectDto } | null
   >(null);
@@ -68,11 +71,11 @@ export function StudioApp({
   const importInputRef = useRef<HTMLInputElement>(null);
 
   const stats = useMemo(() => {
-    const active = projectList.filter(
-      (p) => p.status === "in-progress" || p.status === "planned",
-    ).length;
+    // "Active" mirrors the live app: only In Progress projects count
+    // (a planned-only studio reports "0 active").
+    const active = projectList.filter((p) => p.status === "in-progress").length;
     const low = supplyList.filter(
-      (s) => s.condition === "low" || s.condition === "critical-out",
+      (s) => s.condition === "low" || s.condition === "critical",
     ).length;
     return {
       projects: projectList.length,
@@ -86,6 +89,7 @@ export function StudioApp({
   const navigate = useCallback((next: StudioView) => {
     setView(next);
     setSidebarOpen(false);
+    setChatPanelOpen(false);
   }, []);
 
   function handleSignOut() {
@@ -96,13 +100,7 @@ export function StudioApp({
   }
 
   function handleExport() {
-    const payload: ExportPayload = {
-      app: "AST Studio",
-      exportedAt: new Date().toISOString(),
-      version: 1,
-      projects: projectList,
-      supplies: supplyList,
-    };
+    const payload = buildExportPayload(projectList, supplyList);
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
       type: "application/json",
     });
@@ -147,9 +145,34 @@ export function StudioApp({
       .catch(() => setImportNotice("Could not read that file."));
   }
 
+  function handleSupplySaved(supply: SupplyDto, isEdit: boolean) {
+    setSupplyList((list) =>
+      isEdit ? list.map((s) => (s.id === supply.id ? supply : s)) : [supply, ...list],
+    );
+    setSupplyModal(null);
+    if (!isEdit) {
+      // The live app navigates to the supplies list after creating one.
+      setView("supplies");
+      setSupplyListNavToken((token) => token + 1);
+    }
+  }
+
+  function handleProjectDeleted(projectId: string) {
+    setProjectList((list) => list.filter((p) => p.id !== projectId));
+    // Supplies assigned to the deleted project revert to studio inventory.
+    setSupplyList((list) =>
+      list.map((s) => (s.assignedProjectId === projectId ? { ...s, assignedProjectId: null } : s)),
+    );
+  }
+
+  function handleSupplyDeleted(supplyId: string) {
+    setSupplyList((list) => list.filter((s) => s.id !== supplyId));
+  }
+
   const sidebarProps = {
     stats,
     navigate,
+    currentView: view,
     projects: projectList,
     inspiration,
     onNewProject: () => {
@@ -170,6 +193,8 @@ export function StudioApp({
         memoryText={user.lastWorkedOn}
         onSignOut={handleSignOut}
         onOpenSidebar={() => setSidebarOpen(true)}
+        chatPanelOpen={chatPanelOpen}
+        onToggleChatPanel={() => setChatPanelOpen((v) => !v)}
       />
 
       <div className="flex flex-1 flex-col md:flex-row md:overflow-hidden">
@@ -194,28 +219,38 @@ export function StudioApp({
           {view === "projects" && (
             <ProjectsView
               projects={projectList}
+              supplies={supplyList}
               onExport={handleExport}
               onImportClick={() => importInputRef.current?.click()}
               onNewProject={() => setProjectModal({ mode: "create" })}
               onEditProject={(project) => setProjectModal({ mode: "edit", project })}
+              onProjectDeleted={handleProjectDeleted}
+              onSupplyAssignmentChanged={(supply) =>
+                setSupplyList((list) => list.map((s) => (s.id === supply.id ? supply : s)))
+              }
             />
           )}
           {view === "supplies" && (
             <SuppliesView
+              key={supplyListNavToken}
               supplies={supplyList}
               projects={projectList}
               onExport={handleExport}
               onImportClick={() => importInputRef.current?.click()}
               onNewSupply={() => setSupplyModal({ mode: "create" })}
               onEditSupply={(supply) => setSupplyModal({ mode: "edit", supply })}
+              initialSubView={supplyListNavToken > 0 ? "list" : "grid"}
+              onSupplyDeleted={handleSupplyDeleted}
             />
           )}
           {view === "inspiration" && <InspirationView inspiration={inspiration} />}
 
-          {/* Community panel stacks below the main view on <lg (live app order). */}
-          <div className="mt-10 lg:hidden">
-            <CommunityContent messages={chatMessages} memoryText={user.lastWorkedOn} />
-          </div>
+          {/* Mobile community panel — toggled by the header's Chat ☰ button. */}
+          {chatPanelOpen && (
+            <div className="mt-6 lg:hidden">
+              <CommunityContent messages={chatMessages} memoryText={user.lastWorkedOn} />
+            </div>
+          )}
         </div>
 
         <aside className="hidden w-80 shrink-0 overflow-y-auto scrollbar-studio px-4 pb-10 pt-6 lg:block">
@@ -257,14 +292,7 @@ export function StudioApp({
           initial={supplyModal.mode === "edit" ? supplyModal.supply : null}
           projects={projectList}
           onClose={() => setSupplyModal(null)}
-          onSaved={(saved, isEdit) => {
-            setSupplyList((list) =>
-              isEdit
-                ? list.map((s) => (s.id === saved.id ? saved : s))
-                : [saved, ...list],
-            );
-            setSupplyModal(null);
-          }}
+          onSaved={handleSupplySaved}
         />
       )}
     </main>
@@ -279,6 +307,8 @@ function StudioHeader({
   memoryText,
   onSignOut,
   onOpenSidebar,
+  chatPanelOpen,
+  onToggleChatPanel,
 }: {
   email: string;
   memoryOpen: boolean;
@@ -287,6 +317,8 @@ function StudioHeader({
   memoryText: string;
   onSignOut: () => void;
   onOpenSidebar: () => void;
+  chatPanelOpen: boolean;
+  onToggleChatPanel: () => void;
 }) {
   return (
     <header className="sticky top-0 z-40 shrink-0 bg-[#050009]/90 px-4 py-4 backdrop-blur-xl md:px-8">
@@ -358,6 +390,18 @@ function StudioHeader({
             </div>
           )}
         </div>
+      </div>
+
+      {/* Mobile chat toggle — the live app's "Chat ☰" header control. */}
+      <div className="mt-3 flex justify-end lg:hidden">
+        <button
+          type="button"
+          onClick={onToggleChatPanel}
+          aria-expanded={chatPanelOpen}
+          className="flex items-center gap-1.5 rounded-xl border border-ast-pink/30 bg-[#120724] px-3 py-2 text-xs font-semibold text-ast-pink transition hover:border-ast-pink/60"
+        >
+          {chatPanelOpen ? "✕ Close" : "Chat ☰"}
+        </button>
       </div>
     </header>
   );

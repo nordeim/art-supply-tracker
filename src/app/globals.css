@@ -27,6 +27,11 @@
   --color-ast-deep: #0f1230;
   --color-ast-bg-blue: #1a2a6c;
 
+  /* Panel glow shadows (verbatim from the live app's generated CSS) */
+  --shadow-ast-pink: 0 0 28px 0 rgba(255, 77, 166, 0.55);
+  --shadow-ast-turquoise: 0 0 28px 0 rgba(46, 196, 182, 0.45);
+  --shadow-ast-blue: 0 0 28px 0 rgba(46, 100, 255, 0.45);
+
   /* Font tokens: var() chains are the one legitimate var() use in @theme. */
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
 

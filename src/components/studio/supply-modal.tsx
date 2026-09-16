@@ -1,9 +1,15 @@
 "use client";
 
 /**
- * Supply modal — Add / Edit Supply dialog with name, photo, category, type,
- * quantity, condition, location, notes, barcode, and project assignment,
- * cloned from the live app's form (same option lists, same placeholders).
+ * Supply modal — Add / Edit Supply dialog with name, photo, category,
+ * subcategory (per-category picker), quantity, condition, location, notes,
+ * barcode, and project assignment, cloned from the live app's form (same
+ * option lists, same placeholders).
+ *
+ * The Subcategory picker mirrors the live app exactly: it renders the
+ * chosen category's list between the "— None —" and "Other / Custom…"
+ * sentinels, and is hidden entirely for the "Other" category (which has
+ * no subcategories).
  */
 import { useEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
@@ -13,7 +19,8 @@ import type { ProjectDto, SupplyDto } from "@/lib/dto";
 import {
   SUPPLY_CATEGORIES,
   SUPPLY_CONDITIONS,
-  SUPPLY_TYPES,
+  SUBCATEGORY_NONE,
+  subcategoryOptionsFor,
 } from "@/lib/studio-domain";
 
 interface SupplyModalProps {
@@ -46,8 +53,8 @@ async function fileToDataUrl(file: File): Promise<string> {
 
 export function SupplyModal({ initial, projects, onClose, onSaved }: SupplyModalProps) {
   const [name, setName] = useState(initial?.name ?? "");
-  const [category, setCategory] = useState(initial?.category ?? "paint");
-  const [type, setType] = useState(initial?.type ?? "none");
+  const [category, setCategory] = useState(initial?.category ?? "Paint");
+  const [subcategory, setSubcategory] = useState(initial?.subcategory ?? SUBCATEGORY_NONE);
   const [quantity, setQuantity] = useState(initial?.quantity ?? "");
   const [condition, setCondition] = useState(initial?.condition ?? "ok");
   const [location, setLocation] = useState(initial?.location ?? "");
@@ -62,6 +69,9 @@ export function SupplyModal({ initial, projects, onClose, onSaved }: SupplyModal
   const dialogRef = useRef<HTMLDivElement>(null);
 
   const isEdit = initial !== null;
+  const subcategoryOptions = subcategoryOptionsFor(category);
+  // The live app hides the Subcategory picker for the Other category.
+  const showSubcategory = subcategoryOptions.length > 0;
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -71,6 +81,14 @@ export function SupplyModal({ initial, projects, onClose, onSaved }: SupplyModal
     dialogRef.current?.querySelector<HTMLInputElement>("input")?.focus();
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
+
+  function onCategoryChange(next: string) {
+    setCategory(next);
+    // A subcategory from another category's list is invalid for the new
+    // category — reset to None unless the value is still offered.
+    const stillValid = subcategoryOptionsFor(next).some((o) => o.value === subcategory);
+    if (!stillValid) setSubcategory(SUBCATEGORY_NONE);
+  }
 
   function onAddPhoto(file: File | undefined) {
     if (!file || !file.type.startsWith("image/")) return;
@@ -97,7 +115,7 @@ export function SupplyModal({ initial, projects, onClose, onSaved }: SupplyModal
     const payload = {
       name: name.trim(),
       category,
-      type,
+      subcategory: showSubcategory ? subcategory : SUBCATEGORY_NONE,
       quantity: quantity.trim(),
       condition,
       location: location.trim() || undefined,
@@ -206,7 +224,7 @@ export function SupplyModal({ initial, projects, onClose, onSaved }: SupplyModal
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className={showSubcategory ? "grid grid-cols-2 gap-4" : undefined}>
             <div>
               <label htmlFor="supply-category" className={labelClass}>
                 Category
@@ -214,7 +232,7 @@ export function SupplyModal({ initial, projects, onClose, onSaved }: SupplyModal
               <select
                 id="supply-category"
                 value={category}
-                onChange={(e) => setCategory(e.target.value)}
+                onChange={(e) => onCategoryChange(e.target.value)}
                 className="w-full rounded-xl border border-ast-purple/40 bg-[#0B0018] px-3.5 py-2.5 text-sm text-white focus:border-ast-cyan/60 focus:outline-none"
               >
                 {SUPPLY_CATEGORIES.map((option) => (
@@ -224,23 +242,25 @@ export function SupplyModal({ initial, projects, onClose, onSaved }: SupplyModal
                 ))}
               </select>
             </div>
-            <div>
-              <label htmlFor="supply-type" className={labelClass}>
-                Subcategory
-              </label>
-              <select
-                id="supply-type"
-                value={type}
-                onChange={(e) => setType(e.target.value)}
-                className="w-full rounded-xl border border-ast-purple/40 bg-[#0B0018] px-3.5 py-2.5 text-sm text-white focus:border-ast-cyan/60 focus:outline-none"
-              >
-                {SUPPLY_TYPES.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {showSubcategory && (
+              <div>
+                <label htmlFor="supply-subcategory" className={labelClass}>
+                  Subcategory
+                </label>
+                <select
+                  id="supply-subcategory"
+                  value={subcategoryOptions.some((o) => o.value === subcategory) ? subcategory : SUBCATEGORY_NONE}
+                  onChange={(e) => setSubcategory(e.target.value)}
+                  className="w-full rounded-xl border border-ast-purple/40 bg-[#0B0018] px-3.5 py-2.5 text-sm text-white focus:border-ast-cyan/60 focus:outline-none"
+                >
+                  {subcategoryOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -333,7 +353,7 @@ export function SupplyModal({ initial, projects, onClose, onSaved }: SupplyModal
               onChange={(e) => setAssignedProjectId(e.target.value)}
               className="w-full rounded-xl border border-ast-purple/40 bg-[#0B0018] px-3.5 py-2.5 text-sm text-white focus:border-ast-cyan/60 focus:outline-none"
             >
-              <option value="">Unassigned — Studio inventory</option>
+              <option value="">— Studio inventory (unassigned) —</option>
               {projects.map((project) => (
                 <option key={project.id} value={project.id}>
                   {project.name}

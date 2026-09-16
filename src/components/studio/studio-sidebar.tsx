@@ -15,6 +15,8 @@ import type { StudioView } from "@/components/studio/studio-app";
 interface StudioSidebarProps {
   stats: { projects: number; active: number; supplies: number; low: number; inspo: number };
   navigate: (view: StudioView) => void;
+  /** The currently active main view — its stat tile renders highlighted. */
+  currentView: StudioView;
   projects: ProjectDto[];
   inspiration: InspirationEntryDto[];
   onNewProject: () => void;
@@ -85,6 +87,7 @@ export function StudioSidebar(props: StudioSidebarProps) {
 function SidebarContent({
   stats,
   navigate,
+  currentView,
   projects,
   inspiration,
   onNewProject,
@@ -116,21 +119,30 @@ function SidebarContent({
             label="Projects"
             value={stats.projects}
             sub={`${stats.active} active`}
-            accent="text-ast-turquoise"
+            active={currentView === "projects"}
+            labelClass="text-ast-turquoise"
+            valueClass="text-[#00E6FF]"
+            subClass="text-ast-body/55"
             onClick={() => navigate("projects")}
           />
           <StatCard
             label="Supplies"
             value={stats.supplies}
             sub={`${stats.low} low`}
-            accent="text-ast-lavender"
+            active={currentView === "supplies"}
+            labelClass="text-[#9F6BFF]"
+            valueClass="text-[#00E5FF]"
+            subClass="text-[#F6B94B]/80"
             onClick={() => navigate("supplies")}
           />
           <StatCard
             label="Inspo"
             value={stats.inspo}
             sub="entries"
-            accent="text-ast-pink"
+            active={currentView === "inspiration"}
+            labelClass="text-ast-lavender"
+            valueClass="text-ast-lavender/80"
+            subClass="text-ast-body/55"
             onClick={() => navigate("inspiration")}
           />
         </div>
@@ -247,28 +259,44 @@ function SidebarContent({
   );
 }
 
+/**
+ * Stat tile — mirrors the live app: the active view's tile is highlighted
+ * (electric blue border/tint), idle tiles sit on the card canvas with
+ * per-card accent colors lifted from the live sidebar.
+ */
 function StatCard({
   label,
   value,
   sub,
-  accent,
+  active,
+  labelClass,
+  valueClass,
+  subClass,
   onClick,
 }: {
   label: string;
   value: number;
   sub: string;
-  accent: string;
+  active: boolean;
+  labelClass: string;
+  valueClass: string;
+  subClass: string;
   onClick: () => void;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="rounded-xl border border-ast-purple/25 bg-[#161030] p-2 text-left transition hover:border-ast-purple/50"
+      aria-current={active ? "true" : undefined}
+      className={
+        active
+          ? "rounded-xl border border-ast-electric-blue/60 bg-ast-electric-blue/10 p-2.5 text-left transition"
+          : "rounded-xl border border-ast-purple/30 bg-[#120724] p-2.5 text-left transition hover:border-ast-electric-blue/40 hover:bg-ast-electric-blue/5"
+      }
     >
-      <p className={`text-[10px] font-semibold uppercase tracking-wider ${accent}`}>{label}</p>
-      <p className="text-xl font-bold text-white">{value}</p>
-      <p className="text-[10px] text-ast-faint">{sub}</p>
+      <p className={`text-[10px] font-bold uppercase tracking-wider ${labelClass}`}>{label}</p>
+      <p className={`mt-0.5 text-lg font-bold ${valueClass}`}>{value}</p>
+      <p className={`text-[9px] leading-tight ${subClass}`}>{sub}</p>
     </button>
   );
 }

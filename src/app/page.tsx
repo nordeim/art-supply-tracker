@@ -73,7 +73,7 @@ export default async function StudioPage() {
     id: row.id,
     name: row.name,
     category: row.category,
-    type: row.type,
+    subcategory: row.type,
     quantity: row.quantity,
     condition: row.condition,
     location: row.location,

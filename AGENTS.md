@@ -11,7 +11,7 @@ Run from the repo root. Bun is the package manager — use `bun`, never `npm`/`y
 | `bun run dev` | Dev server on :3000 |
 | `bun run lint` | ESLint (next/core-web-vitals + next/typescript) |
 | `bun run typecheck` | `tsc --noEmit`, strict |
-| `bun run test` | Vitest — `src/lib/*.test.ts` (domain vocabulary, inspiration detail) |
+| `bun run test` | Vitest — 82 tests: domain vocabulary, validation, export/import wire format, rate limiting, action layer (each action file runs against a throwaway SQLite DB) |
 | `bun run db:push` | Push `prisma/schema.prisma` to SQLite (`db/custom.db`) — required after schema edits |
 | `bun run db:generate` | Regenerate Prisma Client |
 | `bun run db:seed` | Idempotent seed: demo user, 5 chat messages, 15 inspiration entries |
@@ -19,9 +19,11 @@ Run from the repo root. Bun is the package manager — use `bun`, never `npm`/`y
 | `bun run build` / `bun run start` | Production build (standalone) / serve it |
 
 Order for a clean check: `bun run lint && bun run typecheck && bun run test`,
-then exercise the golden paths in a browser (login → create project → add
-supply → chat → export/import round-trip → breadcrumb sub-views →
-inspiration detail panels).
+then `bun run build`, then exercise the golden paths in a browser (login →
+create project → add supply → detail panels → assign supply → delete with
+confirm → chat → export/import round-trip → breadcrumb sub-views →
+stock filters → mobile drawer + "Chat ☰"). `.github/workflows/verify-gate.yml`
+runs the same gate on every push.
 
 ## Architecture invariants
 
@@ -35,13 +37,25 @@ inspiration detail panels).
   errors are logged server-side and flattened to a safe `INTERNAL` error.
   The only route handler is the `/api` health probe.
 - **Zod at every boundary** (`src/lib/validation.ts`). SQLite has no enums —
-  status/category/type/condition are strings validated against the
-  single-source lists in `src/lib/studio-domain.ts` (including the
-  per-category `SUPPLY_TYPE_LISTS`); never accept free-form values for them.
+  status/category/subcategory/condition are strings validated against the
+  single-source lists in `src/lib/studio-domain.ts`: category tokens are the
+  live app's singular values (`Paint`, `Brush`, `Pastel`, `Paper`, `Canvas`,
+  `Medium`, `Other`), conditions are `ok | low | critical`, and supply
+  subcategories come from the per-category `SUPPLY_TYPE_LISTS` (the supply
+  modal's picker is category-scoped; "Other" hides it). Never accept
+  free-form values for them.
 - **Auth seam:** `src/lib/auth.ts` — scrypt password hashes (`scrypt:salt:hash`
   format), opaque session tokens in the httpOnly `ast_session` cookie,
   `getCurrentUser()` resolves session → user. Actions derive `userId` from
-  the session, never from client input.
+  the session, never from client input. `signInAction` is throttled by the
+  in-memory fixed-window limiter in `src/lib/rate-limit.ts` (5 attempts per
+  IP per minute).
+- **Wire format:** export/import payloads are built and normalized in
+  `src/lib/export-payload.ts` to match the ORIGINAL app's JSON shape
+  (`title`/`subcategory`/`status`/numeric `qty`/`supplyIds`/`isNew`); the
+  legacy clone shape imports through the same normalizer. The live app's
+  project→`supplyIds` relation maps onto our internal
+  `Supply.assignedProjectId`.
 - **DTO discipline:** Prisma rows never reach the client; the mappers in
   `page.tsx` / `studio.ts` convert to the types in `src/lib/dto.ts`.
 - **First-paint data** is fetched in `page.tsx` and handed to `StudioApp` as
@@ -65,13 +79,15 @@ inspiration detail panels).
   `document.visibilityState !== "visible"` and re-pins to the bottom only if
   the reader was already near the bottom.
 - **Photos are data URLs**, downscaled client-side to ≤ 1024px JPEG q0.8 and
-  rejected if > 300 KB encoded — there is no object storage; don't change one
-  side of that contract without the other (server cap:
-  `projectInputSchema.photos`).
-- **Import replaces the studio** (delete + re-create in one
-  `db.$transaction`) — it is a restore, not a merge. Export must stay
-  byte-compatible with the original app's payload (`app: "AST Studio"`,
-  `version: 1`).
+  rejected if > 300 KB encoded — the server cap is
+  `MAX_PHOTO_DATA_URL_LENGTH` (400,000 chars) in `src/lib/studio-domain.ts`,
+  shared by the modal contract and every Zod schema that touches photos;
+  don't change one side of that contract without the other.
+- **Import replaces the studio** (delete + re-create) — it is a restore, not a
+  merge. Export must stay byte-compatible with the original app's payload
+  (`app: "AST Studio"`, `version: 1`, `title`/`subcategory` field names,
+  numeric quantity trio, `supplyIds` relations — captured verbatim from a
+  live export; see `src/lib/export-payload.test.ts` for the pinned shape).
 - **`next.config.ts` has `ignoreBuildErrors: false`** — never flip it to ship;
   fix the types.
 

@@ -5,7 +5,7 @@ ssh_git_wrapper_v3.py — push to GitHub over SSH with an externally-supplied ke
 Why this exists
 ---------------
 The repo's canonical remote for pushes is the SSH URL
-(`git@github.com:nordeim/design-brand-strategy.git`), but cloning happens over
+(`git@github.com:nordeim/art-supply-tracker.git`), but cloning happens over
 HTTPS and sandbox/CI environments rarely have a resident `~/.ssh` identity.
 This wrapper lets an operator push without permanently installing a key:
 
@@ -31,7 +31,7 @@ Usage
 Options
 -------
   --remote <url>    SSH remote to push to
-                    (default git@github.com:nordeim/design-brand-strategy.git)
+                    (default git@github.com:nordeim/art-supply-tracker.git)
   --branch <name>   Branch to push (default: main — the operator contract for
                     this repo is main-only, no feature branches)
   --set-url         Also persist the SSH URL as origin's push URL in .git/config

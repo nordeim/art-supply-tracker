@@ -8,11 +8,18 @@
 **Rule:** Every architectural decision in this document traces to a specific rationale.
 Nothing is here "because it's popular."
 
-#### Revision Block — v1.0 (Tracked Changes)
+#### Revision Block — v1.1 (Tracked Changes)
 
 - `[SYN]` Initial PAD generated alongside the v1.0 codebase — every section
   verified against the actual source tree and executed commands on
   2026-09-16 (lint/typecheck green; golden paths browser-verified).
+- `[R2]` Session-3 parity remediation (2026-09-16): live data vocabulary
+  (Paint/Brush/… categories, ok/low/critical conditions, per-category
+  subcategories), supply/project detail panels with Delete, stock filter
+  tabs, supply assignment, byte-compatible export/import wire format,
+  photo validation fix, active-stat fix, mobile "Chat ☰" toggle, sign-in
+  rate limiting, action-layer tests (82 total), CI verify-gate workflow.
+  All sections re-verified against the source tree and the live app.
 
 ---
 
@@ -184,6 +191,43 @@ app, or to replicate the architecture elsewhere.
    drifts from the real token source); `@theme inline` + `:root` switching
   (runtime theming the product doesn't need).
 
+**ADR-008: Live-app wire format as the export/import contract**
+
+- **Context:** A live-app export was captured verbatim (2026-09-16) and
+  differs fundamentally from the clone's original DTO shape: projects use
+  `title` with `supplyIds` relations; supplies use `subcategory`, a
+  `status` condition field (omitted when ok), numeric
+  `quantityValue`/`quantity`/`qty`, `tags`, and `isNew`.
+- **Decision:** `src/lib/export-payload.ts` owns the mapping — exports emit
+  the live shape exactly; imports normalize BOTH the live shape and the
+  clone's legacy shape onto one internal payload before storage. The live
+  project→`supplyIds` relation maps onto `Supply.assignedProjectId`
+  (single membership, matching the supply modal's single-valued assign
+  select).
+- **Rationale:** format compatibility is the clone's data contract: a
+  user must be able to move their studio between the original app and this
+  one via Export/Import.
+- **Consequences:** field names differ across the DTO↔wire boundary
+  (documented in dto.ts); legacy exports stay importable forever via the
+  normalizer's mapping tables.
+- **Alternatives Rejected:** storing the live shape verbatim (would need a
+  relation array SQLite handles poorly and the UI does not want); breaking
+  with the old clone format (abandons existing backups).
+
+**ADR-009: In-memory per-IP sign-in rate limiting**
+
+- **Context:** PAD v1.0 §10 flagged credential stuffing as an open risk.
+- **Decision:** `src/lib/rate-limit.ts` — a fixed-window limiter (5
+  attempts / 60 s / IP, key from `x-forwarded-for`) wired into
+  `signInAction`; bounded memory (expired windows pruned, oldest evicted
+  at 1,000 keys).
+- **Rationale:** matches the single-process deployment contract with zero
+  infrastructure; a restart merely resets the throttle.
+- **Consequences:** not shared across replicas (none exist); proxies that
+  strip XFF collapse attackers into one bucket with everyone else.
+- **Alternatives Rejected:** persistent counters (adds writes to every
+  login); no limiter (the flagged risk).
+
 ---
 
 ## 2. High-Level System Topology
@@ -198,8 +242,8 @@ app, or to replicate the architecture elsewhere.
 ┌──────────────────────▼───────────────────────────────────────────┐
 │  Next.js 16 App Router — single route (src/app/page.tsx)         │
 │  ├─ RSC render: session → (login | StudioApp + first-paint DTOs) │
-│  ├─ src/actions/auth.ts      signIn / signUp / signOut           │
-│  ├─ src/actions/studio.ts    projects / supplies / chat / import │
+│  ├─ src/actions/auth.ts   signIn (rate-limited) / signUp / out   │
+│  ├─ src/actions/studio.ts  projects/supplies/assign/chat/import  │
 │  └─ src/app/api/route.ts     GET health probe (machine-only)     │
 └──────────────────────┬───────────────────────────────────────────┘
                        │ Prisma Client
@@ -222,7 +266,8 @@ app, or to replicate the architecture elsewhere.
 ### 3.1 The Layer Model
 
 ```
-Layer 0: src/lib (auth, db, result, validation, dto, studio-domain)
+Layer 0: src/lib (auth, db, result, validation, dto, studio-domain,
+         inspiration, export-payload, rate-limit)
          Pure infrastructure + contracts. No imports from layers above.
 Layer 1: src/actions (auth.ts, studio.ts)
          The only write surface. Imports Layer 0 only. Returns ActionResult<T>.
@@ -409,10 +454,10 @@ erDiagram
         string id PK
         string userId FK
         string name
-        string category "paint|brushes-tools|pastels|paper|canvas-board|mediums|other"
-        string type "watercolor|acrylic|oil|gouache|ink|encaustic|other"
+        string category "Paint|Brush|Pastel|Paper|Canvas|Medium|Other (live tokens)"
+        string type "per-category subcategory (e.g. Watercolor, Palette knives)"
         string quantity "free-form: '2', '1.5', '1/2'"
-        string condition "ok|low|critical-out"
+        string condition "ok|low|critical"
         string location "nullable"
         string barcode "nullable"
         string photo "data URL, nullable"
@@ -442,7 +487,13 @@ erDiagram
 
 - `Project.photos` / `Supply.photo` are text columns holding JSON / data
   URLs — SQLite has no list primitive; parsing degrades to "no photos" on
-  corrupt JSON rather than breaking the view.
+  corrupt JSON rather than breaking the view. Photo data URLs are capped at
+  `MAX_PHOTO_DATA_URL_LENGTH` (400,000 chars) across the client contract and
+  every Zod schema.
+- `Supply.type` stores the per-category subcategory value (live token); the
+  DTO/export layers expose it as `subcategory`. `Supply.assignedProjectId`
+  is the internal single-membership assignment; the export layer derives the
+  live app's project-side `supplyIds` arrays from it (ADR-008).
 - `InspirationEntry.detailJson` holds the typed overlay payload behind the
   inspiration detail panels (quote, artwork caption, citation, rights,
   tags, spotlight handle/link) — parsed by `parseInspirationDetail`
@@ -531,6 +582,8 @@ All values extracted verbatim from the production app's generated CSS bundle.
 | Import validates structure + bounds | `importPayloadSchema` caps arrays (500/1000), string lengths, and vocabulary enums |
 | Secrets never committed | `.gitignore` rejects `.env*` (except example), `db/`, `*.key`, `ssh-key.txt`; push wrapper shreds materialized keys |
 | Timing-safe credential compare | `timingSafeEqual` on the derived scrypt buffer |
+| Sign-in throttling | `consumeRateLimit` (5 attempts / 60 s / IP) at the top of `signInAction` (ADR-009) |
+| Import normalizes before storing | `normalizeImportPayload` maps live + legacy shapes onto validated internal types |
 
 ### 6.2 Security Utilities
 
@@ -573,8 +626,10 @@ All values extracted verbatim from the production app's generated CSS bundle.
 | Category | Count | Location | Framework |
 |---|---|---|---|
 | Static | — | `eslint .` / `tsc --noEmit` | ESLint 9 + TS 5.9 strict |
-| Automated unit | 24 tests | `src/lib/studio-domain.test.ts`, `src/lib/inspiration.test.ts` | Vitest (node env, `@/` alias) |
-| Manual golden paths | 9 flows | README "Testing & Quality" | Browser-executed |
+| Automated unit | 65 tests | `src/lib/*.test.ts` — studio-domain, validation, export-payload, rate-limit, inspiration | Vitest (node env, `@/` alias) |
+| Automated action | 17 tests | `src/actions/studio.test.ts` (throwaway SQLite DB, mocked auth seam) | Vitest |
+| Manual golden paths | 11 flows | README "Testing & Quality" | Browser-executed |
+| CI verify-gate | — | `.github/workflows/verify-gate.yml` (lint + typecheck + test + build) | GitHub Actions |
 
 ### 7.2 Test Patterns
 
@@ -600,9 +655,13 @@ production screenshot.
 
 ### 7.3 Coverage Thresholds
 
-None enforced yet. New domain logic in `src/lib` requires tests-first
-(red → green); contributions extending the suite should pin: actions ≥ 90%
-lines (they are the mutation surface), lib ≥ 95%.
+None enforced yet. New domain logic in `src/lib` and new actions require
+tests-first (red → green); contributions extending the suite should pin:
+actions ≥ 90% lines (they are the mutation surface), lib ≥ 95%. The action
+tests demonstrate the pattern: each action test file pushes the Prisma schema
+to a throwaway SQLite database in `beforeAll`, mocks `@/lib/auth`'s
+`requireUser` to a controllable session user, and imports the actions
+dynamically after `DATABASE_URL` is set.
 
 ### 7.4 Pre-PR / Pre-Deploy Checklist
 
@@ -692,11 +751,14 @@ public exposure).
 
 | Priority | Issue | Impact | Status |
 |---|---|---|---|
-| Medium | ~~No automated test framework~~ | Regressions rely on manual golden paths | **Resolved 2026-09-16** — Vitest suite added (24 tests: studio-domain vocabulary + inspiration detail parsing); extend into `src/actions` next |
-| Medium | No auth rate limiting | Credential-stuffing surface on public deployments | Open — add per-IP backoff on `signInAction` before any public host |
+| Medium | ~~No automated test framework~~ | Regressions rely on manual golden paths | **Resolved 2026-09-16 (r1)** — Vitest suite added |
+| Medium | ~~Action layer untested~~ | The mutation surface relied on manual golden paths | **Resolved 2026-09-16 (r2)** — 17 action tests against a throwaway SQLite DB (CRUD, IDOR, assignment, import, chat) |
+| Medium | ~~No auth rate limiting~~ | Credential-stuffing surface on public deployments | **Resolved 2026-09-16 (r2)** — in-memory per-IP fixed-window limiter on `signInAction` (ADR-009) |
 | Low | View state not URL-addressable | Browser back doesn't switch studio views | Accepted (ADR-001 consequence) |
 | Low | Chat avatar colors keyed to seeded usernames | New users get the default purple avatar | Accepted (matches original's initials behavior) |
 | Low | SQLite single-writer | No multi-process horizontal scale | Accepted (ADR-002); swap to Postgres by changing `provider` + URL if ever needed |
+| Low | Supply↔project assignment is single-membership internally | A live-app export listing one supply under two projects assigns it to the first on import | Accepted (ADR-008 consequence — the supply modal's assign select is single-valued on the live app too) |
+| Info | NEW-badge window is a 7-day assumption | The live threshold is not observable without multi-day waits | Documented assumption in `studio-domain.ts` |
 | Info | Partner Spotlight / Inspire Me are placeholders | Visual parity with the original beta's placeholders | Intentional — content arrives with partner integrations |
 
 ---
@@ -706,14 +768,18 @@ public exposure).
 | File | Lines (≈) | Purpose |
 |---|---|---|
 | `src/app/page.tsx` | ~125 | The route: session resolution + first-paint DTO assembly |
-| `src/components/studio/studio-app.tsx` | ~390 | Shell: header, sidebar wiring, views, community panel, import/export |
+| `src/components/studio/studio-app.tsx` | ~470 | Shell: header (+ mobile Chat ☰), sidebar wiring, views, community panel, import/export |
+| `src/components/studio/supply-detail-panel.tsx` | ~135 | Supply detail card: fields, NEW badge, Delete/Edit actions |
+| `src/components/studio/project-detail-panel.tsx` | ~210 | Project detail card: budget, supply assignment, Delete/Edit |
+| `src/lib/export-payload.ts` | ~240 | Live wire format: buildExportPayload + normalizeImportPayload |
+| `src/lib/rate-limit.ts` | ~85 | Fixed-window per-IP sign-in throttle |
 | `src/components/studio/projects-view.tsx` | ~280 | Tiles + breadcrumb sub-views (Series/Groups/status/Needs Sorting filters) |
 | `src/components/studio/supplies-view.tsx` | ~320 | Category tiles + "Art Supplies › Paint › Watercolor" type navigation |
 | `src/components/studio/inspiration-view.tsx` | ~375 | Feed tabs, quote carousel, spotlight/history/partner detail panels |
-| `src/actions/studio.ts` | ~445 | Projects/supplies CRUD, chat, import (the mutation surface) |
+| `src/actions/studio.ts` | ~530 | Projects/supplies CRUD, assignment, chat, import (the mutation surface) |
 | `src/lib/auth.ts` | ~90 | scrypt + sessions (server-only) |
 | `src/lib/inspiration.ts` | ~75 | InspirationDetail schema, defensive parser, pickToday |
-| `src/lib/validation.ts` | ~115 | Every Zod schema |
+| `src/lib/validation.ts` | ~160 | Every Zod schema (incl. per-category subcategory cross-check) |
 | `src/lib/studio-domain.ts` | ~130 | Status/category/type/condition vocabulary + per-category type lists |
 | `src/app/globals.css` | ~110 | `@theme` tokens, scrollbar, motion |
 | `prisma/schema.prisma` | ~100 | 6 models |

@@ -27,14 +27,18 @@ Node runs, with zero cloud dependencies.
 
 | Feature | What it does |
 |---|---|
-| 🔐 Auth gate | Sign In / Create Account tabs, show-password toggle, forgot-password notice — scrypt-hashed passwords, httpOnly opaque session cookies |
+| 🔐 Auth gate | Sign In / Create Account tabs, show-password toggle, forgot-password notice — scrypt-hashed passwords, httpOnly opaque session cookies, per-IP sign-in rate limiting (5 attempts / minute) |
 | 🏠 Dashboard | "Today in the Studio" — Partner Spotlight, Art History, Artist Quote, Studio Spotlight cards + Studio Memory popover |
 | 🎨 Projects | Status columns (Planned / In Progress / On Hold / Completed), Needs Sorting bucket, create/edit modal with budget, notes, and photo attachments |
-| 🖌️ Supplies | Category grid (Paint, Brushes & Tools, Pastels, Paper, Canvas & Board, Mediums, Other) with per-category counts, condition tracking, barcode + location fields, project assignment |
+| 🗂️ Project detail panels | Click a project chip → detail panel with NEW badge, status pill, image well, budget, supply assignment ("Pick supply…" + Assign / × remove), Delete (with confirm), Edit Project |
+| 🖌️ Supplies | Category grid (Paint, Brushes & Tools, Pastels, Paper, Canvas & Board, Mediums, Other) with per-category counts, low-stock "!" indicators, condition tracking, barcode + location fields, project assignment |
+| 🏷️ Per-category subcategories | The supply modal's Subcategory picker follows the category (Paint → Watercolor…, Brushes & Tools → Palette knives…, hidden for Other) — exactly the live app's option lists |
+| 📋 Supply detail panels | Click a supply chip → detail panel (Category / Subcategory / Quantity / Location / Barcode) with Delete (with confirm) and Edit Supply |
+| 🔍 Stock filters | "All | Low Stock | Out of Stock" tabs on every supply list, with the live app's "No supplies match this filter." empty state |
 | ✨ Inspiration | Today / Art History / Inspire Me feed tabs, artist quotes, studio spotlights, partner placeholders (15 seeded entries) |
 | 💬 Studio Chat | Community message wall with 5-second polling that pauses on hidden tabs |
-| 📦 Import / Export | Round-trip JSON backup — the export payload matches the original app's format (`app: "AST Studio"`, `version: 1`) |
-| 📱 Responsive | Three fixed-height columns on desktop; mobile drawer sidebar and stacked community panel below `lg` |
+| 📦 Import / Export | Round-trip JSON backup in the ORIGINAL app's wire format (`title`, `subcategory`, `quantityValue`/`qty`, `supplyIds`, `isNew`…) — live-app exports import here and vice versa; the legacy clone format imports too |
+| 📱 Responsive | Three fixed-height columns on desktop; mobile drawer sidebar and a "Chat ☰" header toggle for the community panel |
 
 ## Architecture
 
@@ -58,11 +62,14 @@ flowchart LR
     Actions --> Prisma[(Prisma Client)]
     Prisma --> SQLite[(SQLite - db/custom.db)]
     Shell -->|5s poll| Actions
+    Shell -->|export| ExportLib[export-payload.ts - live wire format]
 ```
 
 Mutations flow exclusively through **Server Actions** returning
 `ActionResult<T>` unions — there are no REST endpoints for UI operations (the
-lone route handler is a `/api` health probe).
+lone route handler is a `/api` health probe). Export/import payloads are
+built and normalized in `src/lib/export-payload.ts`, which emits and accepts
+the original app's exact JSON shape.
 
 ## File Hierarchy
 
@@ -71,13 +78,14 @@ lone route handler is a `/api` health probe).
 📂 public/assets/     Brand images (logo, portraits, artworks, ADC badge)
 📂 scripts/           seed.ts — idempotent demo/bootstrap data
 📂 src/
-  📂 actions/         Server Actions: auth.ts, studio.ts (projects/supplies/chat/import)
+  📂 actions/         Server Actions: auth.ts (rate-limited sign-in), studio.ts (projects/supplies/chat/assignment/import)
   📂 app/             page.tsx (session-aware shell), layout.tsx, globals.css (@theme tokens)
   📂 components/
-    📂 studio/        Login, shell, sidebar, 4 views, chat, 2 modals
+    📂 studio/        Login, shell, sidebar, 4 views, chat, 2 modals, 2 detail panels
     📂 ui/            shadcn/ui component set
-  📂 lib/             db, auth (scrypt + sessions), result (ActionResult), validation (Zod), dto, studio-domain
+  📂 lib/             db, auth (scrypt + sessions), result (ActionResult), validation (Zod), dto, studio-domain, inspiration, export-payload, rate-limit
 📂 docs/              SSH push wrapper + operator runbook, reference prompts
+📂 .github/           verify-gate workflow (lint + typecheck + test + build on every push)
 ```
 
 ## Quick Start
@@ -120,26 +128,40 @@ before exposing any public deployment.
 ```bash
 bun run lint        # ESLint (next/core-web-vitals + next/typescript)
 bun run typecheck   # tsc --noEmit (strict)
-bun run test        # Vitest — domain vocabulary, inspiration detail parsing
+bun run test        # Vitest — domain vocabulary, validation, export/import, rate limiting, action layer (temp SQLite)
 bun run dev         # then exercise the flows below
 ```
 
-Automated unit tests (Vitest, `src/lib/*.test.ts`) pin the studio-domain
-vocabulary (per-category supply type lists) and the inspiration detail
-parser (Zod schema, corrupt-JSON degradation, today-entry selection).
+Automated tests (Vitest, 82 tests) pin the studio-domain vocabulary
+(per-category supply subcategory lists in the live app's tokens), the Zod
+boundary contracts (photo data-URL caps, per-category subcategory
+cross-validation), the export/import wire format (live-app shape with
+`title`/`subcategory`/`supplyIds`/numeric quantities, plus the legacy clone
+shape), the sign-in rate limiter, and the full action surface against a
+throwaway SQLite database (CRUD, ownership/IDOR checks, assignment,
+import, chat).
 
 Manual verification checklist (the golden paths):
-1. Sign in / create an account / sign out.
-2. Create a project → sidebar stats update immediately.
-3. Add a supply → category count and low-condition badge update.
-4. Send a chat message → it appears and survives reload.
-5. Export Data → downloads `ast-studio-export-<ts>.json`; Import JSON with
-   that file → "Import successful" notice and data restored.
-6. Projects tiles → breadcrumb sub-views (Series / Groups / status filters /
-   Needs Sorting) with back navigation.
-7. Supplies tiles → "Art Supplies › Paint" type tiles → type-filtered list.
-8. Inspiration → quote carousel, spotlight / art-history / partner detail
-   panels with artwork, citations, rights, and tags.
+1. Sign in / create an account / sign out (6 rapid bad logins → throttled).
+2. Create a project → sidebar stats update immediately ("active" counts
+   In Progress only, matching the live app).
+3. Add a supply (per-category subcategory picker) → the view switches to
+   the supply list with "All | Low Stock | Out of Stock" tabs; category
+   tiles show the "!" indicator for low/critical stock.
+4. Click a supply chip → detail panel; Delete with confirm; Edit Supply.
+5. Click a project chip → detail panel; assign supplies ("Pick supply…" →
+   Assign / × remove); Delete with confirm; Edit Project.
+6. Send a chat message → it appears and survives reload.
+7. Export Data → downloads the original app's JSON shape; Import that file
+   (or a live-app export) → "Import successful" and data restored with
+   project↔supply assignments intact.
+8. Projects tiles → breadcrumb sub-views (Series / Groups / status filters /
+   Needs Sorting) with back navigation and singular/plural counts.
+9. Supplies tiles → "Art Supplies › Paint" type tiles → type-filtered list.
+10. Inspiration → quote carousel, spotlight / art-history / partner detail
+    panels with artwork, citations, rights, and tags.
+11. Mobile viewport: sidebar drawer opens/closes; "Chat ☰" toggles the
+    community panel.
 
 ## Design System
 
@@ -165,8 +187,9 @@ Manual verification checklist (the golden paths):
 | Phase | Status | Key Deliverables |
 |---|---|---|
 | Clone build | ✅ Complete | Login, dashboard, projects, supplies, inspiration, chat, import/export |
-| Parity remediation | ✅ Complete | Breadcrumb sub-views (projects/supplies), quote carousel + detail panels, live 15-entry seed with citations/rights/tags, modal label parity, Vitest suite |
-| Verification | ✅ Complete | Lint + typecheck + tests clean; browser E2E on all golden paths |
+| Parity remediation (r1) | ✅ Complete | Breadcrumb sub-views (projects/supplies), quote carousel + detail panels, live 15-entry seed with citations/rights/tags, modal label parity, Vitest suite |
+| Parity remediation (r2) | ✅ Complete | Live data vocabulary (Paint/Brush/… categories, ok/low/critical conditions, per-category subcategories), supply + project detail panels with Delete, "All/Low Stock/Out of Stock" filters, supply assignment from the project panel, byte-compatible export/import with the original app's wire format, photo validation fix, active-stat fix, mobile "Chat ☰" toggle, sign-in rate limiting, action-layer tests, CI verify-gate workflow |
+| Verification | ✅ Complete | Lint + typecheck + 82 tests + build clean; browser E2E on all golden paths; dashboard text diff vs the live app is identical (modulo account) |
 | Documentation | ✅ Complete | README, AGENTS.md, CLAUDE.md, Project_Architecture_Document.md |
 
 Known intentional gaps (mirroring the original beta's placeholders): the

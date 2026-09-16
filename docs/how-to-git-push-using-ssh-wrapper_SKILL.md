@@ -12,8 +12,8 @@ outside the repo, points `GIT_SSH_COMMAND` at it, authenticates, pushes
 1. **main only** — no feature branches; the wrapper defaults to `main` and
    pushes `HEAD:refs/heads/main`.
 2. **Run the verification gate first** — `bun run lint && bun run typecheck
-   && bun run test && bun run build && bun run e2e:all` must be green
-   (CI runs the same gate on every push via `.github/workflows/verify-gate.yml`).
+   && bun run test && bun run build` must be green (CI runs the same gate
+   on every push via `.github/workflows/verify-gate.yml`).
 3. **Commit before push** — the wrapper pushes commits, not the working tree.
 4. **Never commit the key** — keys live outside the repo (`~/.ssh/`, a
    secret store, or a pipe). If a key ever lands in the tree, rotate it.

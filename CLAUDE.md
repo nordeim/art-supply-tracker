@@ -88,10 +88,17 @@ Prisma 6.19.2 + SQLite · Zod 4.3.5 · ESLint 9.
 - Schema: `prisma/schema.prisma`. After edits: `bun run db:push` (dev) —
   there are no migration files; the schema is the migration.
 - SQLite has no enums: string fields validated by Zod against
-  `studio-domain.ts` lists. Add new vocabulary there first.
+  `studio-domain.ts` lists (category tokens are the live app's singular
+  values — Paint/Brush/…; conditions are ok/low/critical). Add new
+  vocabulary there first.
 - Photos are JSON-encoded data-URL arrays on `Project.photos` / a single
   data URL on `Supply.photo` — client downscales to ≤ 1024px JPEG q0.8,
-  ≤ 300 KB encoded; server enforces array/size caps in the Zod schemas.
+  ≤ 300 KB encoded; the server cap is `MAX_PHOTO_DATA_URL_LENGTH`
+  (400,000 chars) enforced by every Zod schema that touches photos.
+- Supply↔project assignment is stored as `Supply.assignedProjectId`
+  (single membership — the supply modal's single-valued "Assign to Project"
+  select); the export layer derives the live app's project-side
+  `supplyIds` arrays from it.
 - Seed is idempotent (existence-guarded per natural key). Rerunning
   `bun run db:seed` is always safe.
 
@@ -122,26 +129,56 @@ not secret — rotate before any public deployment).
 ### Testing Strategy
 
 Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
-`src/**/*.test.ts`). Unit tests pin the studio-domain vocabulary (including
-the per-category `SUPPLY_TYPE_LISTS` extracted from the live app) and the
-inspiration detail parser (schema acceptance, corrupt-JSON degradation to
-null, today-entry selection). Run `bun run test` — new domain logic in
-`src/lib` requires tests first (red → green).
+`src/**/*.test.ts`). The suite (82 tests) pins:
+
+- **Studio-domain vocabulary** — the per-category `SUPPLY_TYPE_LISTS` in the
+  live app's tokens (Paint/Brush/Pastel/Paper/Canvas/Medium/Other categories,
+  capitalized Paint subcategories, ok/low/critical conditions), the modal's
+  picker option order, the NEW-badge window, and quantity parsing
+  (integers, decimals, a/b fractions).
+- **Boundary contracts** (`validation.test.ts`) — photo data-URL caps
+  (client 300 KB ↔ server 400k chars), per-category subcategory
+  cross-validation, and the import schema's acceptance of the live wire
+  shape.
+- **Wire format** (`export-payload.test.ts`) — the export payload's exact
+  field set (`title`, `subcategory`, `supplyIds`, numeric `qty`/`quantity`/
+  `quantityValue`, `isNew`, status omitted when ok) and the import
+  normalizer's handling of both live and legacy clone shapes, including
+  relation remapping.
+- **Rate limiting** (`rate-limit.test.ts`) — fixed-window allow/block,
+  rollover, per-key isolation, cooldown reporting, bounded memory.
+- **Inspiration detail** — schema acceptance, corrupt-JSON degradation to
+  null, today-entry selection.
+- **Action layer** (`src/actions/studio.test.ts`) — the mutation surface
+  against a throwaway SQLite database with the auth seam mocked: CRUD,
+  ownership/IDOR checks, supply assignment, delete-side-effects,
+  live/legacy import, chat validation.
+
+Run `bun run test` — new domain logic in `src/lib` and new actions require
+tests first (red → green).
 
 The broader verification contract is the golden-path checklist, exercised in
 a browser after every change:
 
-1. Sign in / create account / sign out.
-2. Create + edit a project (stats update immediately).
-3. Add + edit a supply (category count, condition badge).
-4. Chat send (message appears and survives reload — polling works).
-5. Export Data → file downloads; Import JSON with it → success notice.
-6. Projects tiles → breadcrumb sub-views (Series/Groups/status/Needs
+1. Sign in / create account / sign out (rate limiting: 6 rapid bad logins →
+   throttled, recovers after a minute).
+2. Create + edit a project (stats update immediately; "active" counts
+   In Progress only).
+3. Add + edit a supply (per-category subcategory picker; post-create the
+   view switches to the supply list with All/Low Stock/Out of Stock tabs).
+4. Project/supply detail panels: chips open panels; assign supplies from
+   the project panel; delete with the native confirm.
+5. Chat send (message appears and survives reload — polling works).
+6. Export Data → the original app's JSON shape downloads; Import JSON with
+   it (or a live-app export) → success notice, assignments intact.
+7. Projects tiles → breadcrumb sub-views (Series/Groups/status/Needs
    Sorting) with back navigation and correct filtered counts.
-7. Supplies tiles → category → type tiles → type-filtered supply list.
-8. Inspiration → quote carousel + spotlight / art-history / partner detail
+8. Supplies tiles → category → type tiles → type-filtered supply list;
+   "!" indicators on categories with low/critical stock.
+9. Inspiration → quote carousel + spotlight / art-history / partner detail
    panels (artwork, citations, rights, tags render from the seeded detail).
-9. Mobile viewport: sidebar drawer opens/closes; community panel stacks.
+10. Mobile viewport: sidebar drawer opens/closes; "Chat ☰" toggles the
+    community panel.
 
 ## Code Quality Standards
 

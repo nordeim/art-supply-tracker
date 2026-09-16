@@ -1,0 +1,249 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  importPayloadSchema,
+  projectInputSchema,
+  supplyInputSchema,
+} from "@/lib/validation";
+
+/**
+ * Boundary-contract tests: the schemas must accept everything the live app
+ * and our own client produce, and reject the shapes that would corrupt data.
+ */
+
+const smallDataUrl = `data:image/jpeg;base64,${"A".repeat(400)}`;
+const realPhotoDataUrl = `data:image/jpeg;base64,${"A".repeat(300 * 1024)}`; // client cap
+const oversizeDataUrl = `data:image/jpeg;base64,${"A".repeat(460_000)}`; // above server cap
+
+describe("projectInputSchema", () => {
+  it("accepts a project with a real (300 KB) photo data URL", () => {
+    const parsed = projectInputSchema.safeParse({
+      name: "Summer Exhibition Series",
+      status: "planned",
+      budget: 250,
+      notes: "Notes",
+      photos: [realPhotoDataUrl],
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("still accepts the legacy modal payload shape", () => {
+    const parsed = projectInputSchema.safeParse({
+      name: "Legacy project",
+      status: "in-progress",
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.name).toBe("Legacy project");
+  });
+
+  it("rejects photo data URLs above the server cap", () => {
+    const parsed = projectInputSchema.safeParse({
+      name: "Too big",
+      photos: [oversizeDataUrl],
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("rejects more than 10 photos", () => {
+    const parsed = projectInputSchema.safeParse({
+      name: "Too many",
+      photos: Array.from({ length: 11 }, () => smallDataUrl),
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("defaults status to planned and trims the name", () => {
+    const parsed = projectInputSchema.safeParse({ name: "  Trimmed  " });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.name).toBe("Trimmed");
+      expect(parsed.data.status).toBe("planned");
+    }
+  });
+});
+
+describe("supplyInputSchema", () => {
+  it("accepts the live vocabulary (category Paint, subcategory Watercolor)", () => {
+    const parsed = supplyInputSchema.safeParse({
+      name: "Cobalt Blue",
+      category: "Paint",
+      subcategory: "Watercolor",
+      quantity: "2",
+      condition: "ok",
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("accepts a Brush supply with its subcategory", () => {
+    const parsed = supplyInputSchema.safeParse({
+      name: "Palette Knife Set",
+      category: "Brush",
+      subcategory: "Palette knives",
+      quantity: "1",
+      condition: "low",
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("normalizes the picker's None and Other/Custom sentinels to undefined", () => {
+    for (const sentinel of ["", "__other__", "none"]) {
+      const parsed = supplyInputSchema.safeParse({
+        name: "S",
+        category: "Paint",
+        subcategory: sentinel,
+        quantity: "1",
+      });
+      expect(parsed.success, `sentinel ${sentinel}`).toBe(true);
+      if (parsed.success) expect(parsed.data.subcategory).toBeUndefined();
+    }
+  });
+
+  it("accepts the critical condition value", () => {
+    const parsed = supplyInputSchema.safeParse({
+      name: "S",
+      category: "Paint",
+      quantity: "1",
+      condition: "critical",
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("rejects a subcategory outside the chosen category's list", () => {
+    const parsed = supplyInputSchema.safeParse({
+      name: "Wrong combo",
+      category: "Paper",
+      subcategory: "Palette knives", // a Brush subcategory
+      quantity: "1",
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("rejects unknown categories", () => {
+    const parsed = supplyInputSchema.safeParse({
+      name: "S",
+      category: "brushes-tools", // legacy value — no longer valid at the boundary
+      quantity: "1",
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("accepts a supply photo data URL at the client cap", () => {
+    const parsed = supplyInputSchema.safeParse({
+      name: "With photo",
+      category: "Paint",
+      quantity: "1",
+      photo: realPhotoDataUrl,
+    });
+    expect(parsed.success).toBe(true);
+  });
+});
+
+describe("importPayloadSchema", () => {
+  it("accepts a live-app export payload verbatim", () => {
+    const parsed = importPayloadSchema.safeParse({
+      app: "AST Studio",
+      version: 1,
+      projects: [
+        {
+          id: "c69412c2-390b-4895-bd48-8849f30ee496",
+          title: "ZZTEST Exhibition Series",
+          description: null,
+          status: "planned",
+          notes: null,
+          coverImageUrl: null,
+          imageKeys: [],
+          supplyIds: ["825c1b82-99f0-45f6-b844-3dec86c4ffd9"],
+          createdAt: "2026-09-16T05:00:37.166Z",
+          updatedAt: "2026-09-16T05:00:37.166Z",
+          images: [],
+          imagePaths: [],
+          budget: 250,
+          isNew: true,
+        },
+      ],
+      supplies: [
+        {
+          id: "825c1b82-99f0-45f6-b844-3dec86c4ffd9",
+          name: "ZZTEST Palette Knife Set",
+          category: "Brush",
+          subcategory: "Palette knives",
+          itemType: null,
+          unit: null,
+          barcode: "",
+          tags: [],
+          quantityValue: 2,
+          quantity: 2,
+          location: null,
+          notes: null,
+          imageKey: null,
+          createdAt: "2026-09-16T04:55:38.495Z",
+          updatedAt: "2026-09-16T05:02:57.395Z",
+          usedInProjectIds: [],
+          qty: 2,
+          image: null,
+          isNew: true,
+          status: "low",
+        },
+      ],
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("accepts a live supply that omits status (the ok case)", () => {
+    const parsed = importPayloadSchema.safeParse({
+      app: "AST Studio",
+      version: 1,
+      projects: [],
+      supplies: [
+        {
+          name: "No status field",
+          category: "Paint",
+          subcategory: "Watercolor",
+          quantity: 3,
+          qty: 3,
+          quantityValue: 3,
+          tags: [],
+        },
+      ],
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("keeps the export/import round-trip shape valid", () => {
+    const payload = {
+      app: "AST Studio",
+      exportedAt: new Date().toISOString(),
+      version: 1,
+      projects: [
+        {
+          id: "p1",
+          title: "Round trip",
+          description: null,
+          status: "completed",
+          notes: "n",
+          coverImageUrl: null,
+          imageKeys: [],
+          supplyIds: [],
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-02T00:00:00.000Z",
+          images: [],
+          imagePaths: [],
+          budget: 0,
+          isNew: false,
+        },
+      ],
+      supplies: [],
+    };
+    expect(importPayloadSchema.safeParse(payload).success).toBe(true);
+  });
+
+  it("rejects payloads from other apps", () => {
+    const parsed = importPayloadSchema.safeParse({
+      app: "Somebody Else",
+      version: 1,
+      projects: [],
+      supplies: [],
+    });
+    expect(parsed.success).toBe(false);
+  });
+});
