@@ -15,6 +15,10 @@ import { PROJECT_STATUSES } from "@/lib/studio-domain";
 
 const MAX_PHOTO_BYTES = 300 * 1024; // 300 KB per encoded photo
 
+// The live app's Status picker orders In Progress first (verified against
+// studiobeta.artsupplytracker.com); the tiles keep the Planned-first order.
+const STATUS_SELECT_ORDER = ["in-progress", "planned", "on-hold", "completed"] as const;
+
 async function fileToDataUrl(file: File): Promise<string> {
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(1, 1024 / Math.max(bitmap.width, bitmap.height));
@@ -144,7 +148,7 @@ export function ProjectModal({ initial, onClose, onSaved }: ProjectModalProps) {
         <form onSubmit={onSubmit} noValidate className="space-y-4">
           <div>
             <label htmlFor="project-name" className="mb-1.5 block text-sm font-medium text-ast-lavender">
-              Project name
+              Project Title <span aria-hidden="true">*</span>
             </label>
             <input
               id="project-name"
@@ -169,16 +173,20 @@ export function ProjectModal({ initial, onClose, onSaved }: ProjectModalProps) {
                 onChange={(e) => setStatus(e.target.value)}
                 className="w-full rounded-xl border border-ast-purple/40 bg-[#0B0018] px-3.5 py-2.5 text-sm text-white focus:border-ast-cyan/60 focus:outline-none"
               >
-                {PROJECT_STATUSES.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
+                {STATUS_SELECT_ORDER.map((value) => {
+                  const option = PROJECT_STATUSES.find((s) => s.value === value);
+                  if (!option) return null;
+                  return (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  );
+                })}
               </select>
             </div>
             <div>
               <label htmlFor="project-budget" className="mb-1.5 block text-sm font-medium text-ast-lavender">
-                Budget
+                Estimated Budget
               </label>
               <input
                 id="project-budget"

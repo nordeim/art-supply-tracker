@@ -166,6 +166,7 @@ export function StudioApp({
         email={user.email}
         memoryOpen={memoryOpen}
         onToggleMemory={() => setMemoryOpen((v) => !v)}
+        onCloseMemory={() => setMemoryOpen(false)}
         memoryText={user.lastWorkedOn}
         onSignOut={handleSignOut}
         onOpenSidebar={() => setSidebarOpen(true)}
@@ -274,6 +275,7 @@ function StudioHeader({
   email,
   memoryOpen,
   onToggleMemory,
+  onCloseMemory,
   memoryText,
   onSignOut,
   onOpenSidebar,
@@ -281,6 +283,7 @@ function StudioHeader({
   email: string;
   memoryOpen: boolean;
   onToggleMemory: () => void;
+  onCloseMemory: () => void;
   memoryText: string;
   onSignOut: () => void;
   onOpenSidebar: () => void;
@@ -338,7 +341,17 @@ function StudioHeader({
 
           {memoryOpen && (
             <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-2xl border border-ast-purple/35 bg-[#120724] p-4 shadow-xl studio-fade">
-              <p className="text-sm font-semibold text-ast-lavender">Studio Memory</p>
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-sm font-semibold text-ast-lavender">Studio Memory</p>
+                <button
+                  type="button"
+                  onClick={onCloseMemory}
+                  aria-label="Close"
+                  className="rounded-lg p-1 text-ast-faint transition hover:bg-white/5 hover:text-white"
+                >
+                  ✕
+                </button>
+              </div>
               <p className="mt-1 text-xs text-ast-body/70">
                 {memoryText ? `You were working on ${memoryText}.` : "Nothing tracked yet — open a workspace to start."}
               </p>

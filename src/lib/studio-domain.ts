@@ -46,6 +46,65 @@ export const SUPPLY_CONDITIONS = [
 
 export type SupplyCondition = (typeof SUPPLY_CONDITIONS)[number]["value"];
 
+/**
+ * Per-category type lists, extracted verbatim from the live app's category
+ * sub-views (studiobeta.artsupplytracker.com). `Supply.type` stores these
+ * free-form labels — the picker offers the flat `SUPPLY_TYPES` paint list for
+ * the modal, while the Supplies view navigates these lists as type tiles.
+ */
+export const SUPPLY_TYPE_LISTS: Record<string, readonly { value: string; label: string }[]> = {
+  paint: [
+    { value: "watercolor", label: "Watercolor" },
+    { value: "acrylic", label: "Acrylic" },
+    { value: "oil", label: "Oil" },
+    { value: "gouache", label: "Gouache" },
+    { value: "ink", label: "Ink" },
+    { value: "encaustic", label: "Encaustic" },
+  ],
+  "brushes-tools": [
+    { value: "Watercolor brushes", label: "Watercolor brushes" },
+    { value: "Acrylic brushes", label: "Acrylic brushes" },
+    { value: "Oil brushes", label: "Oil brushes" },
+    { value: "Detail brushes", label: "Detail brushes" },
+    { value: "Palette knives", label: "Palette knives" },
+    { value: "Palette", label: "Palette" },
+    { value: "Easel", label: "Easel" },
+  ],
+  pastels: [
+    { value: "Oil pastel", label: "Oil pastel" },
+    { value: "Soft pastel", label: "Soft pastel" },
+    { value: "Chalk pastel", label: "Chalk pastel" },
+    { value: "Pan pastel", label: "Pan pastel" },
+  ],
+  paper: [
+    { value: "Watercolor paper", label: "Watercolor paper" },
+    { value: "Drawing paper", label: "Drawing paper" },
+    { value: "Mixed media", label: "Mixed media" },
+    { value: "Bristol", label: "Bristol" },
+    { value: "Sketchbook", label: "Sketchbook" },
+  ],
+  "canvas-board": [
+    { value: "Stretched canvas", label: "Stretched canvas" },
+    { value: "Canvas board", label: "Canvas board" },
+    { value: "Linen", label: "Linen" },
+    { value: "Wood panel", label: "Wood panel" },
+    { value: "Gessoed board", label: "Gessoed board" },
+  ],
+  mediums: [
+    { value: "Gels", label: "Gels" },
+    { value: "Varnishes", label: "Varnishes" },
+    { value: "Solvents", label: "Solvents" },
+    { value: "Pastes", label: "Pastes" },
+    { value: "Gesso", label: "Gesso" },
+    { value: "Fixative", label: "Fixative" },
+  ],
+  other: [],
+} as const;
+
+export function supplyTypeListFor(category: string): readonly { value: string; label: string }[] {
+  return SUPPLY_TYPE_LISTS[category] ?? [];
+}
+
 export const PROJECT_STATUS_VALUES = PROJECT_STATUSES.map((s) => s.value);
 export const SUPPLY_CATEGORY_VALUES = SUPPLY_CATEGORIES.map((c) => c.value);
 export const SUPPLY_TYPE_VALUES = SUPPLY_TYPES.map((t) => t.value);

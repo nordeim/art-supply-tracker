@@ -96,5 +96,9 @@ model InspirationEntry {
   body      String?
   author    String?
   imageUrl  String?
+  // JSON payload parsed into the typed InspirationDetail DTO (quote, artwork,
+  // citation, rights, tags, handle, link…) — same text-column-JSON pattern as
+  // Project.photos; corrupt JSON degrades to "no detail", never breaks a view.
+  detailJson String?
   sortOrder Int     @default(0)
 }

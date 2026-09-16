@@ -50,7 +50,7 @@ function PartnerSpotlightCard() {
         </span>
       </div>
       <h2 className="mb-2 text-lg font-bold text-[#00E6FF]">
-        Partner name placeholder.
+        Partner name placeholder
       </h2>
       <p className="text-sm leading-relaxed text-ast-body/70">
         Partner description placeholder. Real partner content, demos, and
@@ -74,9 +74,9 @@ function ArtHistoryCard() {
         aria-hidden="true"
         className="mb-4 h-28 rounded-lg bg-gradient-to-br from-[#141031] via-[#221a4d] to-[#2e1d5c]"
       />
-      <h3 className="mb-2 text-base font-semibold text-ast-lavender">The Starry Night</h3>
+      <h2 className="mb-2 text-base font-semibold text-ast-lavender">The Starry Night</h2>
       <p className="text-[13px] leading-relaxed text-ast-body/70">
-        Vincent van Gogh completed The Starry Night in June 1889 while a
+        Vincent van Gogh completed <em>The Starry Night</em> in June 1889 while a
         patient at Saint-Paul-de-Mausole in Saint-Rémy-de-Provence. Painted
         from memory rather than direct observation, it is now one of the most
         recognised works in Western art.
@@ -125,7 +125,7 @@ function StudioSpotlightCard({
           className="h-14 w-14 rounded-full border-2 border-ast-purple/50 object-cover"
         />
         <div>
-          <h3 className="text-lg font-semibold text-ast-pink">Kevin Lewis</h3>
+          <h2 className="text-lg font-semibold text-ast-pink">Kevin Lewis</h2>
           <p className="text-[13px] text-ast-body/60">Mixed media &amp; textile artist</p>
         </div>
       </div>

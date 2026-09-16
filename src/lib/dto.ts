@@ -3,6 +3,7 @@
  * (never raw Prisma rows), keeping the client contract stable and free of
  * server-only types like passwordHash.
  */
+import type { InspirationDetail } from "@/lib/inspiration";
 
 export interface ProjectDto {
   id: string;
@@ -49,6 +50,8 @@ export interface InspirationEntryDto {
   body: string | null;
   author: string | null;
   imageUrl: string | null;
+  /** Parsed from detailJson — typed overlay content (quote, tags, rights…). */
+  detail: InspirationDetail | null;
 }
 
 export interface UserDto {

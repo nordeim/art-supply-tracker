@@ -120,8 +120,13 @@ before exposing any public deployment.
 ```bash
 bun run lint        # ESLint (next/core-web-vitals + next/typescript)
 bun run typecheck   # tsc --noEmit (strict)
+bun run test        # Vitest — domain vocabulary, inspiration detail parsing
 bun run dev         # then exercise the flows below
 ```
+
+Automated unit tests (Vitest, `src/lib/*.test.ts`) pin the studio-domain
+vocabulary (per-category supply type lists) and the inspiration detail
+parser (Zod schema, corrupt-JSON degradation, today-entry selection).
 
 Manual verification checklist (the golden paths):
 1. Sign in / create an account / sign out.
@@ -130,6 +135,11 @@ Manual verification checklist (the golden paths):
 4. Send a chat message → it appears and survives reload.
 5. Export Data → downloads `ast-studio-export-<ts>.json`; Import JSON with
    that file → "Import successful" notice and data restored.
+6. Projects tiles → breadcrumb sub-views (Series / Groups / status filters /
+   Needs Sorting) with back navigation.
+7. Supplies tiles → "Art Supplies › Paint" type tiles → type-filtered list.
+8. Inspiration → quote carousel, spotlight / art-history / partner detail
+   panels with artwork, citations, rights, and tags.
 
 ## Design System
 
@@ -155,7 +165,8 @@ Manual verification checklist (the golden paths):
 | Phase | Status | Key Deliverables |
 |---|---|---|
 | Clone build | ✅ Complete | Login, dashboard, projects, supplies, inspiration, chat, import/export |
-| Verification | ✅ Complete | Lint + typecheck clean; browser E2E on all golden paths |
+| Parity remediation | ✅ Complete | Breadcrumb sub-views (projects/supplies), quote carousel + detail panels, live 15-entry seed with citations/rights/tags, modal label parity, Vitest suite |
+| Verification | ✅ Complete | Lint + typecheck + tests clean; browser E2E on all golden paths |
 | Documentation | ✅ Complete | README, AGENTS.md, CLAUDE.md, Project_Architecture_Document.md |
 
 Known intentional gaps (mirroring the original beta's placeholders): the

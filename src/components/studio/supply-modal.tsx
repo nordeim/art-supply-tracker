@@ -154,7 +154,7 @@ export function SupplyModal({ initial, projects, onClose, onSaved }: SupplyModal
         <form onSubmit={onSubmit} noValidate className="space-y-4">
           <div>
             <label htmlFor="supply-name" className={labelClass}>
-              Name
+              Supply Name <span aria-hidden="true">*</span>
             </label>
             <input
               id="supply-name"
@@ -226,7 +226,7 @@ export function SupplyModal({ initial, projects, onClose, onSaved }: SupplyModal
             </div>
             <div>
               <label htmlFor="supply-type" className={labelClass}>
-                Type
+                Subcategory
               </label>
               <select
                 id="supply-type"
@@ -261,7 +261,7 @@ export function SupplyModal({ initial, projects, onClose, onSaved }: SupplyModal
             </div>
             <div>
               <label htmlFor="supply-condition" className={labelClass}>
-                Condition
+                Stock Status
               </label>
               <select
                 id="supply-condition"
@@ -310,7 +310,7 @@ export function SupplyModal({ initial, projects, onClose, onSaved }: SupplyModal
 
           <div>
             <label htmlFor="supply-barcode" className={labelClass}>
-              Barcode
+              Barcode / UPC
             </label>
             <input
               id="supply-barcode"
@@ -325,7 +325,7 @@ export function SupplyModal({ initial, projects, onClose, onSaved }: SupplyModal
 
           <div>
             <label htmlFor="supply-project" className={labelClass}>
-              Assigned to project
+              Assign to Project
             </label>
             <select
               id="supply-project"

@@ -11,15 +11,17 @@ Run from the repo root. Bun is the package manager — use `bun`, never `npm`/`y
 | `bun run dev` | Dev server on :3000 |
 | `bun run lint` | ESLint (next/core-web-vitals + next/typescript) |
 | `bun run typecheck` | `tsc --noEmit`, strict |
+| `bun run test` | Vitest — `src/lib/*.test.ts` (domain vocabulary, inspiration detail) |
 | `bun run db:push` | Push `prisma/schema.prisma` to SQLite (`db/custom.db`) — required after schema edits |
 | `bun run db:generate` | Regenerate Prisma Client |
 | `bun run db:seed` | Idempotent seed: demo user, 5 chat messages, 15 inspiration entries |
 | `bun run db:migrate` / `db:reset` | Dev migration / drop+recreate |
 | `bun run build` / `bun run start` | Production build (standalone) / serve it |
 
-Order for a clean check: `bun run lint && bun run typecheck`, then exercise the
-golden paths in a browser (login → create project → add supply → chat →
-export/import round-trip).
+Order for a clean check: `bun run lint && bun run typecheck && bun run test`,
+then exercise the golden paths in a browser (login → create project → add
+supply → chat → export/import round-trip → breadcrumb sub-views →
+inspiration detail panels).
 
 ## Architecture invariants
 
@@ -34,8 +36,8 @@ export/import round-trip).
   The only route handler is the `/api` health probe.
 - **Zod at every boundary** (`src/lib/validation.ts`). SQLite has no enums —
   status/category/type/condition are strings validated against the
-  single-source lists in `src/lib/studio-domain.ts`; never accept free-form
-  values for them.
+  single-source lists in `src/lib/studio-domain.ts` (including the
+  per-category `SUPPLY_TYPE_LISTS`); never accept free-form values for them.
 - **Auth seam:** `src/lib/auth.ts` — scrypt password hashes (`scrypt:salt:hash`
   format), opaque session tokens in the httpOnly `ast_session` cookie,
   `getCurrentUser()` resolves session → user. Actions derive `userId` from

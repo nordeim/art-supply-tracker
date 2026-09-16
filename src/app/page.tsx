@@ -9,6 +9,7 @@
  */
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { parseInspirationDetail } from "@/lib/inspiration";
 import type {
   ChatMessageDto,
   InspirationEntryDto,
@@ -102,6 +103,7 @@ export default async function StudioPage() {
     body: row.body,
     author: row.author,
     imageUrl: row.imageUrl,
+    detail: parseInspirationDetail(row.detailJson),
   }));
 
   return (

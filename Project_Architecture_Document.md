@@ -247,7 +247,7 @@ boundary is the security seam.
 │   ├── robots.txt             ← permissive bot policy
 │   └── assets/                ← brand imagery cloned from production
 ├── scripts/
-│   └── seed.ts                ← idempotent: demo user, chat history, 15 entries
+│   └── seed.ts                ← idempotent: demo user, chat history, 15 live entries
 ├── src/
 │   ├── actions/
 │   │   ├── auth.ts            ← signIn / signUp / signOut (ActionResult)
@@ -433,6 +433,7 @@ erDiagram
         string body "nullable"
         string author "nullable"
         string imageUrl "nullable"
+        string detailJson "typed overlay payload, nullable (quote/artwork/citation/rights/tags…)"
         int sortOrder
     }
 ```
@@ -442,6 +443,10 @@ erDiagram
 - `Project.photos` / `Supply.photo` are text columns holding JSON / data
   URLs — SQLite has no list primitive; parsing degrades to "no photos" on
   corrupt JSON rather than breaking the view.
+- `InspirationEntry.detailJson` holds the typed overlay payload behind the
+  inspiration detail panels (quote, artwork caption, citation, rights,
+  tags, spotlight handle/link) — parsed by `parseInspirationDetail`
+  (`src/lib/inspiration.ts`) with the same degrade-to-null contract.
 - `User.lastWorkedOn` feeds the Studio Memory widget and the header
   popover ("You were working on Watercolor Botanicals.").
 - `ChatMessage` is global (community wall), not per-user; writes require a
@@ -568,27 +573,42 @@ All values extracted verbatim from the production app's generated CSS bundle.
 | Category | Count | Location | Framework |
 |---|---|---|---|
 | Static | — | `eslint .` / `tsc --noEmit` | ESLint 9 + TS 5.9 strict |
-| Automated unit/E2E | 0 | — | **None configured** (flagged honestly — see §10) |
-| Manual golden paths | 6 flows | README "Testing & Quality" | Browser-executed |
+| Automated unit | 24 tests | `src/lib/studio-domain.test.ts`, `src/lib/inspiration.test.ts` | Vitest (node env, `@/` alias) |
+| Manual golden paths | 9 flows | README "Testing & Quality" | Browser-executed |
 
 ### 7.2 Test Patterns
 
-The verification contract for changes today is the golden-path checklist
-(sign-in → project → supply → chat → export/import → mobile drawer),
-executed in a browser. The clone itself was verified this way end-to-end
-(all six paths pass; evidence recorded in the build worklog), plus a
-visual-diff review against the production screenshot.
+Unit tests follow the Scandi Haven Vitest pattern (`vitest.config.ts` with
+the `@/` alias, node environment, `src/**/*.test.ts`). They pin:
+
+- **Studio-domain vocabulary** — the per-category `SUPPLY_TYPE_LISTS`
+  (Paint 6 / Brushes & Tools 7 / Pastels 4 / Paper 5 / Canvas & Board 5 /
+  Mediums 6 / Other 0) extracted verbatim from the live app's sub-views, so
+  the Zod enums, pickers, and navigation tiles cannot drift.
+- **Inspiration detail domain** — `inspirationDetailSchema` acceptance
+  (quote/spotlight shapes, tag caps), `parseInspirationDetail` degradation
+  (null / corrupt JSON / non-object / schema-invalid → null), and
+  `pickToday` boundary selection (most-recent-on-or-before, future
+  fallback, empty feed).
+
+The broader verification contract remains the golden-path checklist
+(sign-in → project → supply → chat → export/import → breadcrumb sub-views →
+inspiration detail panels → mobile drawer), executed in a browser. The
+parity remediation was verified this way end-to-end against the live site
+(output text compared per sub-view), plus a visual review against the
+production screenshot.
 
 ### 7.3 Coverage Thresholds
 
-None enforced (no automated suite). Any contribution introducing a test
-framework should pin: actions ≥ 90% lines (they are the mutation surface),
-lib ≥ 95%.
+None enforced yet. New domain logic in `src/lib` requires tests-first
+(red → green); contributions extending the suite should pin: actions ≥ 90%
+lines (they are the mutation surface), lib ≥ 95%.
 
 ### 7.4 Pre-PR / Pre-Deploy Checklist
 
 - [ ] `bun run lint` — zero errors
 - [ ] `bun run typecheck` — zero errors
+- [ ] `bun run test` — zero failures
 - [ ] Golden paths exercised in a browser
 - [ ] New action inputs have Zod schemas
 - [ ] `git status` clean of `.env`, `db/`, logs, keys
@@ -672,7 +692,7 @@ public exposure).
 
 | Priority | Issue | Impact | Status |
 |---|---|---|---|
-| Medium | No automated test framework | Regressions rely on manual golden paths | Open — first contribution candidate (Vitest on `src/lib` + `src/actions`) |
+| Medium | ~~No automated test framework~~ | Regressions rely on manual golden paths | **Resolved 2026-09-16** — Vitest suite added (24 tests: studio-domain vocabulary + inspiration detail parsing); extend into `src/actions` next |
 | Medium | No auth rate limiting | Credential-stuffing surface on public deployments | Open — add per-IP backoff on `signInAction` before any public host |
 | Low | View state not URL-addressable | Browser back doesn't switch studio views | Accepted (ADR-001 consequence) |
 | Low | Chat avatar colors keyed to seeded usernames | New users get the default purple avatar | Accepted (matches original's initials behavior) |
@@ -685,15 +705,19 @@ public exposure).
 
 | File | Lines (≈) | Purpose |
 |---|---|---|
-| `src/app/page.tsx` | ~120 | The route: session resolution + first-paint DTO assembly |
-| `src/components/studio/studio-app.tsx` | ~385 | Shell: header, sidebar wiring, views, community panel, import/export |
+| `src/app/page.tsx` | ~125 | The route: session resolution + first-paint DTO assembly |
+| `src/components/studio/studio-app.tsx` | ~390 | Shell: header, sidebar wiring, views, community panel, import/export |
+| `src/components/studio/projects-view.tsx` | ~280 | Tiles + breadcrumb sub-views (Series/Groups/status/Needs Sorting filters) |
+| `src/components/studio/supplies-view.tsx` | ~320 | Category tiles + "Art Supplies › Paint › Watercolor" type navigation |
+| `src/components/studio/inspiration-view.tsx` | ~375 | Feed tabs, quote carousel, spotlight/history/partner detail panels |
 | `src/actions/studio.ts` | ~445 | Projects/supplies CRUD, chat, import (the mutation surface) |
 | `src/lib/auth.ts` | ~90 | scrypt + sessions (server-only) |
+| `src/lib/inspiration.ts` | ~75 | InspirationDetail schema, defensive parser, pickToday |
 | `src/lib/validation.ts` | ~115 | Every Zod schema |
-| `src/lib/studio-domain.ts` | ~70 | Status/category/type/condition vocabulary |
+| `src/lib/studio-domain.ts` | ~130 | Status/category/type/condition vocabulary + per-category type lists |
 | `src/app/globals.css` | ~110 | `@theme` tokens, scrollbar, motion |
 | `prisma/schema.prisma` | ~100 | 6 models |
-| `scripts/seed.ts` | ~125 | Idempotent demo content |
+| `scripts/seed.ts` | ~360 | Idempotent demo content (live 15-entry feed w/ detail payloads) |
 | `docs/ssh_git_wrapper_v3.py` | ~185 | Deploy-key push wrapper |
 
 ---
@@ -705,8 +729,9 @@ public exposure).
   `{ ok: true, data } | { ok: false, error: { code, message } }`.
 - **DTO** — client-safe data transfer type from `src/lib/dto.ts` (never a
   Prisma row).
-- **Golden paths** — the six browser flows that constitute the verification
-  contract (auth, project, supply, chat, export/import, mobile drawer).
+- **Golden paths** — the browser flows that constitute the verification
+  contract (auth, project, supply, chat, export/import, breadcrumb
+  sub-views, inspiration detail panels, mobile drawer).
 - **Studio Memory** — the "You were working on …" hint backed by
   `User.lastWorkedOn`.
 - **Needs Sorting** — projects bucket for unrecognized statuses.

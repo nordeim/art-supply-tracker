@@ -28,7 +28,7 @@ Prisma 6.19.2 + SQLite · Zod 4.3.5 · ESLint 9.
    export/import payload shape needs a second look before coding.
 4. **IMPLEMENT** — typed increments; Zod schemas and DTOs updated in the same
    change as the action; UI reads DTOs only.
-5. **VERIFY** — `bun run lint && bun run typecheck`, then browser-test the
+5. **VERIFY** — `bun run lint && bun run typecheck && bun run test`, then browser-test the
    affected golden path. Claims of "works" require executed evidence.
 6. **DELIVER** — note what was verified, what was not, and any deferred work.
 
@@ -115,22 +115,33 @@ not secret — rotate before any public deployment).
 | Command | Purpose |
 |---|---|
 | `bun run dev` | Dev server :3000 |
-| `bun run lint` / `typecheck` | ESLint / `tsc --noEmit` |
+| `bun run lint` / `typecheck` / `test` | ESLint / `tsc --noEmit` / Vitest |
 | `bun run db:push` / `db:generate` / `db:seed` | Database lifecycle |
 | `bun run build` / `start` | Standalone production build / serve |
 
 ### Testing Strategy
 
-No automated test framework is configured yet (flagged honestly — see PAD
-§8). The verification contract is the golden-path checklist, exercised in a
-browser after every change:
+Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
+`src/**/*.test.ts`). Unit tests pin the studio-domain vocabulary (including
+the per-category `SUPPLY_TYPE_LISTS` extracted from the live app) and the
+inspiration detail parser (schema acceptance, corrupt-JSON degradation to
+null, today-entry selection). Run `bun run test` — new domain logic in
+`src/lib` requires tests first (red → green).
+
+The broader verification contract is the golden-path checklist, exercised in
+a browser after every change:
 
 1. Sign in / create account / sign out.
 2. Create + edit a project (stats update immediately).
 3. Add + edit a supply (category count, condition badge).
 4. Chat send (message appears and survives reload — polling works).
 5. Export Data → file downloads; Import JSON with it → success notice.
-6. Mobile viewport: sidebar drawer opens/closes; community panel stacks.
+6. Projects tiles → breadcrumb sub-views (Series/Groups/status/Needs
+   Sorting) with back navigation and correct filtered counts.
+7. Supplies tiles → category → type tiles → type-filtered supply list.
+8. Inspiration → quote carousel + spotlight / art-history / partner detail
+   panels (artwork, citations, rights, tags render from the seeded detail).
+9. Mobile viewport: sidebar drawer opens/closes; community panel stacks.
 
 ## Code Quality Standards
 
