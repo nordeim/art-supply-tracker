@@ -1,7 +1,7 @@
 # How-To: Git Push Using the SSH Wrapper (`ssh_git_wrapper_v3.py`)
 
 **Purpose.** Push commits from this checkout to the canonical SSH remote
-`git@github.com:nordeim/design-brand-strategy.git` using a deploy key that is
+`git@github.com:nordeim/art-supply-tracker.git` using a deploy key that is
 **never stored inside the repository** (`.gitignore` already rejects `*.key`
 and `ssh-key.txt`). The wrapper materializes the key into a 0600 temp file
 outside the repo, points `GIT_SSH_COMMAND` at it, authenticates, pushes
@@ -21,7 +21,7 @@ outside the repo, points `GIT_SSH_COMMAND` at it, authenticates, pushes
 ## Quick start (key piped on stdin — no key file on disk)
 
 ```bash
-cd design-brand-strategy
+cd art-supply-tracker
 # … make commits on main …
 cat /secure/path/to/id_ed25519 | python3 docs/ssh_git_wrapper_v3.py --key-stdin
 ```
@@ -66,7 +66,7 @@ python3 docs/ssh_git_wrapper_v3.py --key-file ~/.ssh/id_ed25519 --set-url
 ## Troubleshooting
 
 - **`authentication pre-flight failed`** — the key is wrong, expired, or lacks
-  push rights on `nordeim/design-brand-strategy`. Verify with
+  push rights on `nordeim/art-supply-tracker`. Verify with
   `ssh -i /secure/key -T git@github.com` (expect a greeting naming the repo).
 - **`key does not look like an OpenSSH private key`** — the source had a
   trailing-space-mangled block or a passphrase prompt; re-supply the exact
@@ -79,7 +79,7 @@ python3 docs/ssh_git_wrapper_v3.py --key-file ~/.ssh/id_ed25519 --set-url
 
 ## Relationship to the repo's git contract
 
-- AGENTS.md: remote is `https://github.com/nordeim/design-brand-strategy.git`
+- AGENTS.md: remote is `https://github.com/nordeim/art-supply-tracker.git`
   for fetch; the SSH alias is the push target — this wrapper exists so an
   agent or CI runner can push without a resident `~/.ssh` identity.
 - CLAUDE.md commit standards apply: Conventional Commits, atomic commits,

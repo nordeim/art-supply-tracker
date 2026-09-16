@@ -1,0 +1,100 @@
+// AST Studio — Art Supply Tracker
+// SQLite datasource (sandbox/dev). Per the architecture contract, all enum-like
+// fields are plain strings validated with Zod at the action boundary — SQLite
+// has no native enums, and the boundary is the single validation seam.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  displayName  String
+  passwordHash String
+  // "Studio Memory" — the last workspace the artist touched; rendered in the
+  // community panel and behind the header "What was I working on?" trigger.
+  lastWorkedOn String        @default("")
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  sessions     Session[]
+  projects     Project[]
+  supplies     Supply[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Project {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  // planned | in-progress | on-hold | completed (validated via Zod)
+  status    String   @default("planned")
+  budget    Float?
+  notes     String?
+  // JSON array of photo paths — kept as text because SQLite has no list type.
+  photos    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Supply {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name              String
+  // paint | brushes-tools | pastels | paper | canvas-board | mediums | other
+  category          String   @default("paint")
+  // watercolor | acrylic | oil | gouache | ink | encaustic | other | none
+  type              String?
+  // Free-form like the original ("2", "1.5", "1/2")
+  quantity          String   @default("1")
+  // ok | low | critical-out
+  condition         String   @default("ok")
+  location          String?
+  notes             String?
+  barcode           String?
+  photo             String?
+  assignedProjectId String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  username  String
+  email     String
+  message   String
+  createdAt DateTime @default(now())
+}
+
+model InspirationEntry {
+  id        String  @id @default(cuid())
+  // art_history | artist_quote | studio_spotlight | partner
+  type      String
+  date      String?
+  title     String
+  body      String?
+  author    String?
+  imageUrl  String?
+  sortOrder Int     @default(0)
+}

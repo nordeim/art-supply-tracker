@@ -53,7 +53,7 @@ import subprocess
 import sys
 import tempfile
 
-DEFAULT_REMOTE = "git@github.com:nordeim/design-brand-strategy.git"
+DEFAULT_REMOTE = "git@github.com:nordeim/art-supply-tracker.git"
 DEFAULT_BRANCH = "main"
 KEY_MARKER = "-----BEGIN OPENSSH PRIVATE KEY-----"
 

@@ -1,0 +1,108 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * AST Studio theme — tokens extracted from the production app bundle.
+ * The ast-* palette is the dashboard vocabulary; the shadcn semantic layer is
+ * pinned to the same dark values so dialog/select primitives blend into the
+ * #050009 canvas without a .dark class toggle (the studio is always dark).
+ */
+@theme {
+  /* AST brand palette (verbatim from the live app's generated CSS) */
+  --color-ast-turquoise: #2ec4b6;
+  --color-ast-cyan: #00e6ff;
+  --color-ast-purple: #5a3a8e;
+  --color-ast-lavender: #b78bff;
+  --color-ast-pink: #ff4db8;
+  --color-ast-blue: #4a69d6;
+  --color-ast-electric-blue: #2e64ff;
+  --color-ast-coral: #ff7a7a;
+  --color-ast-yellow: #ffd5a8;
+  --color-ast-body: #fff4d6;
+  --color-ast-muted: #dcc7ff;
+  --color-ast-faint: #9f7fd6;
+  --color-ast-bg-dark: #14182b;
+  --color-ast-deep: #0f1230;
+  --color-ast-bg-blue: #1a2a6c;
+
+  /* Font tokens: var() chains are the one legitimate var() use in @theme. */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  /* shadcn semantic tokens remapped to the AST dark canvas */
+  --color-background: #050009;
+  --color-foreground: #fff4d6;
+  --color-card: #120724;
+  --color-card-foreground: #fff4d6;
+  --color-popover: #0f0a1e;
+  --color-popover-foreground: #fff4d6;
+  --color-primary: #ff4db8;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #1a0f2e;
+  --color-secondary-foreground: #dcc7ff;
+  --color-muted: #1a0f2e;
+  --color-muted-foreground: #dcc7ff;
+  --color-accent: #2ec4b6;
+  --color-accent-foreground: #050009;
+  --color-destructive: #ff7a7a;
+  --color-border: #2a1d4a;
+  --color-input: #2a1d4a;
+  --color-ring: #2ec4b6;
+
+  --radius-sm: 0.75rem;
+  --radius-md: 0.875rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+}
+
+:root {
+  --radius: 1rem;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* Studio scrollbar — thin, theme-matched (used by chat + sidebar drawers). */
+.scrollbar-studio::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scrollbar-studio::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-studio::-webkit-scrollbar-thumb {
+  background: #2a1d4a;
+  border-radius: 3px;
+}
+.scrollbar-studio::-webkit-scrollbar-thumb:hover {
+  background: #3d2b66;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .studio-fade {
+    animation: none !important;
+  }
+}
+
+@keyframes studio-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.studio-fade {
+  animation: studio-fade-in 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
