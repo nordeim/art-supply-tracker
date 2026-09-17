@@ -21,20 +21,62 @@ const emailSchema = z
   .email("Enter a valid email address.")
   .max(254, "Email is too long.");
 
-const passwordSchema = z
+/** The live app's Cognito password policy, in its exact Amplify copy
+ * (r9 — measured on the deployed app: every violated rule renders as its
+ * own line, so the rules must be checked INDEPENDENTLY, never merged).
+ * Client-side this drives the signup policy stack; the signUpSchema mirrors
+ * it server-side as defense in depth. */
+const PASSWORD_POLICY_RULES: Array<{
+  test: (pw: string) => boolean;
+  message: string;
+}> = [
+  { test: (pw) => pw.length >= 8, message: "Password must have at least 8 characters" },
+  { test: (pw) => /[A-Z]/.test(pw), message: "Password must have upper case letters" },
+  { test: (pw) => /[a-z]/.test(pw), message: "Password must have lower case letters" },
+  { test: (pw) => /[0-9]/.test(pw), message: "Password must have numbers" },
+  { test: (pw) => /[^A-Za-z0-9]/.test(pw), message: "Password must have special characters" },
+];
+
+/** Every Cognito rule the given password violates, in the live app's
+ * display order (length → upper → lower → number → special). */
+export function passwordPolicyViolations(password: string): string[] {
+  return PASSWORD_POLICY_RULES.filter((rule) => !rule.test(password)).map(
+    (rule) => rule.message,
+  );
+}
+
+/** Sign-in NEVER policy-checks the password (r9): on the live, a short
+ * password submits and Cognito answers "Incorrect username or password."
+ * The schema therefore only guards against empty/oversized input; every
+ * real mismatch is resolved by the credential check itself. */
+const signInPasswordSchema = z
   .string()
-  // The live app's Amplify copy, byte-for-byte (no trailing period).
-  .min(8, "Password must have at least 8 characters")
-  .max(128, "Password is too long.");
+  .min(1, "Incorrect username or password.")
+  .max(256, "Incorrect username or password.");
 
 export const signInSchema = z.object({
   email: emailSchema,
-  password: passwordSchema,
+  password: signInPasswordSchema,
 });
+
+/** Server-side mirror of the Cognito sign-up policy (r9). Unreachable via
+ * the UI — the browser blocks empty fields natively and the client shows
+ * the rule stack before submitting — but the boundary must not store a
+ * policy-violating password if it is ever called directly. */
+const signUpPasswordSchema = z
+  .string()
+  .min(1, "Password is required.")
+  .max(128, "Password is too long.")
+  .superRefine((pw, ctx) => {
+    const violations = passwordPolicyViolations(pw);
+    if (violations.length > 0) {
+      ctx.addIssue({ code: "custom", message: violations[0] });
+    }
+  });
 
 export const signUpSchema = z.object({
   email: emailSchema,
-  password: passwordSchema,
+  password: signUpPasswordSchema,
   // The live app's Cognito sign-up asks only for email + password (+ client
   // confirm); the display name is derived server-side (see deriveDisplayName).
   displayName: z

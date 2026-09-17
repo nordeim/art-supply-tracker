@@ -27,7 +27,7 @@ Node runs, with zero cloud dependencies.
 
 | Feature | What it does |
 |---|---|
-| 🔐 Auth gate | Sign In / Create Account tabs, show-password toggle, forgot-password notice — scrypt-hashed passwords, httpOnly opaque session cookies, per-IP sign-in rate limiting (5 attempts / minute) |
+| 🔐 Auth gate | Sign In / Create Account tabs, show-password toggles, the live's full Amplify error chrome — server errors (bad credentials, duplicate email, invalid code) in the pale-pink dismissible alert box, client validation inline (the Cognito password-policy rule stack + "Your passwords must match"), native browser validation — scrypt-hashed passwords, httpOnly opaque session cookies, per-IP sign-in rate limiting (5 attempts / minute), and the live's complete Reset Password flow (email view → Code/New Password confirmation view with the live's invalid-code rejection; no mailer exists, so no code can ever be valid — the honest simulation of the deployed behavior) |
 | 🏠 Dashboard | "Today in the Studio" — Partner Spotlight, Art History, Artist Quote, Studio Spotlight cards; the Studio Spotlight card navigates to the inspiration Feed (the live's hardcoded section opens no panel); the header's ✧ memory button is inert, exactly like the live app |
 | 🎨 Projects | Status columns (Planned / In Progress / On Hold / Completed), Needs Sorting bucket, create/edit modal with budget, notes, and photo attachments |
 | 🗂️ Project detail panels | Click a project chip → detail panel with NEW badge, status pill, image well, budget, supply assignment ("Pick supply…" + Assign / × remove), Delete (with confirm), Edit Project — which swaps the panel for the live app's INLINE edit form in the same slot (single column, Planned-first status order, budget defaulting to 0). The sidebar's Recent Projects tiles focus a project the way the live app does: the "All Projects" list opens with that project's panel, and the focus is sticky — every later projects-view entry re-opens it (the live's focusRequest semantics) |
@@ -141,7 +141,7 @@ app's focusRequest semantics), the inspiration rail panels, and the
 import/export surface — leaving the studio pristine. It doubles as the
 regression suite for the post-create navigation contract.
 
-Automated tests (Vitest, 180 tests) pin the studio-domain vocabulary
+Automated tests (Vitest, 202 tests) pin the studio-domain vocabulary
 (per-category supply subcategory lists in the live app's tokens), the
 production bundle's status/condition style maps (project status pills,
 chip borders with per-status hover/selected treatments, supply condition
@@ -149,10 +149,10 @@ pills, the detail-panel condition icon ternary, and the stock-filter switch
 where Low Stock matches low AND critical), the design-token literals
 (the live bundle's compiled utility ground truth), the Zod boundary
 contracts (photo data-URL caps, the Other/Custom free-form subcategory
-flow, and the normalized import gate — array caps, string lengths, and
-vocabulary enums), the export/import wire format (live-app shape with
-`title`/`subcategory`/`supplyIds`/numeric quantities, plus the legacy
-clone shape), the sign-in rate limiter, the inspiration rail section
+flow, the normalized import gate, the Cognito password-policy rules
+and the permissive sign-in schema), the export/import wire format (live-app
+shape with `title`/`subcategory`/`supplyIds`/numeric quantities, plus the
+legacy clone shape), the sign-in rate limiter, the inspiration rail section
 resolver ("art-history-today" / "partner" expand their panels; "quote"
 and the hardcoded "spotlight-kevin-lewis" are the live's inert
 sections), the seeded community-chat fidelity (the live history's five
@@ -163,8 +163,11 @@ Amplify geometry: the responsive logo's intrinsic 1068×269 aspect, the
 Tailwind-v3 radius scale, the zero-webfont InterVariable stack, the sticky
 community header + scroll-container split, the eye-toggle's
 input-segment chrome and near-invisible #0d1a26 icons, the invisible-typing
-input quirk, and the tab strip's 2px gray/turquoise top border), and the
-full action surface
+input quirk, the tab strip's 2px gray/turquoise top border, the
+pale-pink dismissible Amplify alert box with its exact warning/X icon
+paths, the Cognito policy-rule stack, the Reset Password confirmation
+view, the content-width 35px link buttons, and the native-validation
+attribute set), and the full action surface
 against a throwaway SQLite database (CRUD, ownership/IDOR checks,
 assignment, import — including the mid-import failure that must roll back
 without emptying the studio).
@@ -239,7 +242,8 @@ Headline gradient: `linear-gradient(90deg, #00E6FF, #2E64FF, #8D5CFF,
 | Focus-flow parity (r6) | ✅ Complete | Recent Projects rail focuses a project like the live app ("All Projects" list + detail panel, sticky across away-and-back — the live focusRequest semantics, bundle-extracted and DOM-verified), the sidebar's TODAY IN ART HISTORY / PARTNERS rail buttons auto-expand their Feed panels (`resolveInspirationFocus` with the live's inert "quote" / "spotlight-kevin-lewis" quirks pinned by tests), the dashboard Studio Spotlight card navigates to the Feed; live account restored to the reference pristine state (131 tests, 23 smoke checks) |
 | Seed-fidelity pass (r7) | ✅ Complete | Fresh full-surface recon (four-view + mobile VLM comparison of live vs clone — parity; all 15 inspiration entries, chat timestamps, and detail-panel content byte-verified against the live DOM; 23/23 smoke + all gates green) found one residual gap: the seeded chat history had silently "corrected" the live author's two typos. The seed now mirrors the live messages byte-for-byte ("KIm", "brower" — pinned by the new seed-fidelity test so they cannot drift again), local demo DB re-seeded and browser-verified (134 tests, 23 smoke checks) |
 | Pixel-parity pass (r8) | ✅ Complete | Post-hydration DOM recon (the live renders different pre-hydration markup — steady-state measurements are the only ground truth) closed the last visual gaps: responsive header logo (intrinsic 1068×269 aspect, h-10/12/14 classes — header 88px desktop / 126px mobile, logo 222×56 / 159×40), Tailwind-v3 radius scale (rounded-lg/xl = 8/12px, not the scaffold's 16/20px — card histograms identical), zero-webfont font parity (the live ships no webfont; its InterVariable stack resolves to system fonts — the clone's self-hosted Inter had wider metrics that re-wrapped the Studio Memory text), the chat panel's sticky-header + scroll-container split (community rows at the live's exact coordinates), login Amplify chrome fidelity (equal-width tabs with the 2px gray/turquoise top strip, the eye toggle as the input's right segment with near-invisible #0d1a26 icons, #89949f borders, #9ca3af placeholders, the invisible-typing #0d1a26 input quirk, mobile h1 leading 1.25, Confirm-Password signup, Reset Password view, Amplify error copy), mobile chat drawer scrollbar parity, chat auto-scroll removal (the live has none) — 180 tests, 23 smoke checks, VLM parity on all views + login at both viewports |
-| Verification | ✅ Complete | Lint + typecheck + 180 tests + production build clean; VLM screenshot comparison of all four views (plus the mobile dashboard and the login page at both viewports) vs the live app (parity); 23-check functional smoke suite (CRUD, filters, panels, modals, navigation regression, focus flows) |
+| Error-state pass (r9) | ✅ Complete | Fresh full-surface recon (17 VLM comparisons + DOM spot-checks all PARITY — desktop/mobile views, sidebar drawer, login at both viewports) then an error-state deep-dive closed the auth-error chrome: server errors render in the live's Amplify alert box (bg #FCE9E9, 24px warning icon, 50×34 "Dismiss alert" button — byte-identical at (527,702) 414×58, wrapping to 72px, mobile (49,778) 292×72); the signup Cognito password-policy stack (every violated rule as its own contiguous 24px line — "Password must have at least 8 characters" / upper / lower / numbers / special — coexisting with the "Your passwords must match" line, both stacks DOM-identical incl. the card re-centering shift); the duplicate-email copy ("User already exists"); the complete Reset Password confirmation flow (Send code → Code * / New Password / Confirm / Submit / Resend Code view — card 480×485 with every element at the live's coordinates; Submit answers with the live's "Invalid verification code provided, please try again." — no mailer exists so no code can ever be valid, the honest simulation; Resend is a silent no-op); native form validation (no suppressed validation; password inputs required-only like the live); content-width 35px link buttons (Forgot 182px, Back to Sign In 127px, Resend Code 115px — the r8 51px forgot pin was a pre-hydration artifact). 202 tests, 23 smoke checks, all gates green |
+| Verification | ✅ Complete | Lint + typecheck + 202 tests + production build clean; VLM screenshot comparison of all four views (plus the mobile views, the sidebar drawer, and the login page at both viewports — including the error states and the reset-confirmation view) vs the live app (parity); 23-check functional smoke suite (CRUD, filters, panels, modals, navigation regression, focus flows) |
 | Documentation | ✅ Complete | README, AGENTS.md, CLAUDE.md, Project_Architecture_Document.md |
 
 Known intentional gaps (mirroring the original beta's placeholders): the

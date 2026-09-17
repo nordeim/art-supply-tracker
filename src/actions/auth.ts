@@ -96,7 +96,8 @@ export async function signUpAction(
   try {
     const existing = await db.user.findUnique({ where: { email } });
     if (existing) {
-      return validationError("An account with this email already exists. Try signing in.");
+      // The live app's exact Cognito duplicate-account error (r9).
+      return validationError("User already exists");
     }
     const user = await db.user.create({
       data: {
@@ -112,7 +113,8 @@ export async function signUpAction(
     // Two concurrent sign-ups with the same email race past the findUnique
     // check; surface the friendly duplicate-account copy, not an INTERNAL.
     if (isUniqueConstraintViolation(error)) {
-      return validationError("An account with this email already exists. Try signing in.");
+      // The live app's exact Cognito duplicate-account error (r9).
+      return validationError("User already exists");
     }
     console.error("[auth:signUp] failed", { email: email.slice(0, 3) + "***", error });
     return internalError();

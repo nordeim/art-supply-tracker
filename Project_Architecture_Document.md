@@ -1,9 +1,9 @@
-# AST Studio — Master Project Architecture Document (PAD) v1.7
+# AST Studio — Master Project Architecture Document (PAD) v1.8
 
 **Classification:** Internal Engineering Reference
 **Status:** DEFINITIVE, PRODUCTION-LOCKED BLUEPRINT
 **Companion Document:** `README.md` (onboarding), `AGENTS.md` (agent instructions), `CLAUDE.md` (engineering standards)
-**Last Updated:** 2026-09-17 (r8)
+**Last Updated:** 2026-09-17 (r9)
 **Audience:** Senior Engineers, Tech Leads, DevOps, and Onboarding Engineers
 **Rule:** Every architectural decision in this document traces to a specific rationale.
 Nothing is here "because it's popular."
@@ -119,6 +119,39 @@ Nothing is here "because it's popular."
   pattern) plus the extended `design-tokens.test.ts`; 180 tests total,
   23 smoke checks, VLM parity on all four views and the login page at
   both viewports.
+- `[R9]` Session-13 error-state pass (2026-09-17): a fresh full-surface
+  recon (17 VLM comparisons — desktop/mobile views, the mobile sidebar
+  drawer, login at both viewports — plus DOM spot-checks: header 88px /
+  126px, logo 222×56 / 159×40, chat structure rows, tab strip, password
+  row — all byte-identical) confirmed the r8 tree at parity, then an
+  error-state deep-dive closed the auth-error chrome: SERVER auth errors
+  (bad credentials, duplicate email, invalid reset code) now render in
+  the live's Amplify alert box (div[role=alert], flex row, 16px gap,
+  px-4 py-3, bg #FCE9E9, content-driven height 58/72px, the exact 24px
+  warning-icon and 16px X-icon SVG paths, a working 50×34 "Dismiss
+  alert" button — measured byte-identical at (527,702) 414×58 desktop
+  and (49,778) 292×72 mobile); signup CLIENT validation renders the
+  Cognito password-policy stack (one contiguous 24px line per violated
+  rule — 8 chars / upper / lower / number / special, ALL violations at
+  once via `passwordPolicyViolations` in `src/lib/validation.ts`,
+  coexisting with the "Your passwords must match" line; both stacks
+  DOM-verified identical incl. the centered-card re-settling shift);
+  the duplicate-email copy is the live's exact "User already exists";
+  the Reset Password flow is complete (Send code with a valid email →
+  the confirmation view: Code * / New Password / Confirm Password /
+  Submit / Resend Code — card 480×485 with every element at the live's
+  coordinates; Submit answers with the live's "Invalid verification
+  code provided, please try again." because no mailer exists so no code
+  can ever be valid — the honest simulation; Resend is a silent no-op;
+  the r8 static support notice is gone); the auth forms use native
+  browser validation (password inputs `required`-only, matching the
+  live's attribute set) and `signInSchema` never policy-checks (the
+  live submits short passwords and answers "Incorrect username or
+  password."); the link buttons are content-width 35px centered
+  (Forgot 182px, Back to Sign In 127px, Resend Code 115px — the r8
+  51px forgot pin was a pre-hydration artifact). Pinned by the extended
+  `login-fidelity.test.ts` + `validation.test.ts`; 202 tests total,
+  23 smoke checks, all gates green.
 
 ---
 
@@ -783,7 +816,7 @@ CSS — distinct from the utility purple.
 | Category | Count | Location | Framework |
 |---|---|---|---|
 | Static | — | `eslint .` / `tsc --noEmit` | ESLint 9 + TS 5.9 strict |
-| Automated unit | 157 tests | `src/lib/*.test.ts` — studio-domain (incl. bundle-pinned style maps + edit-panel budget/option mapping), design-tokens (globals.css literal pinning incl. the Tailwind-v3 radius scale and the zero-webfont stack), validation (incl. the normalized import gate), export-payload, rate-limit, inspiration (incl. the rail section resolver with the live's inert "quote" / "spotlight-kevin-lewis" quirks), seed-fidelity (scripts/seed.ts pinned to the live chat byte-for-byte, typos included), login-fidelity + chat-fidelity (the live's measured Amplify login chrome, logo aspect, and chat-panel structure) | Vitest (node env, `@/` alias) |
+| Automated unit | 179 tests | `src/lib/*.test.ts` — studio-domain (incl. bundle-pinned style maps + edit-panel budget/option mapping), design-tokens (globals.css literal pinning incl. the Tailwind-v3 radius scale and the zero-webfont stack), validation (incl. the normalized import gate, the Cognito password-policy rules + permissive sign-in schema), export-payload, rate-limit, inspiration (incl. the rail section resolver with the live's inert "quote" / "spotlight-kevin-lewis" quirks), seed-fidelity (scripts/seed.ts pinned to the live chat byte-for-byte, typos included), login-fidelity + chat-fidelity (the live's measured Amplify login chrome incl. the alert-box error chrome, policy stack, reset-confirmation view, and content-width link buttons; logo aspect; chat-panel structure) | Vitest (node env, `@/` alias) |
 | Automated action | 23 tests | `src/actions/studio.test.ts` (throwaway SQLite DB, mocked auth seam — incl. the mid-import rollback contract) | Vitest |
 | Manual golden paths | 11 flows | README "Testing & Quality" | Browser-executed (pinned by `scripts/smoke_functional.py`, 23 checks) |
 | CI verify-gate | — | `.github/workflows/verify-gate.yml` (lint + typecheck + test + build) | GitHub Actions |
@@ -935,6 +968,7 @@ public exposure).
 | Medium | ~~Font build mismatch re-wrapped text~~ | The clone's self-hosted next/font Inter has wider advance widths than the live's system-font resolution: the Studio Memory text wrapped to 2 lines and header pills inflated | **Resolved 2026-09-17 (r8)** — zero-webfont parity: the live's exact InterVariable stack, no `next/font` |
 | Medium | ~~Chat panel structure nested~~ | One `space-y-3` wrapper (vs the live's sticky header + scroll-container split) rendered the whole community column 16px high; the clone also auto-scrolled new messages (the live does not) | **Resolved 2026-09-17 (r8)** — `sticky top-4` header + `max-h` scroll container; auto-scroll removed; pinned by `chat-fidelity.test.ts` |
 | Medium | ~~Login Amplify chrome incomplete~~ | Missing eye-segment borders, wrong grays (#89949b vs #89949f), visible typed text (live renders invisible #0d1a26), no tab-strip top border, mobile h1 leading 1.25 | **Resolved 2026-09-17 (r8)** — all pinned by `login-fidelity.test.ts`; pixel-verified against the live |
+| High | ~~Auth error chrome and reset flow diverged~~ | Server errors rendered as bare paragraphs (the live uses the Amplify alert box with icon + dismiss); the reset flow dead-ended on a static support notice instead of the live's Code/New Password confirmation view; signup lacked the Cognito password-policy rule stack; duplicate-email copy diverged; link buttons were full-width | **Resolved 2026-09-17 (r9)** — Amplify alert box (bg #FCE9E9, warning/X SVG paths, working dismiss), the full confirmation view (Submit answers with the live's invalid-code rejection — no mailer, the honest simulation), the policy-rule stack + mismatch line, "User already exists" copy, native validation, content-width 35px link buttons; all DOM-verified byte-identical against the live and pinned by tests |
 | Low | View state not URL-addressable | Browser back doesn't switch studio views | Accepted (ADR-001 consequence) |
 | Low | Chat avatar colors keyed to seeded usernames | New users get the default purple avatar | Accepted (matches original's initials behavior) |
 | Low | SQLite single-writer | No multi-process horizontal scale | Accepted (ADR-002); swap to Postgres by changing `provider` + URL if ever needed |

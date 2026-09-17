@@ -131,7 +131,7 @@ not secret — rotate before any public deployment).
 ### Testing Strategy
 
 Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
-`src/**/*.test.ts`). The suite (180 tests) pins:
+`src/**/*.test.ts`). The suite (202 tests) pins:
 
 - **Studio-domain vocabulary** — the per-category `SUPPLY_TYPE_LISTS` in the
   live app's tokens (Paint/Brush/Pastel/Paper/Canvas/Medium/Other categories,
@@ -156,8 +156,12 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
 - **Boundary contracts** (`validation.test.ts`) — photo data-URL caps
   (client 300 KB ↔ server 400k chars), the Other/Custom free-form
   subcategory flow (live parity: the pickers are the vocabulary guard, the
-  schema enforces type/trim/length), and the import schema's acceptance of
-  the live wire shape.
+  schema enforces type/trim/length), the import schema's acceptance of
+  the live wire shape, the Cognito password-policy rules
+  (`passwordPolicyViolations`: every violated rule reported independently,
+  in the live's exact copy), the server-side sign-up policy mirror, and
+  the permissive sign-in schema (a short password submits and fails with
+  "Incorrect username or password." — exactly the live behavior).
 - **Wire format** (`export-payload.test.ts`) — the export payload's exact
   field set (`title`, `subcategory`, `supplyIds`, numeric `qty`/`quantity`/
   `quantityValue`, `isNew`, status omitted when ok, unset `budget`/`barcode`
@@ -190,9 +194,15 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
   with the 2px gray/turquoise top strip, the eye toggle as the input's
   right segment with near-invisible `#0d1a26` icons, `#89949f` borders,
   `#9ca3af` placeholders, the invisible-typing `#0d1a26` input quirk, the
-  mobile h1 leading 1.25), the sticky community header + scroll-container
-  split (the sticky `top-4` displacement is load-bearing), and the
-  absence of chat auto-scroll (the live has none).
+  mobile h1 leading 1.25), the two-tier error chrome (SERVER errors in the
+  pale-pink `#FCE9E9` dismissible alert box with the exact warning/X SVG
+  paths; CLIENT validation inline — the Cognito policy-rule stack and the
+  mismatch line), the Reset Password confirmation view (Code * / New
+  Password / Confirm / Submit / Resend Code; the invalid-code alert copy;
+  no support notice), the content-width 35px link buttons, the
+  native-validation attribute set, the sticky community header +
+  scroll-container split (the sticky `top-4` displacement is load-bearing),
+  and the absence of chat auto-scroll (the live has none).
 - **Action layer** (`src/actions/studio.test.ts`) — the mutation surface
   against a throwaway SQLite database with the auth seam mocked: CRUD,
   ownership/IDOR checks, supply assignment, delete-side-effects,

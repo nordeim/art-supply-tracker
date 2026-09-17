@@ -15,17 +15,33 @@
  *   inactive #304050.
  * - Password row: the eye toggle is a 50px sibling OUTSIDE the input
  *   (the live's Amplify layout), not an icon inside the field.
- * - Submit: 42px, 16px/700 #FE5FA7. Errors render in the live's #660000
- *   at 16px with the exact Amplify copy ("Incorrect username or
- *   password.", "Your passwords must match").
+ * - Submit: 42px, 16px/700 #FE5FA7. SERVER auth errors render as the
+ *   live's Amplify ALERT BOX (r9, DOM-measured): div[role=alert], flex row,
+ *   16px gap, px-4 py-3, bg #FCE9E9, no radius, content-driven height
+ *   (58px one line / 72px two), a 24px warning icon and a 50x34 "Dismiss
+ *   alert" button (both in the live's #660000); dismissing restores the
+ *   no-error layout. CLIENT validation stays inline at 16px #660000: the
+ *   Cognito password-policy stack (contiguous 24px lines after the
+ *   Password field, one per violated rule — "Password must have at least 8
+ *   characters" etc.) and "Your passwords must match" after Confirm.
+ * - Forms rely on NATIVE validation — the browser blocks empty and
+ *   malformed-email submissions (password inputs carry `required` only; the
+ *   live has no min/maxLength attributes).
  * - Create Account asks Email / Password / Confirm Password (the live's
  *   Cognito form — no display name; the action derives it from the email
  *   local part).
  * - "Forgot your password?" swaps the card to the live's Reset Password
  *   view (32px/500 #0d1a26 heading — the live's dark-on-dark quirk —
  *   "Enter your email" label, pink "Send code", teal "Back to Sign In",
- *   tabs hidden). This deployment has no mailer (ADR-003), so Send code
- *   surfaces the support notice instead of emailing a code.
+ *   tabs hidden). A valid email then swaps to the live's CONFIRMATION view
+ *   ("Code *", New Password + Confirm Password with eyes, pink Submit,
+ *   teal "Resend Code" — r9). No mailer exists (ADR-003), so no code can
+ *   ever be valid: Submit answers with the live's exact Cognito rejection
+ *   ("Invalid verification code provided, please try again.") and Resend
+ *   is a silent no-op, exactly like the deployed app's code redelivery.
+ * - Link buttons are CONTENT-WIDTH 35px centered (r9): Forgot 182px, Back
+ *   to Sign In 127px, Resend Code 115px — the r8 51px full-width forgot pin
+ *   was a pre-hydration artifact.
  *
  * Submits through Server Actions and refreshes the route on success so the
  * server component re-renders with the session cookie present.
@@ -36,9 +52,60 @@ import Image from "next/image";
 import { Eye, EyeOff } from "lucide-react";
 
 import { signInAction, signUpAction } from "@/actions/auth";
+import { passwordPolicyViolations } from "@/lib/validation";
 import type { ActionResult } from "@/lib/result";
 
-type Mode = "signin" | "signup" | "reset";
+type Mode = "signin" | "signup" | "reset" | "reset-confirm";
+
+/** The live's AWS-Amplify error alert, chrome-measured on the deployed app
+ * (r9): a pale-pink full-width box (#FCE9E9, no radius/border) with the 24px
+ * warning icon, the 16px #660000 message in a flex:1 body, and a 50x34
+ * dismiss button (transparent, 4px radius, X icon). The height is
+ * content-driven — the 34px button + 24px v-padding sets the 58px one-line
+ * floor; a wrapped message grows it (the live's invalid-code alert renders
+ * 72px). Dismissing collapses it back to the no-error layout. */
+function AmplifyAlert({
+  message,
+  onDismiss,
+}: {
+  message: string;
+  onDismiss: () => void;
+}) {
+  return (
+    <div
+      role="alert"
+      className="flex items-center gap-4 bg-[#FCE9E9] px-4 py-3"
+    >
+      <span
+        aria-hidden="true"
+        className="shrink-0 leading-none text-[#660000]"
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path
+            d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM13 17H11V15H13V17ZM13 13H11V7H13V13Z"
+            fill="currentColor"
+          />
+        </svg>
+      </span>
+      <div className="flex-1">
+        <p className="text-base text-[#660000]">{message}</p>
+      </div>
+      <button
+        type="button"
+        aria-label="Dismiss alert"
+        onClick={onDismiss}
+        className="flex h-[34px] shrink-0 items-center justify-center rounded-[4px] border border-transparent px-4 font-bold text-[#660000]"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path
+            d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z"
+            fill="currentColor"
+          />
+        </svg>
+      </button>
+    </div>
+  );
+}
 
 const inputClasses =
   "h-[42px] w-full rounded-[4px] border border-[#89949f] bg-transparent px-3 text-sm text-[#0d1a26] placeholder:text-[#9ca3af] focus:border-[#047d95] focus:outline-none focus:ring-2 focus:ring-[#047d95]/30";
@@ -58,7 +125,23 @@ export function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** The Cognito password-policy stack — every violated rule renders as
+   * its own inline line directly after the Password field (the live app
+   * shows ALL violations at once, never just the first). */
+  const [policyErrors, setPolicyErrors] = useState<string[]>([]);
+  /** The "Your passwords must match" line (client-side confirmation check). */
+  const [mismatch, setMismatch] = useState(false);
+  /** The reset-confirmation view's code field. */
+  const [resetCode, setResetCode] = useState("");
   const [pending, startTransition] = useTransition();
+
+  /** Clears every client-validation surface (mode switches reset the card
+   * to its pristine state, like the live's Amplify route changes). */
+  function clearValidation() {
+    setError(null);
+    setPolicyErrors([]);
+    setMismatch(false);
+  }
 
   function handleResult(result: ActionResult<{ email: string; displayName: string }>) {
     if (result.ok) {
@@ -71,7 +154,7 @@ export function LoginScreen() {
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
+    clearValidation();
 
     if (mode === "signin") {
       startTransition(async () => {
@@ -79,11 +162,14 @@ export function LoginScreen() {
       });
       return;
     }
-    if (password !== confirmPassword) {
-      // The live app's Amplify copy for a mismatched confirmation.
-      setError("Your passwords must match");
-      return;
-    }
+    // The live's Cognito client validation: every violated policy rule
+    // stacks after the Password field AND the confirmation mismatch shows
+    // after Confirm — both at once when both are broken (submission
+    // blocked until the form is clean).
+    const violations = passwordPolicyViolations(password);
+    if (violations.length > 0) setPolicyErrors(violations);
+    if (password !== confirmPassword) setMismatch(true);
+    if (violations.length > 0 || password !== confirmPassword) return;
     startTransition(async () => {
       handleResult(await signUpAction({ email, password }));
     });
@@ -91,12 +177,29 @@ export function LoginScreen() {
 
   function onResetSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
-    // No mailer exists on this deployment (ADR-003) — the live app would
-    // email a confirmation code here; surface the support path instead.
-    setError(
-      "Password reset is not configured for this deployment — email support@artsupplytracker.com from your account address.",
-    );
+    // The live's Amplify flow: a valid email swaps the card to the
+    // confirmation view (Cognito emails a code from here). Invalid formats
+    // never reach this handler — native type=email validation blocks them,
+    // exactly like the deployed form.
+    clearValidation();
+    setPassword("");
+    setConfirmPassword("");
+    setResetCode("");
+    setMode("reset-confirm");
+  }
+
+  function onResetConfirmSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    clearValidation();
+    // Same client validation as sign-up: the policy stack after New
+    // Password, the mismatch after Confirm.
+    const violations = passwordPolicyViolations(password);
+    if (violations.length > 0) setPolicyErrors(violations);
+    if (password !== confirmPassword) setMismatch(true);
+    if (violations.length > 0 || password !== confirmPassword) return;
+    // No mailer exists (ADR-003) — no code was ever emailed, so no code can
+    // be valid. Cognito's exact rejection, measured on the live app.
+    setError("Invalid verification code provided, please try again.");
   }
 
   /** The live's Amplify show-password control: an eye icon announced as a
@@ -172,7 +275,7 @@ export function LoginScreen() {
          * Amplify shadow, zero card padding (the form carries it). */}
         <section className="w-full" aria-label="Account access">
           <div className="mx-auto w-full max-w-[480px] border border-[#5B3FD3] bg-[#120724] shadow-[0_2px_6px_rgba(13,26,38,0.15)] pb-3">
-            {mode !== "reset" ? (
+            {mode !== "reset" && mode !== "reset-confirm" ? (
               <>
                 <div
                   role="tablist"
@@ -185,7 +288,7 @@ export function LoginScreen() {
                     aria-selected={mode === "signin"}
                     onClick={() => {
                       setMode("signin");
-                      setError(null);
+                      clearValidation();
                     }}
                     className={`flex h-[50px] flex-1 items-center justify-center border-t-2 text-base font-bold transition ${
                       mode === "signin"
@@ -201,7 +304,7 @@ export function LoginScreen() {
                     aria-selected={mode === "signup"}
                     onClick={() => {
                       setMode("signup");
-                      setError(null);
+                      clearValidation();
                     }}
                     className={`flex h-[50px] flex-1 items-center justify-center border-t-2 text-base font-bold transition ${
                       mode === "signup"
@@ -213,7 +316,7 @@ export function LoginScreen() {
                   </button>
                 </div>
 
-                <form onSubmit={onSubmit} noValidate className="mt-3 space-y-4 px-8 pt-8 pb-8">
+                <form onSubmit={onSubmit} className="mt-3 space-y-4 px-8 pt-8 pb-8">
                   <div>
                     <label htmlFor="email" className={labelClasses}>
                       Email
@@ -224,7 +327,6 @@ export function LoginScreen() {
                       type="email"
                       autoComplete="email"
                       required
-                      maxLength={254}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="Enter your Email"
@@ -243,8 +345,6 @@ export function LoginScreen() {
                         type={showPassword ? "text" : "password"}
                         autoComplete={mode === "signin" ? "current-password" : "new-password"}
                         required
-                        minLength={8}
-                        maxLength={128}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="Enter your Password"
@@ -253,6 +353,19 @@ export function LoginScreen() {
                       {renderEyeToggle(showPassword, () => setShowPassword((v) => !v))}
                     </div>
                   </div>
+
+                  {/* The live's Cognito policy stack: every violated rule as
+                   * its own contiguous 24px line, directly under the Password
+                   * field (measured on the live: no vertical gaps). */}
+                  {mode === "signup" && policyErrors.length > 0 && (
+                    <div>
+                      {policyErrors.map((message) => (
+                        <p key={message} className="text-base text-[#660000]">
+                          {message}
+                        </p>
+                      ))}
+                    </div>
+                  )}
 
                   {mode === "signup" && (
                     <div>
@@ -266,7 +379,6 @@ export function LoginScreen() {
                           type={showConfirmPassword ? "text" : "password"}
                           autoComplete="new-password"
                           required
-                          maxLength={128}
                           value={confirmPassword}
                           onChange={(e) => setConfirmPassword(e.target.value)}
                           placeholder="Please confirm your Password"
@@ -280,10 +392,18 @@ export function LoginScreen() {
                     </div>
                   )}
 
-                  {error && (
-                    <p role="alert" className="text-base text-[#660000]">
-                      {error}
+                  {/* The live's confirmation mismatch line (client-side,
+                   * inline — never in the alert box). */}
+                  {mode === "signup" && mismatch && (
+                    <p className="text-base text-[#660000]">
+                      Your passwords must match
                     </p>
+                  )}
+
+                  {/* Server auth errors render in the live's Amplify alert
+                   * box (bad credentials, duplicate email). */}
+                  {error && (
+                    <AmplifyAlert message={error} onDismiss={() => setError(null)} />
                   )}
 
                   <button
@@ -301,21 +421,23 @@ export function LoginScreen() {
                   </button>
 
                   {mode === "signin" && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setError(null);
-                        setMode("reset");
-                      }}
-                      className="flex h-[51px] w-full items-center justify-center text-sm font-bold text-[#047d95]"
-                    >
-                      Forgot your password?
-                    </button>
+                    <div className="flex w-full justify-center pb-4">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          clearValidation();
+                          setMode("reset");
+                        }}
+                        className="flex h-[35px] items-center justify-center border border-transparent px-3 text-sm font-bold text-[#047d95]"
+                      >
+                        Forgot your password?
+                      </button>
+                    </div>
                   )}
                 </form>
               </>
-            ) : (
-              <form onSubmit={onResetSubmit} noValidate className="space-y-4 px-8 pt-8 pb-5">
+            ) : mode === "reset" ? (
+              <form onSubmit={onResetSubmit} className="space-y-4 px-8 pt-8 pb-5">
                 {/* The live's Amplify heading renders #0d1a26 on the
                  * #120724 card — dark on dark, an authentic quirk kept
                  * deliberately (do not "fix" the contrast). */}
@@ -332,19 +454,12 @@ export function LoginScreen() {
                     type="email"
                     autoComplete="email"
                     required
-                    maxLength={254}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Enter your email"
                     className={inputClasses}
                   />
                 </div>
-
-                {error && (
-                  <p role="alert" className="text-base text-[#660000]">
-                    {error}
-                  </p>
-                )}
 
                 <button
                   type="submit"
@@ -353,16 +468,121 @@ export function LoginScreen() {
                   Send code
                 </button>
 
+                <div className="flex w-full justify-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearValidation();
+                      setMode("signin");
+                    }}
+                    className="flex h-[35px] items-center justify-center border border-transparent px-3 text-sm font-bold text-[#047d95]"
+                  >
+                    Back to Sign In
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={onResetConfirmSubmit} className="space-y-4 px-8 pt-8 pb-5">
+                {/* The live's confirmation view (after "Send code" with a
+                 * valid email): Code + New Password + Confirm + Submit +
+                 * Resend Code — same dark-on-dark heading quirk. */}
+                <h3 className="text-[32px] font-medium leading-tight text-[#0d1a26]">
+                  Reset Password
+                </h3>
+                <div>
+                  <label htmlFor="reset-code" className={labelClasses}>
+                    Code *
+                  </label>
+                  <input
+                    id="reset-code"
+                    name="reset-code"
+                    type="text"
+                    required
+                    value={resetCode}
+                    onChange={(e) => setResetCode(e.target.value)}
+                    className={inputClasses}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="new-password" className={labelClasses}>
+                    New Password
+                  </label>
+                  <div className="flex items-center">
+                    <input
+                      id="new-password"
+                      name="new-password"
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="new-password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className={`${passwordInputClasses} min-w-0 flex-1`}
+                    />
+                    {renderEyeToggle(showPassword, () => setShowPassword((v) => !v))}
+                  </div>
+                </div>
+
+                {policyErrors.length > 0 && (
+                  <div>
+                    {policyErrors.map((message) => (
+                      <p key={message} className="text-base text-[#660000]">
+                        {message}
+                      </p>
+                    ))}
+                  </div>
+                )}
+
+                <div>
+                  <label htmlFor="confirm-password" className={labelClasses}>
+                    Confirm Password
+                  </label>
+                  <div className="flex items-center">
+                    <input
+                      id="confirm-password"
+                      name="confirm-password"
+                      type={showConfirmPassword ? "text" : "password"}
+                      autoComplete="new-password"
+                      required
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className={`${passwordInputClasses} min-w-0 flex-1`}
+                    />
+                    {renderEyeToggle(
+                      showConfirmPassword,
+                      () => setShowConfirmPassword((v) => !v),
+                    )}
+                  </div>
+                </div>
+
+                {mismatch && (
+                  <p className="text-base text-[#660000]">
+                    Your passwords must match
+                  </p>
+                )}
+
+                {error && (
+                  <AmplifyAlert message={error} onDismiss={() => setError(null)} />
+                )}
+
                 <button
-                  type="button"
-                  onClick={() => {
-                    setError(null);
-                    setMode("signin");
-                  }}
-                  className="flex h-[35px] w-full items-center justify-center text-sm font-bold text-[#047d95]"
+                  type="submit"
+                  className="h-[42px] w-full rounded-[4px] bg-[#FE5FA7] px-4 text-base font-bold text-white transition hover:bg-[#fe77b6]"
                 >
-                  Back to Sign In
+                  Submit
                 </button>
+
+                {/* The live's code-redelivery link — a silent no-op here (no
+                 * mailer, ADR-003), exactly like the deployed app's
+                 * "Resend Code" click with nothing observable changing. */}
+                <div className="flex w-full justify-center">
+                  <button
+                    type="button"
+                    onClick={() => {}}
+                    className="flex h-[35px] items-center justify-center border border-transparent px-3 text-sm font-bold text-[#047d95]"
+                  >
+                    Resend Code
+                  </button>
+                </div>
               </form>
             )}
           </div>

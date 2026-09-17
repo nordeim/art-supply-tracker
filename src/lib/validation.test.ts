@@ -4,7 +4,9 @@ import {
   deriveDisplayName,
   importPayloadSchema,
   normalizedImportPayloadSchema,
+  passwordPolicyViolations,
   projectInputSchema,
+  signInSchema,
   signUpSchema,
   supplyInputSchema,
 } from "@/lib/validation";
@@ -377,5 +379,70 @@ describe("signUpSchema + deriveDisplayName (live Cognito form shape)", () => {
     // Unreachable in practice (emailSchema runs first) — documents the
     // degradation: empty local part falls back to "Artist".
     expect(deriveDisplayName("@localhost")).toBe("Artist");
+  });
+});
+
+describe("passwordPolicyViolations (live Cognito rules, r9)", () => {
+  it("returns every violated rule in the live's copy, byte-for-byte", () => {
+    expect(passwordPolicyViolations("")).toEqual([
+      "Password must have at least 8 characters",
+      "Password must have upper case letters",
+      "Password must have lower case letters",
+      "Password must have numbers",
+      "Password must have special characters",
+    ]);
+  });
+
+  it("reports each rule independently (the live stacks all violations)", () => {
+    // "abc" on the live: length, upper, number, special (lowercase present).
+    expect(passwordPolicyViolations("abc")).toEqual([
+      "Password must have at least 8 characters",
+      "Password must have upper case letters",
+      "Password must have numbers",
+      "Password must have special characters",
+    ]);
+    // "ABC123!A" on the live: only the lowercase rule is missing.
+    expect(passwordPolicyViolations("ABC123!A")).toEqual([
+      "Password must have lower case letters",
+    ]);
+  });
+
+  it("passes a compliant password with no violations", () => {
+    expect(passwordPolicyViolations("StudioDemo2026!")).toEqual([]);
+  });
+});
+
+describe("signUpSchema password policy (server-side mirror of the live, r9)", () => {
+  it("rejects a policy-violating password with the first violated rule", () => {
+    const parsed = signUpSchema.safeParse({
+      email: "artist@example.com",
+      password: "abc",
+    });
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      expect(parsed.error.issues[0]?.message).toBe(
+        "Password must have at least 8 characters",
+      );
+    }
+  });
+
+  it("still enforces the length ceiling (defense in depth)", () => {
+    const parsed = signUpSchema.safeParse({
+      email: "artist@example.com",
+      password: "Aa1!" + "a".repeat(130),
+    });
+    expect(parsed.success).toBe(false);
+  });
+});
+
+describe("signInSchema is permissive (live behavior: attempt and fail, r9)", () => {
+  it("accepts a short password — sign-in never policy-checks client-side", () => {
+    // On the live, signing in with "abc" submits and Cognito answers
+    // "Incorrect username or password." — the schema must not pre-reject.
+    const parsed = signInSchema.safeParse({
+      email: "artist@example.com",
+      password: "abc",
+    });
+    expect(parsed.success).toBe(true);
   });
 });
