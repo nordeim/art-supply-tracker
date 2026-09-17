@@ -8,9 +8,14 @@ import {
   SUPPLY_CONDITIONS,
   SUPPLY_TYPE_LISTS,
   isNewItem,
+  matchesStockFilter,
   parseQuantityValue,
+  projectChipStatusClasses,
+  projectStatusPillClasses,
   subcategoryOptionsFor,
   supplyConditionLabel,
+  supplyConditionPill,
+  supplyDetailConditionIcon,
   supplyTypeListFor,
 } from "@/lib/studio-domain";
 
@@ -211,5 +216,139 @@ describe("parseQuantityValue", () => {
     expect(parseQuantityValue("")).toBeNull();
     expect(parseQuantityValue("1/0")).toBeNull();
     expect(parseQuantityValue("2/3/4")).toBeNull();
+  });
+});
+
+/**
+ * Stock filter + status style maps — pinned to the live app's bundle
+ * (studiobeta.artsupplytracker.com/assets/index-DMkKcyoM.js, extracted
+ * 2026-09-17). The live "Low Stock" filter matches low OR critical
+ * (verified in the Yz component's filter switch); the style maps are the
+ * live jz/Jz/Mz constants, so chips and pills cannot drift from production.
+ */
+describe("stock filters", () => {
+  it("Low Stock matches low AND critical (live behavior)", () => {
+    expect(matchesStockFilter("low", "low")).toBe(true);
+    expect(matchesStockFilter("critical", "low")).toBe(true);
+    expect(matchesStockFilter("ok", "low")).toBe(false);
+  });
+
+  it("Out of Stock matches critical only", () => {
+    expect(matchesStockFilter("critical", "out")).toBe(true);
+    expect(matchesStockFilter("low", "out")).toBe(false);
+    expect(matchesStockFilter("ok", "out")).toBe(false);
+  });
+
+  it("All matches every condition", () => {
+    expect(matchesStockFilter("ok", "all")).toBe(true);
+    expect(matchesStockFilter("low", "all")).toBe(true);
+    expect(matchesStockFilter("critical", "all")).toBe(true);
+    expect(matchesStockFilter("weird", "all")).toBe(true);
+  });
+});
+
+describe("project status pill styles (live jz map)", () => {
+  it("maps each status to its live pill classes", () => {
+    expect(projectStatusPillClasses("planned")).toBe(
+      "bg-ast-electric-blue/20 text-ast-electric-blue",
+    );
+    expect(projectStatusPillClasses("in-progress")).toBe("bg-ast-cyan/20 text-ast-cyan");
+    expect(projectStatusPillClasses("on-hold")).toBe("bg-ast-yellow/20 text-ast-yellow");
+    expect(projectStatusPillClasses("completed")).toBe("bg-ast-lavender/20 text-ast-lavender");
+  });
+
+  it("falls back to coral for unknown statuses", () => {
+    expect(projectStatusPillClasses("mystery")).toBe("bg-ast-coral/20 text-ast-coral");
+  });
+});
+
+describe("project chip status styles (live Mz map)", () => {
+  it("maps planned to the electric-blue chip treatment", () => {
+    expect(projectChipStatusClasses("planned", false)).toBe(
+      "border-ast-electric-blue/30 bg-ast-electric-blue/5 hover:border-ast-electric-blue/55 hover:bg-ast-electric-blue/10",
+    );
+    expect(projectChipStatusClasses("planned", true)).toBe(
+      "border-ast-electric-blue/70 bg-ast-electric-blue/15 shadow-ast-blue",
+    );
+  });
+
+  it("maps in-progress to the cyan treatment with ast-cyan selected shadow", () => {
+    expect(projectChipStatusClasses("in-progress", false)).toBe(
+      "border-ast-cyan/30 bg-ast-cyan/5 hover:border-ast-cyan/55 hover:bg-ast-cyan/10",
+    );
+    expect(projectChipStatusClasses("in-progress", true)).toBe(
+      "border-ast-cyan/70 bg-ast-cyan/15 shadow-ast-cyan",
+    );
+  });
+
+  it("maps on-hold to the yellow treatment with warm selected shadow", () => {
+    expect(projectChipStatusClasses("on-hold", true)).toBe(
+      "border-ast-yellow/70 bg-ast-yellow/15 shadow-ast-warm",
+    );
+  });
+
+  it("maps completed to the lavender treatment", () => {
+    expect(projectChipStatusClasses("completed", false)).toBe(
+      "border-ast-lavender/25 bg-ast-lavender/5 hover:border-ast-lavender/45 hover:bg-ast-lavender/10",
+    );
+    expect(projectChipStatusClasses("completed", true)).toBe(
+      "border-ast-lavender/60 bg-ast-lavender/10 shadow-ast-lavender",
+    );
+  });
+
+  it("falls back to the neutral purple supply-chip treatment", () => {
+    expect(projectChipStatusClasses("mystery", false)).toBe(
+      "border-ast-purple/30 bg-ast-purple/5 hover:border-ast-lavender/40 hover:bg-ast-lavender/5",
+    );
+  });
+});
+
+describe("supply condition pill styles (live Jz map)", () => {
+  it("renders ok as the fallback ? pill", () => {
+    // The live app stores no status for OK supplies, so the pill renders the
+    // Jz fallback (label '?', white/10 bg). Our ok maps onto that rendering.
+    expect(supplyConditionPill("ok")).toEqual({
+      label: "?",
+      classes: "bg-white/10 text-ast-faint",
+    });
+  });
+
+  it("renders low and critical as pink label pills", () => {
+    expect(supplyConditionPill("low")).toEqual({
+      label: "Low",
+      classes: "bg-ast-pink/20 text-ast-pink",
+    });
+    expect(supplyConditionPill("critical")).toEqual({
+      label: "Critical",
+      classes: "bg-ast-pink/20 text-ast-pink",
+    });
+  });
+});
+
+describe("supply detail condition icon (live detail header)", () => {
+  it("matches the live undefined-status rendering for ok", () => {
+    // Live data has no status string for OK, which lands in the pink else
+    // branch with an empty label — users see a pink warning glyph only.
+    expect(supplyDetailConditionIcon("ok")).toEqual({
+      icon: "⚠️",
+      label: "",
+      classes: "bg-ast-pink/20 text-ast-pink",
+    });
+  });
+
+  it("renders low as yellow warning with label", () => {
+    expect(supplyDetailConditionIcon("low")).toEqual({
+      icon: "⚠️",
+      label: "low",
+      classes: "bg-ast-yellow/20 text-ast-yellow",
+    });
+  });
+
+  it("renders critical as pink warning with label", () => {
+    expect(supplyDetailConditionIcon("critical")).toEqual({
+      icon: "⚠️",
+      label: "critical",
+      classes: "bg-ast-pink/20 text-ast-pink",
+    });
   });
 });

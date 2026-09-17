@@ -5,9 +5,11 @@
  * (Projects / Supplies / Inspo), Recent Projects, and the Inspiration rail
  * (spotlight, quote of the day, art history, partners).
  *
- * Desktop renders a fixed column; below md the same content renders inside a
- * slide-in drawer (classes lifted from the live app: rounded-r-3xl, blurred
- * #0B0018 canvas, turquoise right border).
+ * Desktop renders the turquoise-bordered glass card (col-span-3 of the
+ * studio grid); below md the same content renders inside a slide-in drawer
+ * (classes lifted from the live app: rounded-r-3xl, blurred #0B0018 canvas,
+ * turquoise right border). Stat tiles carry the live app's per-tile accent
+ * borders, and the active view's tile renders highlighted (electric blue).
  */
 import type { InspirationEntryDto, ProjectDto } from "@/lib/dto";
 import type { StudioView } from "@/components/studio/studio-app";
@@ -42,19 +44,16 @@ function artHistoryToday(inspiration: InspirationEntryDto[]) {
 }
 
 export function StudioSidebar(props: StudioSidebarProps) {
-  const { navigate, onNewProject, sidebarOpen, onCloseSidebar } = props;
+  const { onCloseSidebar, sidebarOpen } = props;
 
   const content = <SidebarContent {...props} />;
 
   return (
     <>
-      {/* Desktop column */}
-      <nav
-        aria-label="Studio tools"
-        className="hidden w-72 shrink-0 overflow-y-auto scrollbar-studio px-4 pb-10 pt-6 md:block"
-      >
+      {/* Desktop column — the studio grid's turquoise glass card. */}
+      <aside className="hidden min-h-0 overflow-y-auto scrollbar-left rounded-3xl border border-ast-turquoise/30 bg-[#0B0018] p-4 backdrop-blur-xl md:col-span-3 md:block">
         {content}
-      </nav>
+      </aside>
 
       {/* Mobile drawer */}
       <div
@@ -67,7 +66,7 @@ export function StudioSidebar(props: StudioSidebarProps) {
       <nav
         aria-label="Studio tools"
         aria-hidden={!sidebarOpen}
-        className={`fixed inset-y-0 left-0 z-50 w-4/5 max-w-xs overflow-y-auto scrollbar-studio rounded-r-3xl border-r border-ast-turquoise/30 bg-[#0B0018] p-4 backdrop-blur-xl transition-transform duration-300 md:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 w-4/5 max-w-xs overflow-y-auto scrollbar-left rounded-r-3xl border-r border-ast-turquoise/30 bg-[#0B0018] p-4 backdrop-blur-xl transition-transform duration-300 md:hidden ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -98,7 +97,10 @@ function SidebarContent({
   const partners = inspiration.find(
     (e) => e.type === "partner" && e.title === "Retailer & Manufacturer Picks",
   );
-  const recent = projects.slice(0, 3);
+  // The live rail shows the four most recently touched projects.
+  const recent = [...projects]
+    .sort((a, b) => (b.updatedAt ?? "").localeCompare(a.updatedAt ?? ""))
+    .slice(0, 4);
 
   return (
     <div>
@@ -123,6 +125,8 @@ function SidebarContent({
             labelClass="text-ast-turquoise"
             valueClass="text-[#00E6FF]"
             subClass="text-ast-body/55"
+            idleBorder="border-ast-turquoise/30"
+            hoverBorder="hover:border-ast-electric-blue/40 hover:bg-ast-electric-blue/5"
             onClick={() => navigate("projects")}
           />
           <StatCard
@@ -133,6 +137,8 @@ function SidebarContent({
             labelClass="text-[#9F6BFF]"
             valueClass="text-[#00E5FF]"
             subClass="text-[#F6B94B]/80"
+            idleBorder="border-ast-lavender/30"
+            hoverBorder="hover:border-ast-electric-blue/40 hover:bg-ast-electric-blue/5"
             onClick={() => navigate("supplies")}
           />
           <StatCard
@@ -143,126 +149,153 @@ function SidebarContent({
             labelClass="text-ast-lavender"
             valueClass="text-ast-lavender/80"
             subClass="text-ast-body/55"
+            idleBorder="border-ast-purple/30"
+            hoverBorder="hover:border-ast-lavender/40 hover:bg-ast-lavender/5"
             onClick={() => navigate("inspiration")}
           />
         </div>
 
-        <section aria-label="Recent projects">
-          <p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-widest text-ast-turquoise">
+        <div>
+          <p className="mb-2 text-xs font-bold uppercase tracking-wider text-ast-turquoise">
             Recent Projects
           </p>
           {recent.length === 0 ? (
-            <div className="rounded-xl border border-ast-purple/25 bg-[#0f0722] p-4 text-center">
-              <p className="text-sm text-ast-faint">No projects yet</p>
+            <div className="rounded-xl border border-ast-turquoise/15 bg-[#120724] px-4 py-5 text-center">
+              <p className="mb-3 text-xs text-ast-body/40">No projects yet</p>
               <button
                 type="button"
                 onClick={onNewProject}
-                className="mt-3 w-full rounded-lg bg-gradient-to-r from-ast-turquoise to-ast-blue px-3 py-2.5 text-xs font-semibold text-white transition hover:opacity-90"
+                className="w-full rounded-lg bg-gradient-to-r from-ast-turquoise to-ast-blue px-3 py-2 text-xs font-semibold text-white transition hover:opacity-90"
               >
                 + Create Project
               </button>
             </div>
           ) : (
-            <ul className="space-y-2">
+            <div className="grid grid-cols-2 gap-1.5">
               {recent.map((project) => (
-                <li key={project.id}>
-                  <button
-                    type="button"
-                    onClick={() => navigate("projects")}
-                    className="w-full rounded-xl border border-ast-purple/25 bg-[#0f0722] p-3 text-left transition hover:border-ast-purple/50"
-                  >
-                    <p className="truncate text-sm font-medium text-ast-body">
-                      {project.name}
-                    </p>
-                    <p className="mt-0.5 text-[11px] text-ast-faint">{project.status}</p>
-                  </button>
-                </li>
+                <RecentProjectTile
+                  key={project.id}
+                  project={project}
+                  onClick={() => navigate("projects")}
+                />
               ))}
-            </ul>
+            </div>
           )}
-        </section>
+        </div>
 
-        <section aria-label="Inspiration">
-          <p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-widest text-ast-lavender">
+        <div>
+          <p className="mb-2 text-xs font-bold uppercase tracking-wider text-ast-lavender">
             Inspiration
           </p>
+          <div className="space-y-1.5">
+            {spotlight && (
+              <button
+                type="button"
+                onClick={() => navigate("inspiration")}
+                className="w-full overflow-hidden rounded-xl border border-ast-purple/30 bg-[#120724] text-left transition hover:border-ast-purple/60"
+              >
+                <div className="h-9 bg-gradient-to-r from-ast-electric-blue/50 via-ast-purple/50 to-ast-pink/40" />
+                <div className="px-3 py-2">
+                  <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wider text-ast-faint">
+                    Studio Spotlight
+                  </p>
+                  <p className="text-xs font-semibold text-ast-turquoise">{spotlight.title}</p>
+                  <p className="truncate text-[10px] text-ast-muted">{spotlight.body}</p>
+                </div>
+              </button>
+            )}
 
-          {spotlight && (
-            <button
-              type="button"
-              onClick={() => navigate("inspiration")}
-              className="mb-2 w-full rounded-xl bg-gradient-to-r from-[#1e1b4b] to-[#581c87] p-3 text-left transition hover:opacity-85"
-            >
-              <span className="block text-[9px] uppercase tracking-wider text-ast-lavender/80">
-                Studio Spotlight
-              </span>
-              <span className="block truncate text-sm font-semibold text-white">
-                {spotlight.title}
-              </span>
-              <span className="block truncate text-[11px] text-ast-lavender">
-                {spotlight.body}
-              </span>
-            </button>
-          )}
+            {quote && (
+              <button
+                type="button"
+                onClick={() => navigate("inspiration")}
+                className="w-full rounded-xl border border-ast-turquoise/20 bg-[#120724] px-3 py-2.5 text-left transition hover:border-ast-turquoise/50"
+              >
+                <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ast-turquoise">
+                  Quote of the Day
+                </p>
+                <p className="text-xs italic leading-snug text-ast-body line-clamp-2">
+                  &ldquo;{quote.title}&rdquo;
+                </p>
+                {quote.author && (
+                  <p className="mt-1 text-[10px] text-ast-muted">— {quote.author}</p>
+                )}
+              </button>
+            )}
 
-          {quote && (
-            <button
-              type="button"
-              onClick={() => navigate("inspiration")}
-              className="mb-2 w-full rounded-xl border border-ast-purple/25 bg-[#0f0722] p-3 text-left transition hover:border-ast-purple/50"
-            >
-              <span className="block text-[10px] font-semibold uppercase tracking-widest text-ast-turquoise">
-                Quote of the Day
-              </span>
-              <span className="mt-1 block text-xs italic leading-relaxed text-ast-body/80">
-                &ldquo;{quote.title}&rdquo;
-              </span>
-              {quote.author && (
-                <span className="mt-1 block text-[11px] text-ast-faint">— {quote.author}</span>
-              )}
-            </button>
-          )}
+            {history && (
+              <button
+                type="button"
+                onClick={() => navigate("inspiration")}
+                className="w-full rounded-xl border border-ast-lavender/20 bg-[#120724] px-3 py-2.5 text-left transition hover:border-ast-lavender/50"
+              >
+                <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ast-lavender">
+                  Today in Art History
+                </p>
+                <p className="text-xs font-semibold leading-snug text-ast-body line-clamp-2">
+                  {history.title}
+                </p>
+              </button>
+            )}
 
-          {history && (
-            <button
-              type="button"
-              onClick={() => navigate("inspiration")}
-              className="mb-2 w-full rounded-xl border border-ast-purple/25 bg-[#0f0722] p-3 text-left transition hover:border-ast-purple/50"
-            >
-              <span className="block text-[10px] font-semibold uppercase tracking-widest text-ast-pink">
-                Today in Art History
-              </span>
-              <span className="mt-1 block text-xs leading-snug text-ast-body/80">
-                {history.title}
-              </span>
-            </button>
-          )}
-
-          {partners && (
-            <button
-              type="button"
-              onClick={() => navigate("inspiration")}
-              className="w-full rounded-xl border border-ast-purple/25 bg-[#0f0722] p-3 text-left transition hover:border-ast-purple/50"
-            >
-              <span className="block text-[10px] font-semibold uppercase tracking-widest text-ast-lavender">
-                Partners
-              </span>
-              <span className="mt-1 block text-xs font-medium text-ast-lavender">
-                {partners.title}
-              </span>
-              <span className="block text-[11px] text-ast-faint">{partners.body}</span>
-            </button>
-          )}
-        </section>
+            {partners && (
+              <button
+                type="button"
+                onClick={() => navigate("inspiration")}
+                className="w-full rounded-xl border border-ast-blue/25 bg-[#120724] px-3 py-2.5 text-left transition hover:border-ast-blue/50"
+              >
+                <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ast-lavender">
+                  Partners
+                </p>
+                <p className="text-xs font-semibold leading-snug text-[#8D5CFF]">
+                  {partners.title}
+                </p>
+                <p className="mt-1 text-[10px] leading-snug text-ast-body/55">{partners.body}</p>
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
+/** Recent-project rail tile — the live app's 2×2 photo cards. */
+function RecentProjectTile({
+  project,
+  onClick,
+}: {
+  project: ProjectDto;
+  onClick: () => void;
+}) {
+  const photo = project.photos[0] ?? null;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group w-full overflow-hidden rounded-xl border border-ast-turquoise/20 bg-[#120724] text-left transition hover:border-ast-electric-blue/50"
+    >
+      {photo ? (
+        <img src={photo} alt="" className="block aspect-square w-full object-cover" />
+      ) : (
+        <div className="aspect-square w-full bg-gradient-to-br from-ast-purple/20 via-ast-lavender/10 to-transparent" />
+      )}
+      <div className="px-2 py-1.5">
+        <p className="truncate text-[10px] font-semibold leading-snug text-ast-body transition-colors group-hover:text-ast-cyan">
+          {project.name}
+        </p>
+        <p className="truncate text-[9px] leading-tight text-ast-muted capitalize">
+          {project.status.replace("-", " ")}
+        </p>
+      </div>
+    </button>
+  );
+}
+
 /**
  * Stat tile — mirrors the live app: the active view's tile is highlighted
- * (electric blue border/tint), idle tiles sit on the card canvas with
- * per-card accent colors lifted from the live sidebar.
+ * (electric blue border/tint), idle tiles carry per-card accent borders
+ * (turquoise / lavender / purple) with the live app's hover treatments.
  */
 function StatCard({
   label,
@@ -272,6 +305,8 @@ function StatCard({
   labelClass,
   valueClass,
   subClass,
+  idleBorder,
+  hoverBorder,
   onClick,
 }: {
   label: string;
@@ -281,6 +316,8 @@ function StatCard({
   labelClass: string;
   valueClass: string;
   subClass: string;
+  idleBorder: string;
+  hoverBorder: string;
   onClick: () => void;
 }) {
   return (
@@ -291,7 +328,7 @@ function StatCard({
       className={
         active
           ? "rounded-xl border border-ast-electric-blue/60 bg-ast-electric-blue/10 p-2.5 text-left transition"
-          : "rounded-xl border border-ast-purple/30 bg-[#120724] p-2.5 text-left transition hover:border-ast-electric-blue/40 hover:bg-ast-electric-blue/5"
+          : `rounded-xl border bg-[#120724] p-2.5 text-left transition ${idleBorder} ${hoverBorder}`
       }
     >
       <p className={`text-[10px] font-bold uppercase tracking-wider ${labelClass}`}>{label}</p>

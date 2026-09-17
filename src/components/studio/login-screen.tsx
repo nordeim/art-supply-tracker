@@ -74,26 +74,28 @@ export function LoginScreen() {
             After creating your account, please check your spam folder if you
             don&apos;t receive your confirmation email within a few minutes.
           </p>
-          <div className="mt-8 rounded-2xl border border-[#5B3FD3]/50 bg-[#120724]/80 px-4 py-3 text-center shadow-lg max-w-md">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#DCC7FF]">
-              Artist Opportunities
-            </p>
-            <a
-              href="https://artdeadline.com"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex justify-center"
-            >
-              <Image
-                src="/assets/listed-with-ADC2.jpg"
-                alt="Listed with ArtDeadline.Com"
-                width={280}
-                height={80}
-                className="max-h-20 w-auto h-auto"
-              />
-            </a>
-          </div>
         </section>
+
+        {/* Artist Opportunities badge — the live grid's top-right cell. */}
+        <div className="rounded-2xl border border-[#5B3FD3]/50 bg-[#120724]/80 px-4 py-3 text-center shadow-lg">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#DCC7FF]">
+            Artist Opportunities
+          </p>
+          <a
+            href="https://artdeadline.com"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex justify-center"
+          >
+            <Image
+              src="/assets/listed-with-ADC2.jpg"
+              alt="Listed with ArtDeadline.Com"
+              width={280}
+              height={80}
+              className="h-auto max-h-20 w-auto"
+            />
+          </a>
+        </div>
 
         {/* Auth card */}
         <section className="w-full" aria-label="Account access">

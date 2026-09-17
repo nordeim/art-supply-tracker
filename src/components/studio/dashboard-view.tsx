@@ -3,7 +3,8 @@
 /**
  * Dashboard view — "Today in the Studio": the four content cards (Partner
  * Spotlight, Art History, Artist Quote, Studio Spotlight) plus the Import
- * JSON / Export Data utilities, matching the live app's default landing.
+ * JSON / Export Data utilities as underlined links (the live app's landing
+ * layout — the links sit at the page's bottom-right, not inside a card).
  */
 import Image from "next/image";
 
@@ -32,7 +33,24 @@ export function DashboardView({
         <PartnerSpotlightCard />
         <ArtHistoryCard />
         <ArtistQuoteCard />
-        <StudioSpotlightCard onExport={onExport} onImportClick={onImportClick} />
+        <StudioSpotlightCard />
+      </div>
+
+      <div className="mt-6 flex justify-end gap-4">
+        <button
+          type="button"
+          onClick={onImportClick}
+          className="text-xs text-ast-lavender/70 underline underline-offset-2 transition hover:text-ast-lavender"
+        >
+          Import JSON
+        </button>
+        <button
+          type="button"
+          onClick={onExport}
+          className="text-xs text-ast-lavender/70 underline underline-offset-2 transition hover:text-ast-lavender"
+        >
+          Export Data
+        </button>
       </div>
     </div>
   );
@@ -41,7 +59,7 @@ export function DashboardView({
 function PartnerSpotlightCard() {
   return (
     <section className="rounded-2xl border border-ast-blue/40 bg-[#120724] p-6">
-      <div className="mb-3 flex items-start justify-between gap-2">
+      <div className="mb-3 flex items-start justify-between">
         <p className="text-xs uppercase tracking-[0.25em] text-ast-lavender">
           Partner Spotlight
         </p>
@@ -57,7 +75,7 @@ function PartnerSpotlightCard() {
         product launches will appear here once partner integrations are
         confirmed.
       </p>
-      <p className="mt-4 text-xs italic text-ast-faint">
+      <p className="mt-5 text-xs text-ast-body/30">
         Partner content — placeholder for MVP
       </p>
     </section>
@@ -66,22 +84,22 @@ function PartnerSpotlightCard() {
 
 function ArtHistoryCard() {
   return (
-    <section className="rounded-2xl border border-ast-purple/35 bg-[#120724] p-6">
+    <section className="rounded-2xl border border-ast-purple/40 bg-[#120724] p-6">
       <p className="mb-3 text-xs uppercase tracking-[0.25em] text-ast-lavender">
         Art History
       </p>
       <div
         aria-hidden="true"
-        className="mb-4 h-28 rounded-lg bg-gradient-to-br from-[#141031] via-[#221a4d] to-[#2e1d5c]"
+        className="mb-3 h-28 rounded-xl bg-gradient-to-br from-ast-purple/20 via-ast-lavender/15 to-ast-blue/20"
       />
-      <h2 className="mb-2 text-base font-semibold text-ast-lavender">The Starry Night</h2>
-      <p className="text-[13px] leading-relaxed text-ast-body/70">
+      <h2 className="mb-3 text-base font-semibold text-[#8D5CFF]">The Starry Night</h2>
+      <p className="text-sm leading-relaxed text-ast-body/70">
         Vincent van Gogh completed <em>The Starry Night</em> in June 1889 while a
         patient at Saint-Paul-de-Mausole in Saint-Rémy-de-Provence. Painted
         from memory rather than direct observation, it is now one of the most
         recognised works in Western art.
       </p>
-      <p className="mt-3 text-[11px] text-ast-faint">
+      <p className="mt-5 text-xs text-ast-body/30">
         Daily art history — curated feed coming in a future release
       </p>
     </section>
@@ -90,68 +108,43 @@ function ArtHistoryCard() {
 
 function ArtistQuoteCard() {
   return (
-    <section className="rounded-2xl border border-ast-turquoise/25 bg-[#120724] p-6">
-      <p className="mb-3 text-xs uppercase tracking-[0.25em] text-ast-turquoise">
+    <section className="flex flex-col justify-between rounded-2xl border border-ast-turquoise/40 bg-[#120724] p-6">
+      <p className="mb-6 text-xs uppercase tracking-[0.25em] text-ast-turquoise">
         Artist Quote
       </p>
-      <blockquote className="text-xl font-semibold leading-snug text-ast-electric-blue">
+      <blockquote className="text-2xl font-semibold leading-snug text-[#2E64FF]">
         Famous artist quote placeholder.
       </blockquote>
-      <p className="mt-4 text-xs text-ast-faint">
+      <p className="mt-5 text-xs text-ast-body/30">
         Verified quote feed coming in a future release.
       </p>
     </section>
   );
 }
 
-function StudioSpotlightCard({
-  onExport,
-  onImportClick,
-}: {
-  onExport: () => void;
-  onImportClick: () => void;
-}) {
+function StudioSpotlightCard() {
   return (
-    <section className="rounded-2xl border border-ast-pink/30 bg-[#120724] p-6">
-      <p className="mb-4 text-xs uppercase tracking-[0.25em] text-ast-pink">
+    <section className="cursor-pointer rounded-2xl border border-ast-pink/40 bg-[#120724] p-6 transition hover:brightness-110">
+      <p className="mb-3 text-xs uppercase tracking-[0.25em] text-ast-pink">
         Studio Spotlight
       </p>
-      <div className="flex items-center gap-3">
+      <div className="mb-3 flex items-center gap-3">
         <Image
           src="/assets/portrait-01.jpg"
           alt="Kevin Lewis"
           width={56}
           height={56}
-          className="h-14 w-14 rounded-full border-2 border-ast-purple/50 object-cover"
+          className="h-14 w-14 rounded-full border border-ast-pink/30 object-cover"
         />
         <div>
-          <h2 className="text-lg font-semibold text-ast-pink">Kevin Lewis</h2>
-          <p className="text-[13px] text-ast-body/60">Mixed media &amp; textile artist</p>
+          <h2 className="text-lg font-bold text-[#FF2FB3]">Kevin Lewis</h2>
+          <p className="text-xs text-ast-body/60">Mixed media &amp; textile artist</p>
         </div>
       </div>
-      <p className="mt-4 text-sm leading-relaxed text-ast-body/70">
+      <p className="text-sm leading-relaxed text-ast-body/70">
         Vivid, intense, and sometimes frightening work rooted in makeup and
         costume design for horror film.
       </p>
-      <p className="mt-3 text-[11px] text-ast-faint">
-        Artwork by Kevin Lewis. Used with artist permission.
-      </p>
-      <div className="mt-4 flex justify-end gap-4">
-        <button
-          type="button"
-          onClick={onImportClick}
-          className="text-xs text-indigo-400 underline-offset-4 transition hover:text-indigo-300 hover:underline"
-        >
-          Import JSON
-        </button>
-        <button
-          type="button"
-          onClick={onExport}
-          className="text-xs text-indigo-400 underline-offset-4 transition hover:text-indigo-300 hover:underline"
-        >
-          Export Data
-        </button>
-      </div>
     </section>
   );
 }

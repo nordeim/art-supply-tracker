@@ -2,21 +2,25 @@
 
 /**
  * Supply detail panel — the card that opens when a supply chip is clicked
- * (the live app renders the panel in place, below the list — it does not
- * open the edit modal). Shows the supply's fields read-only with Delete
- * (native confirm, exact live copy) and Edit Supply actions.
+ * (the live app renders the panel in place, below the chip's row — it does
+ * not open the edit modal). Shows the supply's fields read-only (Category,
+ * Subcategory, Quantity, Location, Notes, Used-in-Projects chips, Photo,
+ * Barcode) with Close, Delete (native confirm, exact live copy), and Edit
+ * Supply actions.
  *
  * Classes mirror the live app's panel: rounded-2xl border-ast_pink/60
- * bg-ast_deep/95 p-6, "⚠️ status" pill, grid-cols-3 field rows.
+ * bg-ast_deep/95 p-6 shadow-astPink, "⚠️ status" condition pill,
+ * grid-cols-3 field rows, pink-gradient Edit Supply.
  */
 import { useState, useTransition } from "react";
 
 import { deleteSupply } from "@/actions/studio";
-import type { SupplyDto } from "@/lib/dto";
-import { isNewItem, supplyConditionLabel } from "@/lib/studio-domain";
+import type { ProjectDto, SupplyDto } from "@/lib/dto";
+import { isNewItem, supplyDetailConditionIcon } from "@/lib/studio-domain";
 
 interface SupplyDetailPanelProps {
   supply: SupplyDto;
+  projects: ProjectDto[];
   onClose: () => void;
   onEdit: (supply: SupplyDto) => void;
   onDeleted: (supplyId: string) => void;
@@ -24,12 +28,18 @@ interface SupplyDetailPanelProps {
 
 export function SupplyDetailPanel({
   supply,
+  projects,
   onClose,
   onEdit,
   onDeleted,
 }: SupplyDetailPanelProps) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+
+  const condition = supplyDetailConditionIcon(supply.condition);
+  const usedInProjects = supply.assignedProjectId
+    ? projects.filter((p) => p.id === supply.assignedProjectId)
+    : [];
 
   function onDelete() {
     // Native confirm with the live app's exact copy.
@@ -55,22 +65,16 @@ export function SupplyDetailPanel({
           <p className="mb-1 text-xs uppercase tracking-wider text-ast-pink">Supply</p>
           <h2 className="flex flex-wrap items-center gap-2 text-lg font-bold text-ast-cyan">
             {supply.name}
-            <NewBadge createdAt={supply.createdAt} />
+            {isNewItem(supply.createdAt) && (
+              <span className="ml-2 rounded-full bg-ast-pink/40 px-2 py-0.5 align-middle text-xs font-semibold text-ast-pink">
+                NEW
+              </span>
+            )}
           </h2>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="rounded bg-ast-pink/20 px-2 py-1 text-xs text-ast-pink">
-            ⚠️ {supply.condition === "ok" ? "" : supplyConditionLabel(supply.condition).toLowerCase()}
-          </span>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close supply details"
-            className="rounded-lg p-1 text-ast-faint transition hover:bg-white/5 hover:text-white"
-          >
-            ✕
-          </button>
-        </div>
+        <span className={`rounded px-2 py-1 text-xs ${condition.classes}`}>
+          {condition.icon} {condition.label}
+        </span>
       </div>
 
       <div className="mb-4 grid grid-cols-3 gap-x-6 gap-y-3">
@@ -78,11 +82,44 @@ export function SupplyDetailPanel({
         {supply.subcategory && (
           <DetailField label="Subcategory" value={supply.subcategory} />
         )}
-        <DetailField label="Quantity" value={supply.quantity} />
+        <DetailField label="Quantity" value={supply.quantity || "—"} />
         <DetailField label="Location" value={supply.location ?? "—"} />
+        {supply.notes && (
+          <div className="col-span-3">
+            <p className="mb-1 text-xs font-medium text-ast-lavender">Notes</p>
+            <p className="text-sm text-ast-body">{supply.notes}</p>
+          </div>
+        )}
       </div>
 
-      {supply.barcode !== null && supply.barcode !== "" && (
+      {usedInProjects.length > 0 && (
+        <div className="mb-4">
+          <p className="mb-2 text-xs font-medium text-ast-lavender">Used in Projects</p>
+          <div className="flex flex-wrap gap-1.5">
+            {usedInProjects.map((project) => (
+              <span
+                key={project.id}
+                className="rounded bg-ast-lavender/20 px-2 py-0.5 text-xs text-ast-lavender"
+              >
+                {project.name}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {supply.photo && (
+        <div className="mb-4">
+          <p className="mb-1 text-xs font-medium text-ast-lavender">Photo</p>
+          <img
+            src={supply.photo}
+            alt=""
+            className="h-32 w-32 rounded-xl border border-ast-pink/30 object-cover"
+          />
+        </div>
+      )}
+
+      {supply.barcode && (
         <div className="mb-4">
           <p className="mb-1 text-xs font-medium text-ast-lavender">Barcode / UPC</p>
           <p className="font-mono text-sm text-ast-body">{supply.barcode}</p>
@@ -98,6 +135,13 @@ export function SupplyDetailPanel({
       <div className="flex gap-3">
         <button
           type="button"
+          onClick={onClose}
+          className="rounded-lg border border-ast-yellow/30 bg-transparent px-4 py-2 text-sm text-ast-yellow transition hover:bg-ast-yellow/10"
+        >
+          Close
+        </button>
+        <button
+          type="button"
           onClick={onDelete}
           disabled={pending}
           className="rounded-lg border border-ast-yellow/30 bg-transparent px-4 py-2 text-sm text-ast-yellow transition hover:bg-ast-yellow/10 disabled:opacity-50"
@@ -107,7 +151,7 @@ export function SupplyDetailPanel({
         <button
           type="button"
           onClick={() => onEdit(supply)}
-          className="flex-1 rounded-lg bg-gradient-to-r from-ast-turquoise to-ast-blue px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+          className="flex-1 rounded-lg bg-gradient-to-r from-ast-pink to-ast-purple px-4 py-2 text-sm font-semibold text-white shadow-ast-pink transition hover:shadow-lg"
         >
           Edit Supply
         </button>
@@ -122,14 +166,5 @@ function DetailField({ label, value }: { label: string; value: string }) {
       <p className="mb-1 text-xs font-medium text-ast-lavender">{label}</p>
       <p className="text-sm text-ast-body">{value}</p>
     </div>
-  );
-}
-
-export function NewBadge({ createdAt }: { createdAt: string }) {
-  if (!isNewItem(createdAt)) return null;
-  return (
-    <span className="ml-1 rounded-full bg-ast-turquoise/40 px-2 py-0.5 align-middle text-xs font-semibold text-ast-turquoise">
-      NEW
-    </span>
   );
 }

@@ -28,17 +28,17 @@ Node runs, with zero cloud dependencies.
 | Feature | What it does |
 |---|---|
 | 🔐 Auth gate | Sign In / Create Account tabs, show-password toggle, forgot-password notice — scrypt-hashed passwords, httpOnly opaque session cookies, per-IP sign-in rate limiting (5 attempts / minute) |
-| 🏠 Dashboard | "Today in the Studio" — Partner Spotlight, Art History, Artist Quote, Studio Spotlight cards + Studio Memory popover |
+| 🏠 Dashboard | "Today in the Studio" — Partner Spotlight, Art History, Artist Quote, Studio Spotlight cards; the header's ✧ memory button is inert, exactly like the live app |
 | 🎨 Projects | Status columns (Planned / In Progress / On Hold / Completed), Needs Sorting bucket, create/edit modal with budget, notes, and photo attachments |
 | 🗂️ Project detail panels | Click a project chip → detail panel with NEW badge, status pill, image well, budget, supply assignment ("Pick supply…" + Assign / × remove), Delete (with confirm), Edit Project |
 | 🖌️ Supplies | Category grid (Paint, Brushes & Tools, Pastels, Paper, Canvas & Board, Mediums, Other) with per-category counts, low-stock "!" indicators, condition tracking, barcode + location fields, project assignment |
 | 🏷️ Per-category subcategories | The supply modal's Subcategory picker follows the category (Paint → Watercolor…, Brushes & Tools → Palette knives…, hidden for Other) — exactly the live app's option lists |
 | 📋 Supply detail panels | Click a supply chip → detail panel (Category / Subcategory / Quantity / Location / Barcode) with Delete (with confirm) and Edit Supply |
-| 🔍 Stock filters | "All | Low Stock | Out of Stock" tabs on every supply list, with the live app's "No supplies match this filter." empty state |
+| 🔍 Stock filters | "All | Low Stock | Out of Stock" tabs on every supply list — Low Stock matches low AND critical, Out of Stock critical only (the live bundle's filter switch) — with the live app's "No supplies match this filter." empty state |
 | ✨ Inspiration | Today / Art History / Inspire Me feed tabs, artist quotes, studio spotlights, partner placeholders (15 seeded entries) |
 | 💬 Studio Chat | Community message wall with 5-second polling that pauses on hidden tabs |
 | 📦 Import / Export | Round-trip JSON backup in the ORIGINAL app's wire format (`title`, `subcategory`, `quantityValue`/`qty`, `supplyIds`, `isNew`…) — live-app exports import here and vice versa; the legacy clone format imports too |
-| 📱 Responsive | Three fixed-height columns on desktop; mobile drawer sidebar and a "Chat ☰" header toggle for the community panel |
+| 📱 Responsive | Desktop: three glass cards (sidebar / main / chat) in a 12-column grid, each rounded-3xl on the blurred `#0B0018` canvas with per-panel accent borders and internal scrolling; mobile: slide-in drawers with the "☰ Studio Tools" / "Chat ☰" toggle bar |
 
 ## Architecture
 
@@ -132,14 +132,17 @@ bun run test        # Vitest — domain vocabulary, validation, export/import, r
 bun run dev         # then exercise the flows below
 ```
 
-Automated tests (Vitest, 82 tests) pin the studio-domain vocabulary
-(per-category supply subcategory lists in the live app's tokens), the Zod
-boundary contracts (photo data-URL caps, per-category subcategory
-cross-validation), the export/import wire format (live-app shape with
-`title`/`subcategory`/`supplyIds`/numeric quantities, plus the legacy clone
-shape), the sign-in rate limiter, and the full action surface against a
-throwaway SQLite database (CRUD, ownership/IDOR checks, assignment,
-import, chat).
+Automated tests (Vitest, 97 tests) pin the studio-domain vocabulary
+(per-category supply subcategory lists in the live app's tokens), the
+production bundle's status/condition style maps (project status pills,
+chip borders with per-status hover/selected treatments, supply condition
+pills, the detail-panel condition icon ternary, and the stock-filter switch
+where Low Stock matches low AND critical), the Zod boundary contracts
+(photo data-URL caps, per-category subcategory cross-validation), the
+export/import wire format (live-app shape with `title`/`subcategory`/
+`supplyIds`/numeric quantities, plus the legacy clone shape), the sign-in
+rate limiter, and the full action surface against a throwaway SQLite
+database (CRUD, ownership/IDOR checks, assignment, import, chat).
 
 Manual verification checklist (the golden paths):
 1. Sign in / create an account / sign out (6 rapid bad logins → throttled).
@@ -167,20 +170,34 @@ Manual verification checklist (the golden paths):
 
 | Token | Hex | Usage |
 |---|---|---|
-| `ast-turquoise` | `#2ec4b6` | Studio Tools label, Need help? card, gradient start |
-| `ast-cyan` | `#00e6ff` | My Studio heading, links, active states |
-| `ast-lavender` | `#b78bff` | Section eyebrows, muted headings |
-| `ast-pink` | `#ff4db8` | Community accents, primary buttons |
-| `ast-purple` | `#5a3a8e` | Card borders (at 25–40% opacity) |
+| `ast-turquoise` | `#2ec4b6` | Studio Tools label, projects chrome, Need help? card |
+| `ast-cyan` | `#00e6ff` | My Studio heading, links, selected chip names |
+| `ast-lavender` | `#b78bff` | Section eyebrows, muted headings, field labels |
+| `ast-pink` | `#ff4db8` | Supplies chrome, community accents, primary CTAs |
+| `ast-purple` | `#5b3fd3` | Card borders (at 25–40% opacity) |
 | `ast-blue` | `#4a69d6` | Utility buttons, quote text |
+| `ast-electric-blue` | `#2e64ff` | Planned status, active tile states, quote text |
+| `ast-coral` | `#ffe0cc` | Needs Sorting bucket, unknown-status fallback |
+| `ast-yellow` | `#f4f27a` | On Hold status, low-condition icon, Close buttons |
+| `ast-orange` | `#ffb85c` | Warm accents |
 | `ast-body` | `#fff4d6` | Body text (at 60–90% opacity) |
 | `ast-faint` | `#9f7fd6` | Placeholders, timestamps |
-| Canvas | `#050009` | Page background |
-| Cards | `#120724` | All card surfaces |
-| Drawer | `#0B0018` | Mobile sidebar backdrop |
+| `ast-muted` | `#dcc7ff` | Secondary text |
+| `ast-deep` / `ast-bg-dark` | `#0f1230` / `#14182b` | Panel wells, field surfaces |
+| `ast-bg-primary` / `ast-bg-secondary` | `#121a5a` / `#1822a8` | Legacy canvas accents |
+| Canvas / cards / drawer | `#050009` / `#120724` / `#0B0018` | Fixed surfaces (literal classes) |
 
-**Typography:** Inter (300–700) via `next/font`. Headline gradient:
-`linear-gradient(90deg, #00E6FF, #2E64FF, #8D5CFF, #FF2FB3)`.
+Panel glow shadows (`shadow-ast-pink` / `-turquoise` / `-blue` / `-cyan` /
+`-lavender` / `-warm`) reproduce the production bundle's 28px radial
+blobs; two themed scrollbar rails (turquoise→blue for left panels,
+pink→purple for right) ship as `.scrollbar-left` / `.scrollbar-right`.
+
+**Typography:** Inter (latin, 100–900 variable) via `next/font`, exposed as
+`--font-inter` on `<body>` and wired through `@theme inline` so the
+`font-sans` utility resolves the next/font variable at the element level
+(a plain `@theme` var() chain silently falls back to the system stack).
+Headline gradient: `linear-gradient(90deg, #00E6FF, #2E64FF, #8D5CFF,
+#FF2FB3)`.
 
 ## Project Status
 
@@ -189,7 +206,8 @@ Manual verification checklist (the golden paths):
 | Clone build | ✅ Complete | Login, dashboard, projects, supplies, inspiration, chat, import/export |
 | Parity remediation (r1) | ✅ Complete | Breadcrumb sub-views (projects/supplies), quote carousel + detail panels, live 15-entry seed with citations/rights/tags, modal label parity, Vitest suite |
 | Parity remediation (r2) | ✅ Complete | Live data vocabulary (Paint/Brush/… categories, ok/low/critical conditions, per-category subcategories), supply + project detail panels with Delete, "All/Low Stock/Out of Stock" filters, supply assignment from the project panel, byte-compatible export/import with the original app's wire format, photo validation fix, active-stat fix, mobile "Chat ☰" toggle, sign-in rate limiting, action-layer tests, CI verify-gate workflow |
-| Verification | ✅ Complete | Lint + typecheck + 82 tests + build clean; browser E2E on all golden paths; dashboard text diff vs the live app is identical (modulo account) |
+| Visual parity (r3) | ✅ Complete | Glass-card 12-column shell with per-panel accent borders, corrected brand tokens (purple/yellow/coral/orange + bg + glow shadows), per-view chrome (turquoise projects, pink supplies), bundle-pinned status pill/chip/condition style maps, rows-of-3 chip grids with in-row detail panels, gradient quote tiles, plain-purple chat avatars, native-alert import feedback, Inter via `@theme inline`, themed scrollbar rails (97 tests) |
+| Verification | ✅ Complete | Lint + typecheck + 97 tests + production build clean; VLM screenshot comparison of all four views vs the live app (near-identical); 16-check functional smoke suite (CRUD, filters, panels, modals) |
 | Documentation | ✅ Complete | README, AGENTS.md, CLAUDE.md, Project_Architecture_Document.md |
 
 Known intentional gaps (mirroring the original beta's placeholders): the

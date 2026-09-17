@@ -10,19 +10,22 @@
  * Watercolor"). Categories without types (Other) open the list directly.
  *
  * Supply lists carry the live app's "All | Low Stock | Out of Stock" filter
- * tabs, and chips open the supply detail panel (not the edit modal). After
- * a supply is created the view switches to the flat list, matching the live
- * app's post-create navigation.
+ * tabs (Low Stock includes low AND critical — the live app's filter), and
+ * chips open the supply detail panel in place, below the chip's row. After
+ * a supply is created the view switches to the flat list, matching the
+ * live app's post-create navigation.
  */
 import { useMemo, useState } from "react";
 
 import type { ProjectDto, SupplyDto } from "@/lib/dto";
 import {
   SUPPLY_CATEGORIES,
+  isNewItem,
+  matchesStockFilter,
+  supplyConditionPill,
   supplyTypeListFor,
 } from "@/lib/studio-domain";
 import { SupplyDetailPanel } from "@/components/studio/supply-detail-panel";
-import { NewBadge } from "@/components/studio/supply-detail-panel";
 
 interface SuppliesViewProps {
   supplies: SupplyDto[];
@@ -43,14 +46,9 @@ type SuppliesSubView =
   | { kind: "type"; category: string; typeValue: string; typeLabel: string }
   | { kind: "list" };
 
-function matchesStockFilter(supply: SupplyDto, filter: StockFilter): boolean {
-  if (filter === "low") return supply.condition === "low";
-  if (filter === "out") return supply.condition === "critical";
-  return true;
-}
-
 export function SuppliesView({
   supplies,
+  projects,
   onExport,
   onImportClick,
   onNewSupply,
@@ -83,32 +81,74 @@ export function SuppliesView({
     setOpenSupplyId(null);
   }
 
+  const categoryLabel =
+    subView && subView.kind !== "list" ? supplyCategoryLabel(subView.category) : "";
+
   return (
     <div className="studio-fade">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-6 flex items-start justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.35em] text-ast-lavender">Inventory</p>
-          <h1 className="mt-2 text-3xl font-bold text-white">Art Supplies</h1>
+          <p className="text-xs uppercase tracking-[0.35em] text-[#9F6BFF]">Inventory</p>
+          <h1 className="mt-2 bg-[linear-gradient(90deg,#00E6FF_0%,#2E64FF_35%,#8D5CFF_65%,#FF2FB3_100%)] bg-clip-text text-3xl font-bold text-transparent">
+            Art Supplies
+          </h1>
+          {subView !== null && (
+            <div className="mt-2 flex items-center gap-1.5 text-xs text-ast-muted">
+              <button
+                type="button"
+                onClick={() => navigate(null)}
+                className="transition hover:text-[#00E5FF]"
+              >
+                Art Supplies
+              </button>
+              {subView.kind !== "list" && (
+                <>
+                  <span aria-hidden="true" className="text-ast-faint">
+                    ›
+                  </span>
+                  {subView.kind === "type" ? (
+                    <button
+                      type="button"
+                      onClick={() => navigate({ kind: "category", category: subView.category })}
+                      className="transition hover:text-[#00E5FF]"
+                    >
+                      {categoryLabel}
+                    </button>
+                  ) : (
+                    <span className="text-[#00E5FF]">{categoryLabel}</span>
+                  )}
+                </>
+              )}
+              {subView.kind === "type" && (
+                <>
+                  <span aria-hidden="true" className="text-ast-faint">
+                    ›
+                  </span>
+                  <span className="text-[#00E5FF]">{subView.typeValue}</span>
+                </>
+              )}
+            </div>
+          )}
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={onImportClick}
-            className="rounded-lg border border-ast-blue/50 px-3.5 py-2 text-xs font-medium text-ast-cyan transition hover:bg-ast-blue/20"
+            className="rounded-lg border border-[#9F6BFF]/40 px-3 py-1.5 text-xs text-[#9F6BFF] transition hover:border-[#315CFF]/60 hover:bg-[#315CFF]/10 hover:shadow-[0_0_12px_rgba(49,92,255,0.2)]"
           >
             Import JSON
           </button>
           <button
             type="button"
             onClick={onExport}
-            className="rounded-lg border border-ast-blue/50 px-3.5 py-2 text-xs font-medium text-ast-cyan transition hover:bg-ast-blue/20"
+            className="rounded-lg border border-[#9F6BFF]/40 px-3 py-1.5 text-xs text-[#9F6BFF] transition hover:border-[#315CFF]/60 hover:bg-[#315CFF]/10 hover:shadow-[0_0_12px_rgba(49,92,255,0.2)]"
           >
             Export Data
           </button>
           <button
             type="button"
             onClick={onNewSupply}
-            className="rounded-lg bg-gradient-to-r from-ast-turquoise to-ast-blue px-3.5 py-2 text-xs font-semibold text-white transition hover:opacity-90"
+            className="rounded-xl border border-ast-pink/40 bg-ast-pink/10 px-4 py-2 text-sm font-semibold text-ast-pink transition hover:bg-ast-pink/20"
           >
             + Add Supply
           </button>
@@ -116,7 +156,7 @@ export function SuppliesView({
       </div>
 
       {subView === null && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-3 gap-3">
           {SUPPLY_CATEGORIES.map((category) => {
             const items = byCategory.get(category.value) ?? [];
             const needsAttention = items.some(
@@ -127,12 +167,10 @@ export function SuppliesView({
                 key={category.value}
                 type="button"
                 onClick={() => navigate({ kind: "category", category: category.value })}
-                className="rounded-2xl border border-ast-purple/25 bg-[#120724] p-5 text-left transition hover:border-ast-purple/50"
+                className="rounded-2xl border border-[#9F6BFF]/40 bg-[#9F6BFF]/5 p-5 text-left transition hover:border-[#00E5FF]/65 hover:bg-[#00E5FF]/5 hover:shadow-[0_0_20px_rgba(0,229,255,0.12)]"
               >
                 <div className="mb-3 flex items-start justify-between">
-                  <p className="text-sm font-semibold text-ast-lavender">
-                    {category.label}
-                  </p>
+                  <p className="text-sm font-semibold text-[#9F6BFF]">{category.label}</p>
                   {needsAttention && (
                     <span className="rounded bg-[#F6B94B]/20 px-1.5 py-0.5 text-xs font-semibold text-[#F6B94B]">
                       !
@@ -142,9 +180,9 @@ export function SuppliesView({
                 <p className="text-2xl font-bold text-[#00E5FF]">{items.length}</p>
                 <p className="mt-1 text-xs text-ast-faint">
                   {items.length === 1 ? "item" : "items"}
-                  {category.typeCount > 0
-                    ? <span className="ml-1 text-ast-faint">· {category.typeCount} types</span>
-                    : ""}
+                  {category.typeCount > 0 && (
+                    <span className="ml-1 text-ast-faint">· {category.typeCount} types</span>
+                  )}
                 </p>
               </button>
             );
@@ -156,20 +194,18 @@ export function SuppliesView({
         <SuppliesSubViewPanel
           subView={subView}
           supplies={supplies}
+          projects={projects}
           byCategory={byCategory}
           stockFilter={stockFilter}
           onStockFilter={setStockFilter}
           openSupplyId={openSupplyId}
           onOpenSupply={(id) => setOpenSupplyId((current) => (current === id ? null : id))}
-          onBack={() => navigate(null)}
-          onOpenCategory={(category) => navigate({ kind: "category", category })}
           onOpenType={(category, typeValue, typeLabel) =>
             navigate({ kind: "type", category, typeValue, typeLabel })
           }
           onNewSupply={onNewSupply}
           onEditSupply={onEditSupply}
           openSupply={openSupply}
-          onCloseSupply={() => setOpenSupplyId(null)}
           onSupplyDeleted={(id) => {
             onSupplyDeleted(id);
             setOpenSupplyId(null);
@@ -178,6 +214,10 @@ export function SuppliesView({
       )}
     </div>
   );
+}
+
+function supplyCategoryLabel(value: string): string {
+  return SUPPLY_CATEGORIES.find((c) => c.value === value)?.label ?? value;
 }
 
 function StockFilterTabs({
@@ -193,18 +233,18 @@ function StockFilterTabs({
     { value: "out", label: "Out of Stock" },
   ];
   return (
-    <div className="mb-4 flex flex-wrap gap-2" role="group" aria-label="Stock filters">
+    <div className="mb-4 flex gap-2">
       {tabs.map((tab) => (
         <button
           key={tab.value}
           type="button"
           aria-pressed={filter === tab.value}
           onClick={() => onFilter(tab.value)}
-          className={
+          className={`rounded-lg px-3 py-1 text-xs transition ${
             filter === tab.value
-              ? "rounded-lg border border-ast-electric-blue/60 bg-ast-electric-blue/15 px-3.5 py-1.5 text-xs font-semibold text-ast-cyan"
-              : "rounded-lg border border-ast-purple/30 bg-[#120724] px-3.5 py-1.5 text-xs font-medium text-ast-body/70 transition hover:border-ast-electric-blue/40 hover:text-ast-cyan"
-          }
+              ? "bg-ast-electric-blue/20 text-ast-electric-blue"
+              : "text-ast-muted hover:text-ast-cyan"
+          }`}
         >
           {tab.label}
         </button>
@@ -216,38 +256,34 @@ function StockFilterTabs({
 function SuppliesSubViewPanel({
   subView,
   supplies,
+  projects,
   byCategory,
   stockFilter,
   onStockFilter,
   openSupplyId,
   onOpenSupply,
-  onBack,
-  onOpenCategory,
   onOpenType,
   onNewSupply,
   onEditSupply,
   openSupply,
-  onCloseSupply,
   onSupplyDeleted,
 }: {
   subView: SuppliesSubView;
   supplies: SupplyDto[];
+  projects: ProjectDto[];
   byCategory: Map<string, SupplyDto[]>;
   stockFilter: StockFilter;
   onStockFilter: (filter: StockFilter) => void;
   openSupplyId: string | null;
   onOpenSupply: (id: string) => void;
-  onBack: () => void;
-  onOpenCategory: (category: string) => void;
   onOpenType: (category: string, typeValue: string, typeLabel: string) => void;
   onNewSupply: () => void;
   onEditSupply: (supply: SupplyDto) => void;
   openSupply: SupplyDto | null;
-  onCloseSupply: () => void;
   onSupplyDeleted: (supplyId: string) => void;
 }) {
   const categoryLabel =
-    subView.kind === "list" ? "" : supplyCategoryShortLabel(subView.category);
+    subView.kind === "list" ? "" : supplyCategoryLabel(subView.category);
   const categoryItems = subView.kind === "list" ? [] : byCategory.get(subView.category) ?? [];
   const typeList = subView.kind === "list" ? [] : supplyTypeListFor(subView.category);
 
@@ -262,150 +298,119 @@ function SuppliesSubViewPanel({
     return categoryItems;
   }, [subView, supplies, categoryItems]);
 
-  const filtered = listedItems.filter((s) => matchesStockFilter(s, stockFilter));
+  const filtered = listedItems.filter((s) => matchesStockFilter(s.condition, stockFilter));
 
-  const listHeading =
-    subView.kind === "type"
-      ? subView.typeValue === "__all__"
-        ? categoryLabel
-        : subView.typeLabel
-      : categoryLabel;
-
-  return (
-    <section className="studio-fade">
-      <nav aria-label="Supplies breadcrumb" className="mb-4 flex flex-wrap items-center gap-2 text-sm">
+  if (subView.kind === "category" && typeList.length > 0) {
+    return (
+      <div className="grid grid-cols-3 gap-3">
         <button
           type="button"
-          onClick={onBack}
-          className="rounded-lg px-2 py-1 text-ast-cyan transition hover:bg-white/5"
+          onClick={() => onOpenType(subView.category, "__all__", `All ${categoryLabel}`)}
+          className="rounded-2xl border border-[#00D6C9]/80 bg-[linear-gradient(135deg,rgba(0,229,255,0.14),rgba(49,92,255,0.16))] p-5 text-left shadow-[0_0_24px_rgba(0,229,255,0.18)] transition hover:shadow-[0_0_30px_rgba(0,229,255,0.25)]"
         >
-          Art Supplies
+          <p className="mb-3 text-sm font-semibold text-[#00D6C9]">All {categoryLabel}</p>
+          <p className="text-2xl font-bold text-[#00E5FF]">{categoryItems.length}</p>
+          <p className="mt-1 text-xs text-ast-faint">view all</p>
         </button>
-        {subView.kind !== "list" && (
-          <>
-            <span aria-hidden="true" className="text-ast-faint">›</span>
-            {subView.kind === "type" && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => onOpenCategory(subView.category)}
-                  className="rounded-lg px-2 py-1 text-ast-cyan transition hover:bg-white/5"
-                >
-                  {categoryLabel}
-                </button>
-                <span aria-hidden="true" className="text-ast-faint">›</span>
-              </>
-            )}
-            <span className="text-ast-body/80">{listHeading}</span>
-          </>
-        )}
-      </nav>
+        {typeList.map((type) => {
+          const count = categoryItems.filter(
+            (s) => (s.subcategory ?? "") === type.value,
+          ).length;
+          return (
+            <button
+              key={type.value}
+              type="button"
+              onClick={() => onOpenType(subView.category, type.value, type.label)}
+              className="rounded-2xl border border-[#9F6BFF]/30 bg-[#9F6BFF]/5 p-5 text-left transition hover:border-[#00E5FF]/65 hover:bg-[#00E5FF]/5 hover:shadow-[0_0_20px_rgba(0,229,255,0.12)]"
+            >
+              <p className="mb-3 text-sm font-semibold text-[#9F6BFF]/80">{type.value}</p>
+              <p className="text-2xl font-bold text-[#00E5FF]">{count}</p>
+              <p className="mt-1 text-xs text-ast-faint">{count === 1 ? "item" : "items"}</p>
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
 
-      {subView.kind === "category" && typeList.length > 0 ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+  // The live app lays chips out in rows of three with the detail panel
+  // rendered directly below the selected chip's row.
+  const rows: SupplyDto[][] = [];
+  for (let i = 0; i < filtered.length; i += 3) rows.push(filtered.slice(i, i + 3));
+
+  return (
+    <section>
+      <StockFilterTabs filter={stockFilter} onFilter={onStockFilter} />
+      {filtered.length === 0 ? (
+        <div className="rounded-2xl border border-[#9F6BFF]/20 bg-[#9F6BFF]/5 px-6 py-10 text-center">
+          <p className="mb-1 text-sm font-medium text-[#9F6BFF]/60">
+            {subView.kind === "type" && subView.typeValue !== "__all__"
+              ? subView.typeValue
+              : subView.kind === "category"
+                ? categoryLabel
+                : ""}
+          </p>
+          <p className="text-sm text-ast-faint">
+            {stockFilter !== "all" ? "No supplies match this filter." : "No supplies here yet."}
+          </p>
           <button
             type="button"
-            onClick={() =>
-              onOpenType(subView.category, "__all__", `All ${categoryLabel}`)
-            }
-            className="rounded-2xl border border-ast-purple/25 bg-[#0f0722] p-4 text-left transition hover:border-ast-purple/50"
+            onClick={onNewSupply}
+            className="mt-4 rounded-xl border border-ast-pink/30 bg-ast-pink/10 px-4 py-2 text-sm text-ast-pink transition hover:bg-ast-pink/20"
           >
-            <p className="text-xs font-semibold uppercase tracking-widest text-ast-lavender">
-              All {categoryLabel}
-            </p>
-            <p className="mt-2 text-2xl font-bold text-white">{categoryItems.length}</p>
-            <p className="mt-1 text-[11px] text-ast-faint">view all</p>
+            + Add Supply
           </button>
-          {typeList.map((type) => {
-            const count = categoryItems.filter(
-              (s) => (s.subcategory ?? "") === type.value,
-            ).length;
-            return (
-              <button
-                key={type.value}
-                type="button"
-                onClick={() => onOpenType(subView.category, type.value, type.label)}
-                className="rounded-2xl border border-ast-purple/25 bg-[#0f0722] p-4 text-left transition hover:border-ast-purple/50"
-              >
-                <p className="text-xs font-semibold uppercase tracking-widest text-ast-lavender">
-                  {type.label}
-                </p>
-                <p className="mt-2 text-2xl font-bold text-white">{count}</p>
-                <p className="mt-1 text-[11px] text-ast-faint">
-                  {count === 1 ? "item" : "items"}
-                </p>
-              </button>
-            );
-          })}
         </div>
       ) : (
-        <div>
-          {subView.kind !== "category" && <StockFilterTabs filter={stockFilter} onFilter={onStockFilter} />}
-          <p className="text-sm font-semibold text-white">{listHeading}</p>
-          {filtered.length === 0 ? (
-            <div className="mt-3">
-              <p className="text-sm text-ast-faint">
-                {subView.kind !== "category" && stockFilter !== "all"
-                  ? "No supplies match this filter."
-                  : "No supplies here yet."}
-              </p>
-              <button
-                type="button"
-                onClick={onNewSupply}
-                className="mt-4 rounded-lg bg-gradient-to-r from-ast-turquoise to-ast-blue px-3.5 py-2 text-xs font-semibold text-white transition hover:opacity-90"
-              >
-                + Add Supply
-              </button>
-            </div>
-          ) : (
-            <>
-              <ul className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-                {filtered.map((supply) => (
-                  <li key={supply.id}>
-                    <SupplyChip
-                      supply={supply}
-                      open={openSupplyId === supply.id}
-                      onOpen={() => onOpenSupply(supply.id)}
-                    />
-                  </li>
+        <div className="space-y-3">
+          {rows.map((row) => (
+            <div key={row[0]?.id ?? "empty"}>
+              <div className="grid grid-cols-3 gap-3">
+                {row.map((supply) => (
+                  <SupplyChip
+                    key={supply.id}
+                    supply={supply}
+                    projectCount={supply.assignedProjectId ? 1 : 0}
+                    open={openSupplyId === supply.id}
+                    onOpen={() => onOpenSupply(supply.id)}
+                  />
                 ))}
-              </ul>
-              {openSupply && (
+              </div>
+              {openSupply && row.some((s) => s.id === openSupply.id) && (
                 <SupplyDetailPanel
                   supply={openSupply}
-                  onClose={onCloseSupply}
+                  projects={projects}
+                  onClose={() => onOpenSupply(openSupply.id)}
                   onEdit={onEditSupply}
                   onDeleted={onSupplyDeleted}
                 />
               )}
-            </>
-          )}
+            </div>
+          ))}
         </div>
       )}
     </section>
   );
 }
 
-/** Chips render the raw category token (the live app shows "Brush", not "Brushes & Tools"). */
-function supplyCategoryShortLabel(value: string): string {
-  return value;
-}
-
 /**
- * Supply chip — the live app's card: NEW badge, name (cyan when the item
- * needs attention, body otherwise), "Category · Subcategory" sub-line,
- * condition pill (OK renders "?"), and "qty N".
+ * Supply chip — the live app's card: NEW badge, optional photo strip, name
+ * (cyan when selected), "Category · Subcategory" sub-line, condition pill
+ * (OK renders "?"), "qty N", and an "N projects" assignment pill.
  */
 function SupplyChip({
   supply,
+  projectCount,
   open,
   onOpen,
 }: {
   supply: SupplyDto;
+  projectCount: number;
   open: boolean;
   onOpen: () => void;
 }) {
-  const needsAttention = supply.condition === "low" || supply.condition === "critical";
+  const pill = supplyConditionPill(supply.condition);
+  const isNew = isNewItem(supply.createdAt);
   return (
     <button
       type="button"
@@ -413,15 +418,26 @@ function SupplyChip({
       aria-expanded={open}
       className={`relative w-full rounded-2xl border p-4 text-left transition ${
         open
-          ? "border-ast-electric-blue/70 bg-ast-electric-blue/15"
-          : "border-ast-purple/25 bg-[#120724] hover:border-ast-purple/50"
+          ? "border-ast-electric-blue/60 bg-ast-electric-blue/10 shadow-ast-blue"
+          : "border-ast-purple/30 bg-ast-purple/5 hover:border-ast-lavender/40 hover:bg-ast-lavender/5"
       }`}
     >
-      <NewBadge createdAt={supply.createdAt} />
+      {isNew && (
+        <span className="absolute right-2 top-2 rounded-full bg-ast-turquoise/40 px-2 py-0.5 text-xs font-semibold text-ast-turquoise">
+          NEW
+        </span>
+      )}
+      {supply.photo && (
+        <img
+          src={supply.photo}
+          alt=""
+          className="mb-2 h-16 w-full rounded-xl object-cover"
+        />
+      )}
       <p
-        className={`mb-1 truncate pr-12 text-sm font-semibold leading-snug ${
-          needsAttention ? "text-ast-cyan" : "text-ast-body"
-        }`}
+        className={`mb-1 truncate text-sm font-semibold leading-snug ${
+          isNew ? "pr-12" : "pr-2"
+        } ${open ? "text-ast-cyan" : "text-ast-body"}`}
       >
         {supply.name}
       </p>
@@ -430,25 +446,20 @@ function SupplyChip({
         {supply.subcategory ? ` · ${supply.subcategory}` : ""}
       </p>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span
-          className={
-            needsAttention
-              ? "rounded-full bg-ast-pink/20 px-2 py-0.5 text-xs font-medium text-ast-pink"
-              : "rounded-full bg-white/10 px-2 py-0.5 text-xs font-medium text-ast-faint"
-          }
-        >
-          {needsAttention ? supplyConditionShort(supply.condition) : "?"}
+        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${pill.classes}`}>
+          {pill.label}
         </span>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-ast-body/50">qty {supply.quantity}</span>
+          {supply.quantity !== "" && supply.quantity !== null && (
+            <span className="text-xs text-ast-body/50">qty {supply.quantity}</span>
+          )}
+          {projectCount > 0 && (
+            <span className="rounded bg-ast-lavender/20 px-1.5 py-0.5 text-xs text-ast-lavender">
+              {projectCount} {projectCount === 1 ? "project" : "projects"}
+            </span>
+          )}
         </div>
       </div>
     </button>
   );
-}
-
-function supplyConditionShort(condition: string): string {
-  if (condition === "low") return "Low";
-  if (condition === "critical") return "Critical";
-  return "?";
 }

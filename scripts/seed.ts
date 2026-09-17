@@ -275,7 +275,7 @@ const INSPIRATION_ENTRIES: SeedEntry[] = [
     title: "Kim Wyatt",
     body: "Studio Art Labs",
     imageUrl: "/assets/kim-wyatt.jpg",
-    sortOrder: 13,
+    sortOrder: 14,
     detail: {
       subtitle: "@kims_studio_labs · Kim Wyatt Studio Art Labs",
       body:
@@ -292,7 +292,7 @@ const INSPIRATION_ENTRIES: SeedEntry[] = [
     title: "Kevin Lewis",
     body: "Mixed media & textile artist",
     imageUrl: "/assets/portrait-01.jpg",
-    sortOrder: 14,
+    sortOrder: 13,
     detail: {
       subtitle: "@kevinlewisart · Kevin Lewis Studio",
       body:

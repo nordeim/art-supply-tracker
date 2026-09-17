@@ -187,3 +187,108 @@ export function supplySubcategoryLabel(value: string | null): string {
 export function supplyConditionLabel(value: string): string {
   return SUPPLY_CONDITIONS.find((c) => c.value === value)?.label ?? value;
 }
+
+/**
+ * Stock-filter matching, pinned to the live app's bundle (the Yz list
+ * component's filter switch): "Low Stock" includes low AND critical;
+ * "Out of Stock" is critical only; "All" matches everything.
+ */
+export function matchesStockFilter(condition: string, filter: "all" | "low" | "out"): boolean {
+  if (filter === "low") return condition === "low" || condition === "critical";
+  if (filter === "out") return condition === "critical";
+  return true;
+}
+
+/**
+ * Project status pill classes — the live app's `jz` map (bundle-extracted).
+ * Unknown statuses fall back to coral, exactly like production.
+ */
+export function projectStatusPillClasses(status: string): string {
+  switch (status) {
+    case "planned":
+      return "bg-ast-electric-blue/20 text-ast-electric-blue";
+    case "in-progress":
+      return "bg-ast-cyan/20 text-ast-cyan";
+    case "on-hold":
+      return "bg-ast-yellow/20 text-ast-yellow";
+    case "completed":
+      return "bg-ast-lavender/20 text-ast-lavender";
+    default:
+      return "bg-ast-coral/20 text-ast-coral";
+  }
+}
+
+/**
+ * Project chip card classes — the live app's `Mz` map: a status-tinted
+ * border/background with status-matched hover and selected treatments
+ * (selected adds the per-status glow shadow). Unknown statuses fall back
+ * to the neutral purple treatment the supply chips use.
+ */
+export function projectChipStatusClasses(status: string, selected: boolean): string {
+  switch (status) {
+    case "planned":
+      return selected
+        ? "border-ast-electric-blue/70 bg-ast-electric-blue/15 shadow-ast-blue"
+        : "border-ast-electric-blue/30 bg-ast-electric-blue/5 hover:border-ast-electric-blue/55 hover:bg-ast-electric-blue/10";
+    case "in-progress":
+      return selected
+        ? "border-ast-cyan/70 bg-ast-cyan/15 shadow-ast-cyan"
+        : "border-ast-cyan/30 bg-ast-cyan/5 hover:border-ast-cyan/55 hover:bg-ast-cyan/10";
+    case "on-hold":
+      return selected
+        ? "border-ast-yellow/70 bg-ast-yellow/15 shadow-ast-warm"
+        : "border-ast-yellow/30 bg-ast-yellow/5 hover:border-ast-yellow/55 hover:bg-ast-yellow/10";
+    case "completed":
+      return selected
+        ? "border-ast-lavender/60 bg-ast-lavender/10 shadow-ast-lavender"
+        : "border-ast-lavender/25 bg-ast-lavender/5 hover:border-ast-lavender/45 hover:bg-ast-lavender/10";
+    default:
+      return selected
+        ? "border-ast-electric-blue/70 bg-ast-electric-blue/15 shadow-ast-blue"
+        : "border-ast-purple/30 bg-ast-purple/5 hover:border-ast-lavender/40 hover:bg-ast-lavender/5";
+  }
+}
+
+export interface ConditionPill {
+  label: string;
+  classes: string;
+}
+
+/**
+ * Supply chip condition pill — the live app's `Jz` map. The live app stores
+ * no status string for OK supplies, so production renders the fallback pill
+ * ("?" on white/10); our "ok" maps onto that same rendering.
+ */
+export function supplyConditionPill(condition: string): ConditionPill {
+  switch (condition) {
+    case "low":
+      return { label: "Low", classes: "bg-ast-pink/20 text-ast-pink" };
+    case "critical":
+      return { label: "Critical", classes: "bg-ast-pink/20 text-ast-pink" };
+    default:
+      return { label: "?", classes: "bg-white/10 text-ast-faint" };
+  }
+}
+
+export interface ConditionIcon {
+  icon: string;
+  label: string;
+  classes: string;
+}
+
+/**
+ * Supply detail header condition icon — the live detail panel's ternary.
+ * Live data never carries the string "ok" (it is omitted when OK), so OK
+ * supplies land in the pink else-branch with an empty label; that exact
+ * rendering (pink glyph, no text) is what users see in production.
+ */
+export function supplyDetailConditionIcon(condition: string): ConditionIcon {
+  switch (condition) {
+    case "low":
+      return { icon: "⚠️", label: "low", classes: "bg-ast-yellow/20 text-ast-yellow" };
+    case "critical":
+      return { icon: "⚠️", label: "critical", classes: "bg-ast-pink/20 text-ast-pink" };
+    default:
+      return { icon: "⚠️", label: "", classes: "bg-ast-pink/20 text-ast-pink" };
+  }
+}

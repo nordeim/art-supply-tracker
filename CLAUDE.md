@@ -129,13 +129,18 @@ not secret — rotate before any public deployment).
 ### Testing Strategy
 
 Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
-`src/**/*.test.ts`). The suite (82 tests) pins:
+`src/**/*.test.ts`). The suite (97 tests) pins:
 
 - **Studio-domain vocabulary** — the per-category `SUPPLY_TYPE_LISTS` in the
   live app's tokens (Paint/Brush/Pastel/Paper/Canvas/Medium/Other categories,
   capitalized Paint subcategories, ok/low/critical conditions), the modal's
   picker option order, the NEW-badge window, and quantity parsing
   (integers, decimals, a/b fractions).
+- **Live style maps** (`studio-domain.test.ts`) — the production bundle's
+  stock-filter switch ("Low Stock" matches low AND critical; "Out of Stock"
+  critical only) and the `jz`/`Mz`/`Jz` status-pill/chip/condition maps,
+  extracted verbatim from the deployed JS, so chips and pills cannot drift
+  from the live rendering.
 - **Boundary contracts** (`validation.test.ts`) — photo data-URL caps
   (client 300 KB ↔ server 400k chars), per-category subcategory
   cross-validation, and the import schema's acceptance of the live wire

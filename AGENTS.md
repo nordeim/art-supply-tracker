@@ -11,7 +11,7 @@ Run from the repo root. Bun is the package manager — use `bun`, never `npm`/`y
 | `bun run dev` | Dev server on :3000 |
 | `bun run lint` | ESLint (next/core-web-vitals + next/typescript) |
 | `bun run typecheck` | `tsc --noEmit`, strict |
-| `bun run test` | Vitest — 82 tests: domain vocabulary, validation, export/import wire format, rate limiting, action layer (each action file runs against a throwaway SQLite DB) |
+| `bun run test` | Vitest — 97 tests: domain vocabulary, bundle-pinned status/condition style maps, validation, export/import wire format, rate limiting, action layer (each action file runs against a throwaway SQLite DB) |
 | `bun run db:push` | Push `prisma/schema.prisma` to SQLite (`db/custom.db`) — required after schema edits |
 | `bun run db:generate` | Regenerate Prisma Client |
 | `bun run db:seed` | Idempotent seed: demo user, 5 chat messages, 15 inspiration entries |

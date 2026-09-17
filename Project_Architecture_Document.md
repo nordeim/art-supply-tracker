@@ -1,14 +1,14 @@
-# AST Studio — Master Project Architecture Document (PAD) v1.0
+# AST Studio — Master Project Architecture Document (PAD) v1.2
 
 **Classification:** Internal Engineering Reference
 **Status:** DEFINITIVE, PRODUCTION-LOCKED BLUEPRINT
 **Companion Document:** `README.md` (onboarding), `AGENTS.md` (agent instructions), `CLAUDE.md` (engineering standards)
-**Last Updated:** 2026-09-16
+**Last Updated:** 2026-09-17
 **Audience:** Senior Engineers, Tech Leads, DevOps, and Onboarding Engineers
 **Rule:** Every architectural decision in this document traces to a specific rationale.
 Nothing is here "because it's popular."
 
-#### Revision Block — v1.1 (Tracked Changes)
+#### Revision Block — v1.2 (Tracked Changes)
 
 - `[SYN]` Initial PAD generated alongside the v1.0 codebase — every section
   verified against the actual source tree and executed commands on
@@ -20,6 +20,18 @@ Nothing is here "because it's popular."
   photo validation fix, active-stat fix, mobile "Chat ☰" toggle, sign-in
   rate limiting, action-layer tests (82 total), CI verify-gate workflow.
   All sections re-verified against the source tree and the live app.
+- `[R3]` Session-5 visual parity remediation (2026-09-17): glass-card
+  12-column shell (sidebar/main/chat as rounded-3xl cards with per-panel
+  accent borders on the blurred `#0B0018` canvas), corrected brand tokens
+  (purple `#5b3fd3`, yellow `#f4f27a`, coral `#ffe0cc`, orange `#ffb85c`,
+  bg-primary/secondary, cyan/lavender/warm glow shadows), per-view chrome
+  (turquoise projects, pink supplies), bundle-extracted status pill/chip/
+  condition style maps in `studio-domain.ts` (97 tests total), rows-of-3
+  chip grids with in-row detail panels, gradient quote tiles, plain-purple
+  chat avatars, native-alert import feedback, Inter wired via
+  `@theme inline` (fixes a silent system-font fallback), themed scrollbar
+  rails. Verified by VLM screenshot comparison of all four views against
+  the live site plus a 16-check functional smoke suite.
 
 ---
 
@@ -523,31 +535,44 @@ erDiagram
 
 ### 5.1 Typographic System
 
-- **Typeface:** Inter (latin subset, 300–700 weights) via `next/font`,
-  exposed as `--font-inter` and mapped by `--font-sans`.
+- **Typeface:** Inter (latin subset, 100–900 variable) via `next/font`,
+  exposed as `--font-inter` on `<body>` and wired through an
+  `@theme inline` block — the `font-sans` utility inlines the
+  `var(--font-inter)` chain so it resolves against the body-scoped
+  next/font variable. (A plain `@theme` var() chain resolves to the
+  guaranteed-invalid value at `:root` and every element silently falls
+  back to the system stack — verified empirically and fixed in r3.)
 - **Scale:** `text-xs` (eyebrows, 10–11 px with `tracking-[0.25em]`–
   `[0.35em]` uppercase) → `text-sm` body → `text-lg`/`text-xl` card titles →
-  `text-3xl` page headline.
+  `text-3xl` page headline with the four-stop cyan→blue→violet→pink
+  gradient.
 
 ### 5.2 Color Tokens (`src/app/globals.css` `@theme`)
 
 | Token | Hex | Usage |
 |---|---|---|
-| `ast-turquoise` | `#2ec4b6` | Studio Tools, Need help?, stat accents |
-| `ast-cyan` | `#00e6ff` | My Studio heading, links, focus |
-| `ast-purple` | `#5a3a8e` | Card borders (25–40% opacity) |
-| `ast-lavender` | `#b78bff` | Section eyebrows, sidebar widgets |
-| `ast-pink` | `#ff4db8` | Community, primary CTAs |
+| `ast-turquoise` | `#2ec4b6` | Studio Tools, projects chrome, Need help? |
+| `ast-cyan` | `#00e6ff` | My Studio heading, links, selected chip names |
+| `ast-purple` | `#5b3fd3` | Card borders (25–40% opacity) |
+| `ast-lavender` | `#b78bff` | Section eyebrows, field labels, sidebar widgets |
+| `ast-pink` | `#ff4db8` | Supplies chrome, community, primary CTAs |
 | `ast-blue` | `#4a69d6` | Utility buttons, gradient end |
-| `ast-electric-blue` | `#2e64ff` | Quote text, electric accents |
-| `ast-coral` | `#ff7a7a` | Errors, critical condition |
-| `ast-yellow` | `#ffd5a8` | Header hover accents |
+| `ast-electric-blue` | `#2e64ff` | Planned status, active tiles, quote text |
+| `ast-coral` | `#ffe0cc` | Needs Sorting bucket, unknown-status fallback |
+| `ast-yellow` | `#f4f27a` | On Hold status, low-condition icon, Close buttons |
+| `ast-orange` | `#ffb85c` | Warm accents |
 | `ast-body` | `#fff4d6` | Body text (60–90% opacity) |
-| `ast-muted` | `#dcc7ff` | Login marketing copy |
+| `ast-muted` | `#dcc7ff` | Login marketing copy, secondary text |
 | `ast-faint` | `#9f7fd6` | Placeholders, timestamps |
+| `ast-deep` / `ast-bg-dark` | `#0f1230` / `#14182b` | Panel wells, field surfaces |
+| `ast-bg-primary` / `ast-bg-secondary` | `#121a5a` / `#1822a8` | Legacy canvas accents |
 | Canvas / cards / drawer | `#050009` / `#120724` / `#0B0018` | Fixed surfaces (literal classes) |
 
-All values extracted verbatim from the production app's generated CSS bundle.
+Glow shadows (`--shadow-ast-pink`/`-turquoise`/`-blue`/`-cyan`/`-lavender`/
+`-warm`) are 24–28px radial blobs; the two scrollbar rails
+(`.scrollbar-left` turquoise→blue, `.scrollbar-right` pink→purple) come
+from the production CSS bundle. All values extracted verbatim from the
+live app's generated CSS (`assets/index-BNZKRdTa.css`, captured 2026-09-17).
 
 ### 5.3 Component Primitives
 
@@ -626,7 +651,7 @@ All values extracted verbatim from the production app's generated CSS bundle.
 | Category | Count | Location | Framework |
 |---|---|---|---|
 | Static | — | `eslint .` / `tsc --noEmit` | ESLint 9 + TS 5.9 strict |
-| Automated unit | 65 tests | `src/lib/*.test.ts` — studio-domain, validation, export-payload, rate-limit, inspiration | Vitest (node env, `@/` alias) |
+| Automated unit | 80 tests | `src/lib/*.test.ts` — studio-domain (incl. bundle-pinned style maps), validation, export-payload, rate-limit, inspiration | Vitest (node env, `@/` alias) |
 | Automated action | 17 tests | `src/actions/studio.test.ts` (throwaway SQLite DB, mocked auth seam) | Vitest |
 | Manual golden paths | 11 flows | README "Testing & Quality" | Browser-executed |
 | CI verify-gate | — | `.github/workflows/verify-gate.yml` (lint + typecheck + test + build) | GitHub Actions |
@@ -640,6 +665,13 @@ the `@/` alias, node environment, `src/**/*.test.ts`). They pin:
   (Paint 6 / Brushes & Tools 7 / Pastels 4 / Paper 5 / Canvas & Board 5 /
   Mediums 6 / Other 0) extracted verbatim from the live app's sub-views, so
   the Zod enums, pickers, and navigation tiles cannot drift.
+- **Live style maps** — `matchesStockFilter` (Low Stock = low OR critical,
+  Out of Stock = critical only, per the bundle's filter switch) and the
+  `jz`/`Mz`/`Jz` maps (`projectStatusPillClasses`,
+  `projectChipStatusClasses`, `supplyConditionPill`,
+  `supplyDetailConditionIcon`) extracted from the deployed JS, pinning
+  pills, chip borders, hover/selected treatments, and condition icons to
+  the production rendering.
 - **Inspiration detail domain** — `inspirationDetailSchema` acceptance
   (quote/spotlight shapes, tag caps), `parseInspirationDetail` degradation
   (null / corrupt JSON / non-object / schema-invalid → null), and

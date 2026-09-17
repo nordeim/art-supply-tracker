@@ -5,12 +5,14 @@
  * (desktop column / mobile drawer), main view area (dashboard, projects,
  * supplies, inspiration), and the community panel with Studio Chat.
  *
- * Layout contract: lg+ renders the original three fixed-height columns with
- * independent scroll; below lg the page flows naturally with the community
- * panel toggled by the header's "Chat ☰" button (the live app's mobile
- * pattern — the panel is hidden until toggled, not stacked under the view).
- * Projects/supplies state is seeded from the server render and mutated
- * exclusively through Server Actions.
+ * Layout contract (mirrors the live app): md+ renders the three glass cards
+ * in a 12-column grid — sidebar col-span-3 (turquoise border), main
+ * col-span-7 (purple border), chat col-span-2 (pink border), each
+ * rounded-3xl on the blurred #0B0018 canvas with internal scrolling. Below
+ * md the main card carries the "☰ Studio Tools" / "Chat ☰" toggle bar and
+ * the sidebar + chat render as fixed slide-in drawers. Projects/supplies
+ * state is seeded from the server render and mutated exclusively through
+ * Server Actions.
  */
 import { useCallback, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -58,8 +60,6 @@ export function StudioApp({
   const [supplyList, setSupplyList] = useState(supplies);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [chatPanelOpen, setChatPanelOpen] = useState(false);
-  const [memoryOpen, setMemoryOpen] = useState(false);
-  const [importNotice, setImportNotice] = useState<string | null>(null);
   const [supplyListNavToken, setSupplyListNavToken] = useState(0);
   const [projectModal, setProjectModal] = useState<
     { mode: "create" } | { mode: "edit"; project: ProjectDto } | null
@@ -113,7 +113,8 @@ export function StudioApp({
   }
 
   function handleImportFile(file: File) {
-    setImportNotice(null);
+    // The live app reports import outcomes through native alerts with this
+    // exact copy — the clone keeps the same feedback channel.
     file
       .text()
       .then((text) => {
@@ -121,13 +122,13 @@ export function StudioApp({
         try {
           payload = JSON.parse(text);
         } catch {
-          setImportNotice("That file is not valid JSON.");
+          window.alert("Invalid JSON file. Import cancelled.");
           return;
         }
         startTransition(async () => {
           const result = await importStudioData(payload);
           if (!result.ok) {
-            setImportNotice(result.error.message);
+            window.alert(result.error.message);
             return;
           }
           // Re-read both lists so the UI reflects exactly what was stored.
@@ -137,12 +138,10 @@ export function StudioApp({
           ]);
           if (projectsResult.ok) setProjectList(projectsResult.data);
           if (suppliesResult.ok) setSupplyList(suppliesResult.data);
-          setImportNotice(
-            `Import successful — ${result.data.projects} project(s), ${result.data.supplies} suppl(y/ies).`,
-          );
+          window.alert("Import successful.");
         });
       })
-      .catch(() => setImportNotice("Could not read that file."));
+      .catch(() => window.alert("Could not read file. Import cancelled."));
   }
 
   function handleSupplySaved(supply: SupplyDto, isEdit: boolean) {
@@ -169,94 +168,120 @@ export function StudioApp({
     setSupplyList((list) => list.filter((s) => s.id !== supplyId));
   }
 
-  const sidebarProps = {
-    stats,
-    navigate,
-    currentView: view,
-    projects: projectList,
-    inspiration,
-    onNewProject: () => {
-      setSidebarOpen(false);
-      setProjectModal({ mode: "create" });
-    },
-    onCloseSidebar: () => setSidebarOpen(false),
-    sidebarOpen,
-  };
+  const views = (
+    <>
+      {view === "dashboard" && (
+        <DashboardView
+          onExport={handleExport}
+          onImportClick={() => importInputRef.current?.click()}
+        />
+      )}
+      {view === "projects" && (
+        <ProjectsView
+          projects={projectList}
+          supplies={supplyList}
+          onExport={handleExport}
+          onImportClick={() => importInputRef.current?.click()}
+          onNewProject={() => setProjectModal({ mode: "create" })}
+          onEditProject={(project) => setProjectModal({ mode: "edit", project })}
+          onProjectDeleted={handleProjectDeleted}
+          onSupplyAssignmentChanged={(supply) =>
+            setSupplyList((list) => list.map((s) => (s.id === supply.id ? supply : s)))
+          }
+        />
+      )}
+      {view === "supplies" && (
+        <SuppliesView
+          key={supplyListNavToken}
+          supplies={supplyList}
+          projects={projectList}
+          onExport={handleExport}
+          onImportClick={() => importInputRef.current?.click()}
+          onNewSupply={() => setSupplyModal({ mode: "create" })}
+          onEditSupply={(supply) => setSupplyModal({ mode: "edit", supply })}
+          initialSubView={supplyListNavToken > 0 ? "list" : "grid"}
+          onSupplyDeleted={handleSupplyDeleted}
+        />
+      )}
+      {view === "inspiration" && <InspirationView inspiration={inspiration} />}
+    </>
+  );
 
   return (
-    <main className="flex min-h-screen flex-col bg-[#050009] text-white md:h-screen md:overflow-hidden">
+    <main className="flex min-h-screen flex-col overflow-hidden bg-[#050009] text-white md:h-screen">
       <StudioHeader
         email={user.email}
-        memoryOpen={memoryOpen}
-        onToggleMemory={() => setMemoryOpen((v) => !v)}
-        onCloseMemory={() => setMemoryOpen(false)}
-        memoryText={user.lastWorkedOn}
         onSignOut={handleSignOut}
-        onOpenSidebar={() => setSidebarOpen(true)}
-        chatPanelOpen={chatPanelOpen}
-        onToggleChatPanel={() => setChatPanelOpen((v) => !v)}
       />
 
-      <div className="flex flex-1 flex-col md:flex-row md:overflow-hidden">
-        <StudioSidebar {...sidebarProps} />
+      <div className="flex min-h-0 flex-1 flex-col md:grid md:grid-cols-12 md:gap-4 md:px-4 md:pb-4">
+        <StudioSidebar
+          stats={stats}
+          navigate={navigate}
+          currentView={view}
+          projects={projectList}
+          inspiration={inspiration}
+          onNewProject={() => {
+            setSidebarOpen(false);
+            setProjectModal({ mode: "create" });
+          }}
+          onCloseSidebar={() => setSidebarOpen(false)}
+          sidebarOpen={sidebarOpen}
+        />
 
-        <div className="min-w-0 flex-1 px-4 pb-10 pt-6 md:overflow-y-auto scrollbar-studio md:px-8">
-          {importNotice && (
-            <p
-              role="status"
-              className="mb-4 rounded-xl border border-ast-turquoise/40 bg-ast-turquoise/10 px-4 py-2.5 text-sm text-ast-turquoise"
+        {/* Main card — the purple-bordered glass pane holding the active view.
+         * Below md it carries the live app's "☰ Studio Tools / Chat ☰" bar. */}
+        <section className="flex min-h-0 flex-1 flex-col overflow-y-auto scrollbar-left mx-4 mb-4 rounded-3xl border border-ast-purple/50 bg-[#0B0018] p-6 backdrop-blur-xl md:col-span-7 md:mx-0 md:mb-0">
+          <div className="mb-4 flex justify-between md:hidden">
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+              className="flex items-center gap-1.5 rounded-xl border border-ast-turquoise/30 bg-[#120724] px-3 py-2 text-xs font-semibold text-ast-turquoise transition hover:border-ast-turquoise/60"
             >
-              {importNotice}
-            </p>
-          )}
+              ☰ Studio Tools
+            </button>
+            <button
+              type="button"
+              onClick={() => setChatPanelOpen(true)}
+              className="flex items-center gap-1.5 rounded-xl border border-ast-pink/30 bg-[#120724] px-3 py-2 text-xs font-semibold text-ast-pink transition hover:border-ast-pink/60"
+            >
+              Chat ☰
+            </button>
+          </div>
 
-          {view === "dashboard" && (
-            <DashboardView
-              onExport={handleExport}
-              onImportClick={() => importInputRef.current?.click()}
-            />
-          )}
-          {view === "projects" && (
-            <ProjectsView
-              projects={projectList}
-              supplies={supplyList}
-              onExport={handleExport}
-              onImportClick={() => importInputRef.current?.click()}
-              onNewProject={() => setProjectModal({ mode: "create" })}
-              onEditProject={(project) => setProjectModal({ mode: "edit", project })}
-              onProjectDeleted={handleProjectDeleted}
-              onSupplyAssignmentChanged={(supply) =>
-                setSupplyList((list) => list.map((s) => (s.id === supply.id ? supply : s)))
-              }
-            />
-          )}
-          {view === "supplies" && (
-            <SuppliesView
-              key={supplyListNavToken}
-              supplies={supplyList}
-              projects={projectList}
-              onExport={handleExport}
-              onImportClick={() => importInputRef.current?.click()}
-              onNewSupply={() => setSupplyModal({ mode: "create" })}
-              onEditSupply={(supply) => setSupplyModal({ mode: "edit", supply })}
-              initialSubView={supplyListNavToken > 0 ? "list" : "grid"}
-              onSupplyDeleted={handleSupplyDeleted}
-            />
-          )}
-          {view === "inspiration" && <InspirationView inspiration={inspiration} />}
+          <div className="studio-fade">{views}</div>
+        </section>
 
-          {/* Mobile community panel — toggled by the header's Chat ☰ button. */}
-          {chatPanelOpen && (
-            <div className="mt-6 lg:hidden">
-              <CommunityContent messages={chatMessages} memoryText={user.lastWorkedOn} />
-            </div>
-          )}
-        </div>
-
-        <aside className="hidden w-80 shrink-0 overflow-y-auto scrollbar-studio px-4 pb-10 pt-6 lg:block">
+        {/* Community column — desktop glass card + mobile slide-in drawer. */}
+        <aside className="hidden min-h-0 overflow-hidden rounded-3xl border border-ast-pink/40 bg-[#0B0018] p-4 backdrop-blur-xl md:col-span-2 md:block">
           <CommunityContent messages={chatMessages} memoryText={user.lastWorkedOn} />
         </aside>
       </div>
+
+      {/* Mobile chat drawer — the live app's fixed right panel. */}
+      {chatPanelOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm md:hidden"
+          onClick={() => setChatPanelOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+      <aside
+        aria-label="Community chat"
+        aria-hidden={!chatPanelOpen}
+        className={`fixed inset-y-0 right-0 z-50 w-4/5 max-w-xs overflow-y-auto scrollbar-right rounded-l-3xl border-l border-ast-pink/40 bg-[#0B0018] p-4 backdrop-blur-xl transition-transform duration-300 md:hidden ${
+          chatPanelOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        <button
+          type="button"
+          onClick={() => setChatPanelOpen(false)}
+          className="mb-4 text-xs text-ast-pink/60 transition hover:text-ast-pink"
+        >
+          ✕ Close
+        </button>
+        <CommunityContent messages={chatMessages} memoryText={user.lastWorkedOn} />
+      </aside>
 
       <input
         ref={importInputRef}
@@ -301,44 +326,15 @@ export function StudioApp({
 
 function StudioHeader({
   email,
-  memoryOpen,
-  onToggleMemory,
-  onCloseMemory,
-  memoryText,
   onSignOut,
-  onOpenSidebar,
-  chatPanelOpen,
-  onToggleChatPanel,
 }: {
   email: string;
-  memoryOpen: boolean;
-  onToggleMemory: () => void;
-  onCloseMemory: () => void;
-  memoryText: string;
   onSignOut: () => void;
-  onOpenSidebar: () => void;
-  chatPanelOpen: boolean;
-  onToggleChatPanel: () => void;
 }) {
   return (
-    <header className="sticky top-0 z-40 shrink-0 bg-[#050009]/90 px-4 py-4 backdrop-blur-xl md:px-8">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex min-w-fit items-center gap-3">
-          <button
-            type="button"
-            onClick={onOpenSidebar}
-            aria-label="Open studio tools"
-            className="rounded-xl border border-ast-purple/30 bg-white/5 p-2 text-ast-lavender transition hover:border-ast-turquoise/50 hover:text-ast-turquoise md:hidden"
-          >
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-              <path
-                d="M2 4.5h14M2 9h14M2 13.5h14"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-              />
-            </svg>
-          </button>
+    <header className="sticky top-0 z-40 shrink-0 bg-[#050009]/90 px-6 py-4 backdrop-blur-xl">
+      <div className="flex items-center justify-between gap-6">
+        <div className="min-w-fit">
           <Image
             src="/assets/ast_logo_horizontal_cropped.png"
             alt="ArtSupplyTracker"
@@ -346,21 +342,19 @@ function StudioHeader({
             height={56}
             priority
             style={{ height: "auto", width: "auto", maxWidth: "320px" }}
-            className="h-10 object-contain md:h-12 lg:h-14"
+            className="inline h-10 object-contain md:h-12 lg:h-14"
           />
         </div>
-        <div className="relative flex min-w-fit items-center gap-2 md:gap-3">
+        <div className="flex min-w-fit items-center gap-3">
+          {/* The live app's header button — presentational in production
+           * (the Studio Memory content lives in the chat panel's card). */}
           <button
             type="button"
-            onClick={onToggleMemory}
-            aria-expanded={memoryOpen}
-            className="flex items-center gap-2 rounded-xl border border-[#5B3FD3]/30 bg-white/5 px-3 py-1.5 text-sm text-pink-300 transition hover:border-[#FFD5A8]/70 hover:bg-[#FFD5A8]/20 hover:text-[#FFD5A8]"
+            className="flex items-center gap-2 rounded-xl border border-ast-purple/30 bg-white/5 px-3 py-1.5 text-sm text-pink-300 transition hover:border-ast-yellow/70 hover:bg-ast-yellow/20 hover:text-ast-yellow"
           >
-            <span aria-hidden="true">✧</span>
-            <span className="hidden sm:inline">What was I working on?</span>
-            <span className="sm:hidden">Memory</span>
+            <span aria-hidden="true">✧</span>What was I working on?
           </button>
-          <span className="hidden bg-gradient-to-r from-cyan-400 via-blue-500 to-pink-500 bg-clip-text text-sm font-medium text-transparent md:inline">
+          <span className="bg-gradient-to-r from-cyan-400 via-blue-500 to-pink-500 bg-clip-text text-sm font-medium text-transparent">
             {email}
           </span>
           <button
@@ -370,38 +364,7 @@ function StudioHeader({
           >
             Sign Out
           </button>
-
-          {memoryOpen && (
-            <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-2xl border border-ast-purple/35 bg-[#120724] p-4 shadow-xl studio-fade">
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-sm font-semibold text-ast-lavender">Studio Memory</p>
-                <button
-                  type="button"
-                  onClick={onCloseMemory}
-                  aria-label="Close"
-                  className="rounded-lg p-1 text-ast-faint transition hover:bg-white/5 hover:text-white"
-                >
-                  ✕
-                </button>
-              </div>
-              <p className="mt-1 text-xs text-ast-body/70">
-                {memoryText ? `You were working on ${memoryText}.` : "Nothing tracked yet — open a workspace to start."}
-              </p>
-            </div>
-          )}
         </div>
-      </div>
-
-      {/* Mobile chat toggle — the live app's "Chat ☰" header control. */}
-      <div className="mt-3 flex justify-end lg:hidden">
-        <button
-          type="button"
-          onClick={onToggleChatPanel}
-          aria-expanded={chatPanelOpen}
-          className="flex items-center gap-1.5 rounded-xl border border-ast-pink/30 bg-[#120724] px-3 py-2 text-xs font-semibold text-ast-pink transition hover:border-ast-pink/60"
-        >
-          {chatPanelOpen ? "✕ Close" : "Chat ☰"}
-        </button>
       </div>
     </header>
   );
@@ -430,7 +393,7 @@ function CommunityContent({
       </div>
       <div className="rounded-2xl border border-ast-turquoise/30 bg-[#120724] p-3">
         <p className="text-sm font-semibold text-ast-turquoise">Need help?</p>
-        <p className="mt-1 text-xs text-ast-body/60 leading-relaxed">
+        <p className="mt-1 text-xs text-ast-body/70">
           Ask how to add supplies, track condition, or prep for a show.
         </p>
       </div>

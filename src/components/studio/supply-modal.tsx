@@ -138,12 +138,12 @@ export function SupplyModal({ initial, projects, onClose, onSaved }: SupplyModal
   }
 
   const inputClass =
-    "w-full rounded-xl border border-ast-purple/40 bg-[#0B0018] px-3.5 py-2.5 text-sm text-white placeholder:text-ast-faint focus:border-ast-cyan/60 focus:outline-none focus:ring-2 focus:ring-ast-cyan/30";
-  const labelClass = "mb-1.5 block text-sm font-medium text-ast-lavender";
+    "w-full rounded-lg border border-ast-pink/30 bg-ast-bg-dark/70 px-3 py-2 text-white transition placeholder:text-white/40 focus:border-ast-pink focus:outline-none focus:ring-2 focus:ring-ast-pink/30";
+  const labelClass = "mb-2 block text-sm font-medium text-ast-lavender";
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -153,44 +153,48 @@ export function SupplyModal({ initial, projects, onClose, onSaved }: SupplyModal
         role="dialog"
         aria-modal="true"
         aria-labelledby="supply-modal-title"
-        className="w-full max-w-lg rounded-2xl border border-ast-purple/35 bg-[#120724] p-6 shadow-2xl studio-fade max-h-[90vh] overflow-y-auto scrollbar-studio"
+        className="flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-ast-pink/60 bg-ast-deep/95 shadow-ast-pink studio-fade md:max-w-2xl"
       >
-        <div className="mb-5 flex items-center justify-between">
-          <h2 id="supply-modal-title" className="text-lg font-bold text-white">
+        <div className="flex shrink-0 items-center justify-between px-6 pb-4 pt-6">
+          <h2 id="supply-modal-title" className="text-2xl font-bold text-ast-pink">
             {isEdit ? "Edit Supply" : "Add Supply"}
           </h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close dialog"
-            className="rounded-lg p-1.5 text-ast-faint transition hover:bg-white/5 hover:text-white"
+            className="text-2xl text-ast-yellow/60 transition hover:text-ast-yellow"
           >
             ✕
           </button>
         </div>
 
-        <form onSubmit={onSubmit} noValidate className="space-y-4">
-          <div>
-            <label htmlFor="supply-name" className={labelClass}>
-              Supply Name <span aria-hidden="true">*</span>
-            </label>
-            <input
-              id="supply-name"
-              type="text"
-              required
-              maxLength={160}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., Winsor & Newton Cobalt Blue"
-              className={inputClass}
-            />
-          </div>
-
-          <div>
-            <span className={labelClass}>Photo</span>
-            <div className="flex items-center gap-3">
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-ast-purple/40 bg-[#0B0018] px-4 py-2.5 text-sm text-ast-faint transition hover:border-ast-cyan/50 hover:text-ast-body">
-                📷 Add photo
+        <form onSubmit={onSubmit} noValidate className="flex min-h-0 flex-1 flex-col">
+          <div className="flex-1 overflow-y-auto px-6">
+          <div className="space-y-4 pb-2">
+          <div className="flex items-start gap-4">
+            <div className="flex-1">
+              <label htmlFor="supply-name" className={labelClass}>
+                Supply Name <span aria-hidden="true">*</span>
+              </label>
+              <input
+                id="supply-name"
+                type="text"
+                required
+                maxLength={160}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g., Winsor & Newton Cobalt Blue"
+                className={inputClass}
+              />
+            </div>
+            <div className="shrink-0">
+              <span className={labelClass}>Photo</span>
+              <label className="flex h-16 w-16 cursor-pointer flex-col items-center justify-center rounded-xl border border-ast-pink/30 bg-ast-bg-dark/70 text-ast-muted transition hover:border-ast-pink/60 hover:text-ast-body">
+                <span aria-hidden="true" className="text-lg leading-none">
+                  📷
+                </span>
+                <span className="mt-1 text-[9px]">Add photo</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -202,14 +206,14 @@ export function SupplyModal({ initial, projects, onClose, onSaved }: SupplyModal
                 />
               </label>
               {photo && (
-                <div className="relative">
+                <div className="relative mt-2">
                   <Image
                     src={photo}
                     alt="Supply photo"
                     width={56}
                     height={56}
                     unoptimized
-                    className="h-14 w-14 rounded-lg border border-ast-purple/40 object-cover"
+                    className="h-14 w-14 rounded-xl border border-ast-pink/30 object-cover"
                   />
                   <button
                     type="button"
@@ -233,7 +237,7 @@ export function SupplyModal({ initial, projects, onClose, onSaved }: SupplyModal
                 id="supply-category"
                 value={category}
                 onChange={(e) => onCategoryChange(e.target.value)}
-                className="w-full rounded-xl border border-ast-purple/40 bg-[#0B0018] px-3.5 py-2.5 text-sm text-white focus:border-ast-cyan/60 focus:outline-none"
+                className="w-full rounded-lg border border-ast-pink/30 bg-ast-bg-dark/70 px-3 py-2 text-white transition focus:border-ast-pink focus:outline-none focus:ring-2 focus:ring-ast-pink/30"
               >
                 {SUPPLY_CATEGORIES.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -251,7 +255,7 @@ export function SupplyModal({ initial, projects, onClose, onSaved }: SupplyModal
                   id="supply-subcategory"
                   value={subcategoryOptions.some((o) => o.value === subcategory) ? subcategory : SUBCATEGORY_NONE}
                   onChange={(e) => setSubcategory(e.target.value)}
-                  className="w-full rounded-xl border border-ast-purple/40 bg-[#0B0018] px-3.5 py-2.5 text-sm text-white focus:border-ast-cyan/60 focus:outline-none"
+                  className="w-full rounded-lg border border-ast-pink/30 bg-ast-bg-dark/70 px-3 py-2 text-white transition focus:border-ast-pink focus:outline-none focus:ring-2 focus:ring-ast-pink/30"
                 >
                   {subcategoryOptions.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -287,7 +291,7 @@ export function SupplyModal({ initial, projects, onClose, onSaved }: SupplyModal
                 id="supply-condition"
                 value={condition}
                 onChange={(e) => setCondition(e.target.value)}
-                className="w-full rounded-xl border border-ast-purple/40 bg-[#0B0018] px-3.5 py-2.5 text-sm text-white focus:border-ast-cyan/60 focus:outline-none"
+                className="w-full rounded-lg border border-ast-pink/30 bg-ast-bg-dark/70 px-3 py-2 text-white transition focus:border-ast-pink focus:outline-none focus:ring-2 focus:ring-ast-pink/30"
               >
                 {SUPPLY_CONDITIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -319,7 +323,7 @@ export function SupplyModal({ initial, projects, onClose, onSaved }: SupplyModal
             </label>
             <textarea
               id="supply-notes"
-              rows={3}
+              rows={2}
               maxLength={4000}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -329,17 +333,18 @@ export function SupplyModal({ initial, projects, onClose, onSaved }: SupplyModal
           </div>
 
           <div>
-            <label htmlFor="supply-barcode" className={labelClass}>
+            <label htmlFor="supply-barcode" className="mb-2 block text-sm font-semibold text-ast-lavender">
               Barcode / UPC
             </label>
             <input
               id="supply-barcode"
               type="text"
+              inputMode="numeric"
               maxLength={120}
               value={barcode}
               onChange={(e) => setBarcode(e.target.value)}
               placeholder="Enter barcode manually"
-              className={inputClass}
+              className="w-full rounded-lg border border-blue-500/40 bg-black/30 px-3 py-2 text-white transition placeholder:text-white/40 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
             />
           </div>
 
@@ -351,7 +356,7 @@ export function SupplyModal({ initial, projects, onClose, onSaved }: SupplyModal
               id="supply-project"
               value={assignedProjectId}
               onChange={(e) => setAssignedProjectId(e.target.value)}
-              className="w-full rounded-xl border border-ast-purple/40 bg-[#0B0018] px-3.5 py-2.5 text-sm text-white focus:border-ast-cyan/60 focus:outline-none"
+              className="w-full rounded-lg border border-ast-pink/30 bg-ast-bg-dark/70 px-3 py-2 text-white transition focus:border-ast-pink focus:outline-none focus:ring-2 focus:ring-ast-pink/30"
             >
               <option value="">— Studio inventory (unassigned) —</option>
               {projects.map((project) => (
@@ -362,24 +367,27 @@ export function SupplyModal({ initial, projects, onClose, onSaved }: SupplyModal
             </select>
           </div>
 
+          </div>
+          </div>
+
           {error && (
-            <p role="alert" className="text-sm text-ast-coral">
+            <p role="alert" className="px-6 text-sm text-ast-coral">
               {error}
             </p>
           )}
 
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex shrink-0 gap-3 border-t border-white/5 px-6 pb-6 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-ast-purple/40 px-4 py-2.5 text-sm font-medium text-ast-body/80 transition hover:bg-white/5"
+              className="flex-1 rounded-lg border border-ast-yellow/30 bg-transparent px-4 py-2 text-sm text-ast-yellow transition hover:bg-ast-yellow/10 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={pending}
-              className="rounded-xl bg-gradient-to-r from-ast-turquoise to-ast-blue px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+              className="flex-1 rounded-lg bg-gradient-to-r from-ast-pink to-ast-purple px-4 py-2 font-semibold text-white shadow-ast-pink transition hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
             >
               {pending ? "Saving…" : isEdit ? "Save Changes" : "Add Supply"}
             </button>

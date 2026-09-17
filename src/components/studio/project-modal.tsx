@@ -119,7 +119,7 @@ export function ProjectModal({ initial, onClose, onSaved }: ProjectModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -129,25 +129,27 @@ export function ProjectModal({ initial, onClose, onSaved }: ProjectModalProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="project-modal-title"
-        className="w-full max-w-lg rounded-2xl border border-ast-purple/35 bg-[#120724] p-6 shadow-2xl studio-fade max-h-[90vh] overflow-y-auto scrollbar-studio"
+        className="flex max-h-[calc(100vh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-ast-turquoise/60 bg-ast-deep/95 shadow-ast-turquoise studio-fade md:max-w-xl"
       >
-        <div className="mb-5 flex items-center justify-between">
-          <h2 id="project-modal-title" className="text-lg font-bold text-white">
+        <div className="flex shrink-0 items-center justify-between px-6 pb-4 pt-6">
+          <h2 id="project-modal-title" className="text-2xl font-bold text-ast-turquoise">
             {isEdit ? "Edit Project" : "New Project"}
           </h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close dialog"
-            className="rounded-lg p-1.5 text-ast-faint transition hover:bg-white/5 hover:text-white"
+            className="text-2xl text-ast-yellow/60 transition hover:text-ast-yellow"
           >
             ✕
           </button>
         </div>
 
-        <form onSubmit={onSubmit} noValidate className="space-y-4">
-          <div>
-            <label htmlFor="project-name" className="mb-1.5 block text-sm font-medium text-ast-lavender">
+        <form onSubmit={onSubmit} noValidate className="flex min-h-0 flex-1 flex-col">
+          <div className="flex-1 overflow-y-auto px-6">
+          <div className="grid grid-cols-1 gap-4 pb-2 md:grid-cols-2">
+          <div className="md:col-span-2">
+            <label htmlFor="project-name" className="mb-2 block text-sm font-medium text-ast-lavender">
               Project Title <span aria-hidden="true">*</span>
             </label>
             <input
@@ -158,20 +160,18 @@ export function ProjectModal({ initial, onClose, onSaved }: ProjectModalProps) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Summer Exhibition Series"
-              className="w-full rounded-xl border border-ast-purple/40 bg-[#0B0018] px-3.5 py-2.5 text-sm text-white placeholder:text-ast-faint focus:border-ast-cyan/60 focus:outline-none focus:ring-2 focus:ring-ast-cyan/30"
+              className="w-full rounded-lg border border-ast-turquoise/30 bg-ast-bg-dark/70 px-3 py-2 text-white transition placeholder:text-white/40 focus:border-ast-turquoise focus:outline-none focus:ring-2 focus:ring-ast-turquoise/30"
             />
           </div>
-
-          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label htmlFor="project-status" className="mb-1.5 block text-sm font-medium text-ast-lavender">
+              <label htmlFor="project-status" className="mb-2 block text-sm font-medium text-ast-lavender">
                 Status
               </label>
               <select
                 id="project-status"
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="w-full rounded-xl border border-ast-purple/40 bg-[#0B0018] px-3.5 py-2.5 text-sm text-white focus:border-ast-cyan/60 focus:outline-none"
+                className="w-full rounded-lg border border-ast-turquoise/30 bg-ast-bg-dark/70 px-3 py-2 text-white transition focus:border-ast-turquoise focus:outline-none focus:ring-2 focus:ring-ast-turquoise/30"
               >
                 {STATUS_SELECT_ORDER.map((value) => {
                   const option = PROJECT_STATUSES.find((s) => s.value === value);
@@ -184,8 +184,8 @@ export function ProjectModal({ initial, onClose, onSaved }: ProjectModalProps) {
                 })}
               </select>
             </div>
-            <div>
-              <label htmlFor="project-budget" className="mb-1.5 block text-sm font-medium text-ast-lavender">
+          <div>
+              <label htmlFor="project-budget" className="mb-2 block text-sm font-medium text-ast-lavender">
                 Estimated Budget
               </label>
               <input
@@ -196,30 +196,29 @@ export function ProjectModal({ initial, onClose, onSaved }: ProjectModalProps) {
                 value={budget}
                 onChange={(e) => setBudget(e.target.value)}
                 placeholder="e.g., 150"
-                className="w-full rounded-xl border border-ast-purple/40 bg-[#0B0018] px-3.5 py-2.5 text-sm text-white placeholder:text-ast-faint focus:border-ast-cyan/60 focus:outline-none focus:ring-2 focus:ring-ast-cyan/30"
+                className="w-full rounded-lg border border-ast-turquoise/30 bg-ast-bg-dark/70 px-3 py-2 text-white transition placeholder:text-white/40 focus:border-ast-turquoise focus:outline-none focus:ring-2 focus:ring-ast-turquoise/30"
               />
-            </div>
           </div>
 
-          <div>
-            <label htmlFor="project-notes" className="mb-1.5 block text-sm font-medium text-ast-lavender">
+          <div className="md:col-span-2">
+            <label htmlFor="project-notes" className="mb-2 block text-sm font-medium text-ast-lavender">
               Notes
             </label>
             <textarea
               id="project-notes"
-              rows={4}
+              rows={3}
               maxLength={4000}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Add project details, goals, or inspiration..."
-              className="w-full resize-none rounded-xl border border-ast-purple/40 bg-[#0B0018] px-3.5 py-2.5 text-sm text-white placeholder:text-ast-faint focus:border-ast-cyan/60 focus:outline-none focus:ring-2 focus:ring-ast-cyan/30"
+              className="w-full resize-none rounded-lg border border-ast-turquoise/30 bg-ast-bg-dark/70 px-3 py-2 text-white transition placeholder:text-white/40 focus:border-ast-turquoise focus:outline-none focus:ring-2 focus:ring-ast-turquoise/30"
             />
           </div>
 
-          <div>
-            <span className="mb-1.5 block text-sm font-medium text-ast-lavender">Photos</span>
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-ast-purple/40 bg-[#0B0018] px-4 py-2.5 text-sm text-ast-faint transition hover:border-ast-cyan/50 hover:text-ast-body">
-              📷 Add photos
+          <div className="md:col-span-2">
+            <span className="mb-2 block text-sm font-medium text-ast-lavender">Photos</span>
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-ast-turquoise/30 bg-ast-bg-dark/70 px-3 py-2 text-sm text-ast-muted transition hover:border-ast-turquoise/60 hover:text-ast-body">
+              Add photos
               <input
                 ref={photoInputRef}
                 type="file"
@@ -242,7 +241,7 @@ export function ProjectModal({ initial, onClose, onSaved }: ProjectModalProps) {
                       width={64}
                       height={64}
                       unoptimized
-                      className="h-16 w-16 rounded-lg border border-ast-purple/40 object-cover"
+                      className="h-16 w-16 rounded-lg border border-ast-turquoise/30 object-cover"
                     />
                     <button
                       type="button"
@@ -258,24 +257,27 @@ export function ProjectModal({ initial, onClose, onSaved }: ProjectModalProps) {
             )}
           </div>
 
+          </div>
+          </div>
+
           {error && (
-            <p role="alert" className="text-sm text-ast-coral">
+            <p role="alert" className="px-6 text-sm text-ast-coral">
               {error}
             </p>
           )}
 
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex shrink-0 gap-3 border-t border-white/5 px-6 pb-6 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-ast-purple/40 px-4 py-2.5 text-sm font-medium text-ast-body/80 transition hover:bg-white/5"
+              className="flex-1 rounded-lg border border-ast-yellow/30 bg-transparent px-4 py-2 text-sm text-ast-yellow transition hover:bg-ast-yellow/10 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={pending}
-              className="rounded-xl bg-gradient-to-r from-ast-turquoise to-ast-blue px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+              className="flex-1 rounded-lg bg-gradient-to-r from-ast-turquoise to-ast-blue px-4 py-2 font-semibold text-white shadow-ast-turquoise transition hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
             >
               {pending ? "Saving…" : isEdit ? "Save Changes" : "Create Project"}
             </button>
