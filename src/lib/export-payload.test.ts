@@ -112,6 +112,51 @@ describe("buildExportPayload", () => {
     expect(payload.projects[0].supplyIds).toEqual([]);
     expect(payload.supplies[0].usedInProjectIds).toEqual([]);
   });
+
+  it("emits empty strings for unset budget and barcode (live export behavior)", () => {
+    // The live app's in-memory model defaults both to "" (its create path
+    // does `budget: e.budget ?? ''`), and a fresh live export captured
+    // 2026-09-17 shows `"budget": ""` / `"barcode": ""` — not null.
+    const payload = buildExportPayload(
+      [project({ budget: null })],
+      [supply({ barcode: null })],
+      NOW,
+    );
+    expect(payload.projects[0].budget).toBe("");
+    expect(payload.supplies[0].barcode).toBe("");
+  });
+
+  it("emits the live supply field order including imageUrl", () => {
+    // Live exports carry `imageUrl: null` between imageKey and createdAt;
+    // the clone omits storage-backed owner (no equivalent — privacy) but
+    // keeps every other field the live importer maps.
+    const payload = buildExportPayload([], [supply()], NOW);
+    const s = payload.supplies[0] as unknown as Record<string, unknown>;
+    expect(Object.keys(s)).toEqual([
+      "id",
+      "name",
+      "category",
+      "subcategory",
+      "itemType",
+      "unit",
+      "barcode",
+      "tags",
+      "quantityValue",
+      "quantity",
+      "location",
+      "notes",
+      "imageKey",
+      "imageUrl",
+      "createdAt",
+      "updatedAt",
+      "usedInProjectIds",
+      "qty",
+      "image",
+      "status",
+      "isNew",
+    ]);
+    expect(s.imageUrl).toBeNull();
+  });
 });
 
 describe("normalizeImportPayload", () => {

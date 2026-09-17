@@ -11,16 +11,22 @@
  * #050009 canvas without a .dark class toggle (the studio is always dark).
  */
 @theme {
-  /* AST brand palette (verbatim from the live app's generated CSS) */
+  /* AST brand palette — values pinned to the live app's *compiled utility
+   * classes* (the rendered ground truth), NOT its vestigial :root variable
+   * block. Verified 2026-09-17 against computed styles on
+   * studiobeta.artsupplytracker.com: .text-ast_purple = rgb(90,58,142),
+   * .text-ast_yellow = rgb(255,213,168), .text-ast_coral = rgb(255,122,122).
+   * (The live :root block carries #5b3fd3/#f4f27a/#ffe0cc, but no utility
+   * or custom rule ever resolves those — they are dead values.) */
   --color-ast-turquoise: #2ec4b6;
   --color-ast-cyan: #00e6ff;
-  --color-ast-purple: #5b3fd3;
+  --color-ast-purple: #5a3a8e;
   --color-ast-lavender: #b78bff;
   --color-ast-pink: #ff4db8;
   --color-ast-blue: #4a69d6;
   --color-ast-electric-blue: #2e64ff;
-  --color-ast-coral: #ffe0cc;
-  --color-ast-yellow: #f4f27a;
+  --color-ast-coral: #ff7a7a;
+  --color-ast-yellow: #ffd5a8;
   --color-ast-orange: #ffb85c;
   --color-ast-body: #fff4d6;
   --color-ast-muted: #dcc7ff;

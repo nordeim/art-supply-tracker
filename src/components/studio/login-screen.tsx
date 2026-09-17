@@ -2,14 +2,19 @@
 
 /**
  * Login screen — faithful clone of the live "Join the Art Supply Tracker
- * Artist Beta" gate: marketing column + auth card with Sign In / Create
- * Account tabs, show-password toggle, and the ArtDeadline listing badge.
- * Submits through Server Actions and refreshes the route on success so the
- * server component re-renders with the session cookie present.
+ * Artist Beta" gate: marketing column + the live app's AWS-Amplify-styled
+ * auth card (sharp-cornered #120724 card with a 1px #5B3FD3 border,
+ * text-only tabs — active #047d95 / inactive #304050 — 4px-radius inputs
+ * with grey #89949b borders, the #FE5FA7 primary button, and the eye-icon
+ * password toggle rendered as a switch). Submits through Server Actions
+ * and refreshes the route on success so the server component re-renders
+ * with the session cookie present. All chrome values were measured against
+ * the deployed Amplify UI on 2026-09-17 (computed styles + pixel sampling).
  */
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { Eye, EyeOff } from "lucide-react";
 
 import { signInAction, signUpAction } from "@/actions/auth";
 import type { ActionResult } from "@/lib/result";
@@ -97,13 +102,14 @@ export function LoginScreen() {
           </a>
         </div>
 
-        {/* Auth card */}
+        {/* Auth card — the live app's Amplify authenticator chrome: sharp
+         * corners, 1px #5B3FD3 border, solid #120724 surface (no blur). */}
         <section className="w-full" aria-label="Account access">
-          <div className="rounded-2xl border border-ast-lavender/30 bg-[#120724]/90 backdrop-blur-xl p-6 shadow-xl">
+          <div className="w-full max-w-[480px] border border-[#5B3FD3] bg-[#120724] p-6">
             <div
               role="tablist"
               aria-label="Account access"
-              className="grid grid-cols-2 gap-1 mb-6 rounded-xl bg-[#0B0018] p-1"
+              className="mb-6 flex"
             >
               <button
                 type="button"
@@ -113,10 +119,10 @@ export function LoginScreen() {
                   setMode("signin");
                   setError(null);
                 }}
-                className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                className={`px-4 py-3 text-sm font-bold transition ${
                   mode === "signin"
-                    ? "bg-ast-lavender/15 text-ast-cyan"
-                    : "text-[#9f7fd6] hover:text-[#DCC7FF]"
+                    ? "text-[#047d95]"
+                    : "text-[#304050] hover:text-[#3f5266]"
                 }`}
               >
                 Sign In
@@ -129,10 +135,10 @@ export function LoginScreen() {
                   setMode("signup");
                   setError(null);
                 }}
-                className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                className={`px-4 py-3 text-sm font-bold transition ${
                   mode === "signup"
-                    ? "bg-ast-lavender/15 text-ast-cyan"
-                    : "text-[#9f7fd6] hover:text-[#DCC7FF]"
+                    ? "text-[#047d95]"
+                    : "text-[#304050] hover:text-[#3f5266]"
                 }`}
               >
                 Create Account
@@ -144,7 +150,7 @@ export function LoginScreen() {
                 <div>
                   <label
                     htmlFor="displayName"
-                    className="block text-sm font-medium text-[#DCC7FF] mb-1.5"
+                    className="mb-1.5 block text-base font-normal text-[#304050]"
                   >
                     Display name
                   </label>
@@ -158,7 +164,7 @@ export function LoginScreen() {
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
                     placeholder="Your artist name"
-                    className="w-full rounded-xl border border-ast-purple/40 bg-[#0B0018] px-3.5 py-2.5 text-sm text-[#F7F2FF] placeholder:text-[#9f7fd6] focus:border-ast-cyan/60 focus:outline-none focus:ring-2 focus:ring-ast-cyan/30"
+                    className="h-[42px] w-full rounded-[4px] border border-[#89949b] bg-transparent px-3 text-sm text-[#F7F2FF] placeholder:text-[#89949b]/70 focus:border-[#047d95] focus:outline-none focus:ring-2 focus:ring-[#047d95]/30"
                   />
                 </div>
               )}
@@ -166,7 +172,7 @@ export function LoginScreen() {
               <div>
                 <label
                   htmlFor="email"
-                  className="block text-sm font-medium text-[#DCC7FF] mb-1.5"
+                  className="mb-1.5 block text-base font-normal text-[#304050]"
                 >
                   Email
                 </label>
@@ -180,14 +186,14 @@ export function LoginScreen() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Enter your Email"
-                  className="w-full rounded-xl border border-ast-purple/40 bg-[#0B0018] px-3.5 py-2.5 text-sm text-[#F7F2FF] placeholder:text-[#9f7fd6] focus:border-ast-cyan/60 focus:outline-none focus:ring-2 focus:ring-ast-cyan/30"
+                  className="h-[42px] w-full rounded-[4px] border border-[#89949b] bg-transparent px-3 text-sm text-[#F7F2FF] placeholder:text-[#89949b]/70 focus:border-[#047d95] focus:outline-none focus:ring-2 focus:ring-[#047d95]/30"
                 />
               </div>
 
               <div>
                 <label
                   htmlFor="password"
-                  className="block text-sm font-medium text-[#DCC7FF] mb-1.5"
+                  className="mb-1.5 block text-base font-normal text-[#304050]"
                 >
                   Password
                 </label>
@@ -203,16 +209,23 @@ export function LoginScreen() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your Password"
-                    className="w-full rounded-xl border border-ast-purple/40 bg-[#0B0018] px-3.5 py-2.5 pr-12 text-sm text-[#F7F2FF] placeholder:text-[#9f7fd6] focus:border-ast-cyan/60 focus:outline-none focus:ring-2 focus:ring-ast-cyan/30"
+                    className="h-[42px] w-full rounded-[4px] border border-[#89949b] bg-transparent px-3 pr-12 text-sm text-[#F7F2FF] placeholder:text-[#89949b]/70 focus:border-[#047d95] focus:outline-none focus:ring-2 focus:ring-[#047d95]/30"
                   />
+                  {/* The live app's Amplify show-password control: an eye
+                   * icon announced as a switch with checked state. */}
                   <button
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
-                    aria-pressed={showPassword}
-                    className="absolute inset-y-0 right-0 flex items-center px-3 text-xs text-[#9f7fd6] hover:text-[#DCC7FF]"
+                    role="switch"
+                    aria-checked={showPassword}
                     aria-label={showPassword ? "Hide password" : "Show password"}
+                    className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-[#89949b] transition hover:text-[#c5cdd6]"
                   >
-                    {showPassword ? "Hide" : "Show"}
+                    {showPassword ? (
+                      <EyeOff aria-hidden="true" className="h-4 w-4" />
+                    ) : (
+                      <Eye aria-hidden="true" className="h-4 w-4" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -231,7 +244,7 @@ export function LoginScreen() {
               <button
                 type="submit"
                 disabled={pending}
-                className="w-full rounded-xl bg-ast-pink px-4 py-3 text-sm font-semibold text-white transition hover:bg-ast-pink/85 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="h-[42px] w-full rounded-[4px] bg-[#FE5FA7] px-4 text-sm font-semibold text-white transition hover:bg-[#fe77b6] disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {pending
                   ? mode === "signin"
@@ -250,7 +263,7 @@ export function LoginScreen() {
                       "Password reset is handled by the studio team — email support@artsupplytracker.com from your account address.",
                     )
                   }
-                  className="w-full text-center text-sm text-[#9f7fd6] underline-offset-4 hover:text-ast-cyan hover:underline"
+                  className="w-full text-center text-sm text-[#047d95] underline-offset-4 hover:underline"
                 >
                   Forgot your password?
                 </button>

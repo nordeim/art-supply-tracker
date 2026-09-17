@@ -1,83 +1,65 @@
 "use client";
 
 /**
- * Supply modal — Add / Edit Supply dialog with name, photo, category,
- * subcategory (per-category picker), quantity, condition, location, notes,
- * barcode, and project assignment, cloned from the live app's form (same
- * option lists, same placeholders).
+ * Supply modal — the CREATE dialog with name, photo, category,
+ * subcategory (per-category picker + Other/Custom free-form input),
+ * quantity, condition, location, notes, barcode, and project assignment,
+ * cloned from the live app's form (same option lists, same placeholders).
+ * Editing happens in the inline SupplyEditPanel, mirroring the live app.
  *
  * The Subcategory picker mirrors the live app exactly: it renders the
  * chosen category's list between the "— None —" and "Other / Custom…"
- * sentinels, and is hidden entirely for the "Other" category (which has
- * no subcategories).
+ * sentinels (a custom text input appears when Other/Custom is picked),
+ * and is hidden entirely for the "Other" category (no subcategories).
  */
 import { useEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 
-import { createSupply, updateSupply } from "@/actions/studio";
+import { createSupply } from "@/actions/studio";
 import type { ProjectDto, SupplyDto } from "@/lib/dto";
 import {
   SUPPLY_CATEGORIES,
   SUPPLY_CONDITIONS,
   SUBCATEGORY_NONE,
+  SUBCATEGORY_OTHER,
+  UNASSIGNED_OPTION_CREATE,
   subcategoryOptionsFor,
 } from "@/lib/studio-domain";
+import { fileToDataUrl } from "@/components/studio/photo-data-url";
 
 interface SupplyModalProps {
-  initial: SupplyDto | null;
   projects: ProjectDto[];
   onClose: () => void;
-  onSaved: (supply: SupplyDto, isEdit: boolean) => void;
+  onSaved: (supply: SupplyDto) => void;
 }
 
-const MAX_PHOTO_BYTES = 300 * 1024;
-
-async function fileToDataUrl(file: File): Promise<string> {
-  const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, 1024 / Math.max(bitmap.width, bitmap.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  const context = canvas.getContext("2d");
-  if (!context) throw new Error("Canvas unavailable");
-  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
-  const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
-  if (dataUrl.length > MAX_PHOTO_BYTES) {
-    throw new Error(
-      `"${file.name}" is too large after compression — try a smaller image.`,
-    );
-  }
-  return dataUrl;
-}
-
-export function SupplyModal({ initial, projects, onClose, onSaved }: SupplyModalProps) {
-  const [name, setName] = useState(initial?.name ?? "");
-  const [category, setCategory] = useState(initial?.category ?? "Paint");
-  const [subcategory, setSubcategory] = useState(initial?.subcategory ?? SUBCATEGORY_NONE);
-  const [quantity, setQuantity] = useState(initial?.quantity ?? "");
-  const [condition, setCondition] = useState(initial?.condition ?? "ok");
-  const [location, setLocation] = useState(initial?.location ?? "");
-  const [notes, setNotes] = useState(initial?.notes ?? "");
-  const [barcode, setBarcode] = useState(initial?.barcode ?? "");
-  const [photo, setPhoto] = useState<string | null>(initial?.photo ?? null);
-  const [assignedProjectId, setAssignedProjectId] = useState(
-    initial?.assignedProjectId ?? "",
-  );
+export function SupplyModal({ projects, onClose, onSaved }: SupplyModalProps) {
+  const [name, setName] = useState("");
+  const [category, setCategory] = useState("Paint");
+  const [subcategory, setSubcategory] = useState(SUBCATEGORY_NONE);
+  const [customSubcategory, setCustomSubcategory] = useState("");
+  const [quantity, setQuantity] = useState("");
+  const [condition, setCondition] = useState("ok");
+  const [location, setLocation] = useState("");
+  const [notes, setNotes] = useState("");
+  const [barcode, setBarcode] = useState("");
+  const [photo, setPhoto] = useState<string | null>(null);
+  const [assignedProjectId, setAssignedProjectId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const dialogRef = useRef<HTMLDivElement>(null);
 
-  const isEdit = initial !== null;
   const subcategoryOptions = subcategoryOptionsFor(category);
   // The live app hides the Subcategory picker for the Other category.
   const showSubcategory = subcategoryOptions.length > 0;
+  const isCustomSubcategory = subcategory === SUBCATEGORY_OTHER;
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") onClose();
     }
     window.addEventListener("keydown", onKeyDown);
+    // Focus the first field on open for keyboard users.
     dialogRef.current?.querySelector<HTMLInputElement>("input")?.focus();
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
@@ -88,6 +70,7 @@ export function SupplyModal({ initial, projects, onClose, onSaved }: SupplyModal
     // category — reset to None unless the value is still offered.
     const stillValid = subcategoryOptionsFor(next).some((o) => o.value === subcategory);
     if (!stillValid) setSubcategory(SUBCATEGORY_NONE);
+    setCustomSubcategory("");
   }
 
   function onAddPhoto(file: File | undefined) {
@@ -111,11 +94,16 @@ export function SupplyModal({ initial, projects, onClose, onSaved }: SupplyModal
       setError("Quantity is required.");
       return;
     }
+    // The live save path resolves the __other__ sentinel to the custom text
+    // (falling back to no subcategory when the field is left blank).
+    const resolvedSubcategory = isCustomSubcategory
+      ? customSubcategory.trim() || SUBCATEGORY_NONE
+      : subcategory;
 
     const payload = {
       name: name.trim(),
       category,
-      subcategory: showSubcategory ? subcategory : SUBCATEGORY_NONE,
+      subcategory: showSubcategory ? resolvedSubcategory : SUBCATEGORY_NONE,
       quantity: quantity.trim(),
       condition,
       location: location.trim() || undefined,
@@ -126,14 +114,12 @@ export function SupplyModal({ initial, projects, onClose, onSaved }: SupplyModal
     };
 
     startTransition(async () => {
-      const result = isEdit
-        ? await updateSupply(initial.id, payload)
-        : await createSupply(payload);
+      const result = await createSupply(payload);
       if (!result.ok) {
         setError(result.error.message);
         return;
       }
-      onSaved(result.data, isEdit);
+      onSaved(result.data);
     });
   }
 
@@ -157,7 +143,7 @@ export function SupplyModal({ initial, projects, onClose, onSaved }: SupplyModal
       >
         <div className="flex shrink-0 items-center justify-between px-6 pb-4 pt-6">
           <h2 id="supply-modal-title" className="text-2xl font-bold text-ast-pink">
-            {isEdit ? "Edit Supply" : "Add Supply"}
+            Add Supply
           </h2>
           <button
             type="button"
@@ -228,7 +214,7 @@ export function SupplyModal({ initial, projects, onClose, onSaved }: SupplyModal
             </div>
           </div>
 
-          <div className={showSubcategory ? "grid grid-cols-2 gap-4" : undefined}>
+          <div className={showSubcategory ? "grid grid-cols-1 gap-4 md:grid-cols-2" : undefined}>
             <div>
               <label htmlFor="supply-category" className={labelClass}>
                 Category
@@ -254,7 +240,10 @@ export function SupplyModal({ initial, projects, onClose, onSaved }: SupplyModal
                 <select
                   id="supply-subcategory"
                   value={subcategoryOptions.some((o) => o.value === subcategory) ? subcategory : SUBCATEGORY_NONE}
-                  onChange={(e) => setSubcategory(e.target.value)}
+                  onChange={(e) => {
+                    setSubcategory(e.target.value);
+                    setCustomSubcategory("");
+                  }}
                   className="w-full rounded-lg border border-ast-pink/30 bg-ast-bg-dark/70 px-3 py-2 text-white transition focus:border-ast-pink focus:outline-none focus:ring-2 focus:ring-ast-pink/30"
                 >
                   {subcategoryOptions.map((option) => (
@@ -263,11 +252,21 @@ export function SupplyModal({ initial, projects, onClose, onSaved }: SupplyModal
                     </option>
                   ))}
                 </select>
+                {isCustomSubcategory && (
+                  <input
+                    type="text"
+                    maxLength={60}
+                    value={customSubcategory}
+                    onChange={(e) => setCustomSubcategory(e.target.value)}
+                    placeholder="e.g., Dry brush, Palette knife…"
+                    className={`${inputClass} mt-2`}
+                  />
+                )}
               </div>
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <label htmlFor="supply-quantity" className={labelClass}>
                 Quantity
@@ -358,7 +357,7 @@ export function SupplyModal({ initial, projects, onClose, onSaved }: SupplyModal
               onChange={(e) => setAssignedProjectId(e.target.value)}
               className="w-full rounded-lg border border-ast-pink/30 bg-ast-bg-dark/70 px-3 py-2 text-white transition focus:border-ast-pink focus:outline-none focus:ring-2 focus:ring-ast-pink/30"
             >
-              <option value="">— Studio inventory (unassigned) —</option>
+              <option value="">{UNASSIGNED_OPTION_CREATE}</option>
               {projects.map((project) => (
                 <option key={project.id} value={project.id}>
                   {project.name}
@@ -389,7 +388,7 @@ export function SupplyModal({ initial, projects, onClose, onSaved }: SupplyModal
               disabled={pending}
               className="flex-1 rounded-lg bg-gradient-to-r from-ast-pink to-ast-purple px-4 py-2 font-semibold text-white shadow-ast-pink transition hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {pending ? "Saving…" : isEdit ? "Save Changes" : "Add Supply"}
+              {pending ? "Saving…" : "Add Supply"}
             </button>
           </div>
         </form>

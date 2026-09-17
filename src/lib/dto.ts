@@ -93,7 +93,8 @@ export interface ExportedProject {
   updatedAt: string;
   images: string[];
   imagePaths: string[];
-  budget: number | null;
+  /** Number when set; "" when unset — the live app's in-memory default. */
+  budget: number | "";
   isNew: boolean;
 }
 
@@ -104,13 +105,16 @@ export interface ExportedSupply {
   subcategory: string | null;
   itemType: string | null;
   unit: string | null;
-  barcode: string | null;
+  /** Value when set; "" when unset — the live app's in-memory default. */
+  barcode: string | "";
   tags: string[];
   quantityValue: number | null;
   quantity: number | null;
   location: string | null;
   notes: string | null;
   imageKey: string | null;
+  /** Always null here — the live app's storage-backed URL field. */
+  imageUrl: string | null;
   createdAt: string;
   updatedAt: string;
   usedInProjectIds: string[];

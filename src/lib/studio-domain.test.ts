@@ -7,6 +7,10 @@ import {
   SUPPLY_CATEGORIES,
   SUPPLY_CONDITIONS,
   SUPPLY_TYPE_LISTS,
+  UNASSIGNED_OPTION_CREATE,
+  UNASSIGNED_OPTION_EDIT,
+  budgetEditValue,
+  budgetFromEditInput,
   isNewItem,
   matchesStockFilter,
   parseQuantityValue,
@@ -350,5 +354,36 @@ describe("supply detail condition icon (live detail header)", () => {
       label: "critical",
       classes: "bg-ast-pink/20 text-ast-pink",
     });
+  });
+});
+
+describe("budget edit-panel value mapping (live edit form)", () => {
+  it("renders an unset budget as 0 in the edit input", () => {
+    // The live edit panel mounts its budget number input with value="0"
+    // when the project has no budget (verified against the deployed app).
+    expect(budgetEditValue(null)).toBe("0");
+  });
+
+  it("renders a set budget verbatim", () => {
+    expect(budgetEditValue(150)).toBe("150");
+    expect(budgetEditValue(12.5)).toBe("12.5");
+  });
+
+  it("parses the edit input back, treating blank as unset", () => {
+    expect(budgetFromEditInput("")).toBeNull();
+    expect(budgetFromEditInput("0")).toBe(0);
+    expect(budgetFromEditInput("175")).toBe(175);
+    expect(budgetFromEditInput("not-a-number")).toBeNull();
+  });
+});
+
+describe("supply edit-panel assignment option copy", () => {
+  it("uses the live edit panel's unassigned option text", () => {
+    // The live EDIT panel renders "— Studio inventory (unassigned) —"
+    // (bundle: `— Studio inventory (unassigned) —`), while the CREATE
+    // modal uses "Unassigned — Studio inventory". Both are pinned so the
+    // two surfaces cannot drift.
+    expect(UNASSIGNED_OPTION_EDIT).toBe("— Studio inventory (unassigned) —");
+    expect(UNASSIGNED_OPTION_CREATE).toBe("Unassigned — Studio inventory");
   });
 });

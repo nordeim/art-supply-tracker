@@ -1,63 +1,39 @@
 "use client";
 
 /**
- * Project modal — New / Edit Project dialog with name, status select,
- * budget, notes, and photo attachments, cloned from the live app's form.
- * Photos are downscaled client-side to data URLs (≤ 1024px, JPEG q0.8) so
- * uploads work without object storage; the server re-validates bounds.
+ * Project modal — the CREATE dialog with name, status select, budget,
+ * notes, and photo attachments, cloned from the live app's form. Editing
+ * happens in the inline ProjectEditPanel, mirroring the live app. Photos
+ * are downscaled client-side to data URLs (≤ 1024px, JPEG q0.8) so uploads
+ * work without object storage; the server re-validates bounds.
  */
 import { useEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 
-import { createProject, updateProject } from "@/actions/studio";
+import { createProject } from "@/actions/studio";
 import type { ProjectDto } from "@/lib/dto";
 import { PROJECT_STATUSES } from "@/lib/studio-domain";
-
-const MAX_PHOTO_BYTES = 300 * 1024; // 300 KB per encoded photo
+import { fileToDataUrl } from "@/components/studio/photo-data-url";
 
 // The live app's Status picker orders In Progress first (verified against
 // studiobeta.artsupplytracker.com); the tiles keep the Planned-first order.
 const STATUS_SELECT_ORDER = ["in-progress", "planned", "on-hold", "completed"] as const;
 
-async function fileToDataUrl(file: File): Promise<string> {
-  const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, 1024 / Math.max(bitmap.width, bitmap.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  const context = canvas.getContext("2d");
-  if (!context) throw new Error("Canvas unavailable");
-  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
-  const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
-  if (dataUrl.length > MAX_PHOTO_BYTES) {
-    throw new Error(
-      `"${file.name}" is too large after compression — try a smaller image.`,
-    );
-  }
-  return dataUrl;
-}
-
 interface ProjectModalProps {
-  initial: ProjectDto | null;
   onClose: () => void;
-  onSaved: (project: ProjectDto, isEdit: boolean) => void;
+  onSaved: (project: ProjectDto) => void;
 }
 
-export function ProjectModal({ initial, onClose, onSaved }: ProjectModalProps) {
-  const [name, setName] = useState(initial?.name ?? "");
-  const [status, setStatus] = useState(initial?.status ?? "planned");
-  const [budget, setBudget] = useState(
-    typeof initial?.budget === "number" ? String(initial.budget) : "",
-  );
-  const [notes, setNotes] = useState(initial?.notes ?? "");
-  const [photos, setPhotos] = useState<string[]>(initial?.photos ?? []);
+export function ProjectModal({ onClose, onSaved }: ProjectModalProps) {
+  const [name, setName] = useState("");
+  const [status, setStatus] = useState("planned");
+  const [budget, setBudget] = useState("");
+  const [notes, setNotes] = useState("");
+  const [photos, setPhotos] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const photoInputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
-
-  const isEdit = initial !== null;
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -106,14 +82,12 @@ export function ProjectModal({ initial, onClose, onSaved }: ProjectModalProps) {
     };
 
     startTransition(async () => {
-      const result = isEdit
-        ? await updateProject(initial.id, payload)
-        : await createProject(payload);
+      const result = await createProject(payload);
       if (!result.ok) {
         setError(result.error.message);
         return;
       }
-      onSaved(result.data, isEdit);
+      onSaved(result.data);
     });
   }
 
@@ -133,7 +107,7 @@ export function ProjectModal({ initial, onClose, onSaved }: ProjectModalProps) {
       >
         <div className="flex shrink-0 items-center justify-between px-6 pb-4 pt-6">
           <h2 id="project-modal-title" className="text-2xl font-bold text-ast-turquoise">
-            {isEdit ? "Edit Project" : "New Project"}
+            New Project
           </h2>
           <button
             type="button"
@@ -279,7 +253,7 @@ export function ProjectModal({ initial, onClose, onSaved }: ProjectModalProps) {
               disabled={pending}
               className="flex-1 rounded-lg bg-gradient-to-r from-ast-turquoise to-ast-blue px-4 py-2 font-semibold text-white shadow-ast-turquoise transition hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {pending ? "Saving…" : isEdit ? "Save Changes" : "Create Project"}
+              {pending ? "Saving…" : "Create Project"}
             </button>
           </div>
         </form>

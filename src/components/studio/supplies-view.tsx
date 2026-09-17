@@ -26,6 +26,7 @@ import {
   supplyTypeListFor,
 } from "@/lib/studio-domain";
 import { SupplyDetailPanel } from "@/components/studio/supply-detail-panel";
+import { SupplyEditPanel } from "@/components/studio/supply-edit-panel";
 
 interface SuppliesViewProps {
   supplies: SupplyDto[];
@@ -33,7 +34,7 @@ interface SuppliesViewProps {
   onExport: () => void;
   onImportClick: () => void;
   onNewSupply: () => void;
-  onEditSupply: (supply: SupplyDto) => void;
+  onSupplySaved: (supply: SupplyDto) => void;
   /** "list" opens straight into the flat supply list (post-create navigation). */
   initialSubView: "grid" | "list";
   onSupplyDeleted: (supplyId: string) => void;
@@ -52,7 +53,7 @@ export function SuppliesView({
   onExport,
   onImportClick,
   onNewSupply,
-  onEditSupply,
+  onSupplySaved,
   initialSubView,
   onSupplyDeleted,
 }: SuppliesViewProps) {
@@ -61,6 +62,8 @@ export function SuppliesView({
   );
   const [stockFilter, setStockFilter] = useState<StockFilter>("all");
   const [openSupplyId, setOpenSupplyId] = useState<string | null>(null);
+  // The live app swaps the detail panel for the inline edit form in place.
+  const [editingSupplyId, setEditingSupplyId] = useState<string | null>(null);
 
   const byCategory = useMemo(() => {
     const groups = new Map<string, SupplyDto[]>();
@@ -79,6 +82,7 @@ export function SuppliesView({
     setSubView(next);
     setStockFilter("all");
     setOpenSupplyId(null);
+    setEditingSupplyId(null);
   }
 
   const categoryLabel =
@@ -199,16 +203,26 @@ export function SuppliesView({
           stockFilter={stockFilter}
           onStockFilter={setStockFilter}
           openSupplyId={openSupplyId}
-          onOpenSupply={(id) => setOpenSupplyId((current) => (current === id ? null : id))}
+          onOpenSupply={(id) => {
+            setOpenSupplyId((current) => (current === id ? null : id));
+            setEditingSupplyId(null);
+          }}
           onOpenType={(category, typeValue, typeLabel) =>
             navigate({ kind: "type", category, typeValue, typeLabel })
           }
           onNewSupply={onNewSupply}
-          onEditSupply={onEditSupply}
+          editingSupplyId={editingSupplyId}
+          onEditSupply={(supply) => setEditingSupplyId(supply.id)}
+          onSupplyEditClosed={() => setEditingSupplyId(null)}
+          onSupplySaved={(saved) => {
+            onSupplySaved(saved);
+            setEditingSupplyId(null);
+          }}
           openSupply={openSupply}
           onSupplyDeleted={(id) => {
             onSupplyDeleted(id);
             setOpenSupplyId(null);
+            setEditingSupplyId(null);
           }}
         />
       )}
@@ -264,7 +278,10 @@ function SuppliesSubViewPanel({
   onOpenSupply,
   onOpenType,
   onNewSupply,
+  editingSupplyId,
   onEditSupply,
+  onSupplyEditClosed,
+  onSupplySaved,
   openSupply,
   onSupplyDeleted,
 }: {
@@ -278,7 +295,10 @@ function SuppliesSubViewPanel({
   onOpenSupply: (id: string) => void;
   onOpenType: (category: string, typeValue: string, typeLabel: string) => void;
   onNewSupply: () => void;
+  editingSupplyId: string | null;
   onEditSupply: (supply: SupplyDto) => void;
+  onSupplyEditClosed: () => void;
+  onSupplySaved: (supply: SupplyDto) => void;
   openSupply: SupplyDto | null;
   onSupplyDeleted: (supplyId: string) => void;
 }) {
@@ -377,13 +397,22 @@ function SuppliesSubViewPanel({
                 ))}
               </div>
               {openSupply && row.some((s) => s.id === openSupply.id) && (
-                <SupplyDetailPanel
-                  supply={openSupply}
-                  projects={projects}
-                  onClose={() => onOpenSupply(openSupply.id)}
-                  onEdit={onEditSupply}
-                  onDeleted={onSupplyDeleted}
-                />
+                editingSupplyId === openSupply.id ? (
+                  <SupplyEditPanel
+                    supply={openSupply}
+                    projects={projects}
+                    onCancel={onSupplyEditClosed}
+                    onSaved={onSupplySaved}
+                  />
+                ) : (
+                  <SupplyDetailPanel
+                    supply={openSupply}
+                    projects={projects}
+                    onClose={() => onOpenSupply(openSupply.id)}
+                    onEdit={onEditSupply}
+                    onDeleted={onSupplyDeleted}
+                  />
+                )
               )}
             </div>
           ))}
@@ -416,7 +445,7 @@ function SupplyChip({
       type="button"
       onClick={onOpen}
       aria-expanded={open}
-      className={`relative w-full rounded-2xl border p-4 text-left transition ${
+      className={`relative rounded-2xl border p-4 text-left transition ${
         open
           ? "border-ast-electric-blue/60 bg-ast-electric-blue/10 shadow-ast-blue"
           : "border-ast-purple/30 bg-ast-purple/5 hover:border-ast-lavender/40 hover:bg-ast-lavender/5"
@@ -435,7 +464,7 @@ function SupplyChip({
         />
       )}
       <p
-        className={`mb-1 truncate text-sm font-semibold leading-snug ${
+        className={`mb-1 text-sm font-semibold leading-snug ${
           isNew ? "pr-12" : "pr-2"
         } ${open ? "text-ast-cyan" : "text-ast-body"}`}
       >

@@ -12,7 +12,6 @@ import {
   SUBCATEGORY_OTHER,
   SUPPLY_CATEGORY_VALUES,
   SUPPLY_CONDITION_VALUES,
-  supplyTypeListFor,
 } from "@/lib/studio-domain";
 
 const emailSchema = z
@@ -63,44 +62,33 @@ export const projectInputSchema = z.object({
 
 /**
  * Supply input. `subcategory` arrives as the picker's raw select value —
- * the None/Other sentinels normalize to undefined — and is then
- * cross-checked against the chosen category's list (the live app's
- * pickers are category-scoped, so a Brush subcategory on a Paper supply
- * is invalid input, not a valid free-form value).
+ * the None/Other sentinels normalize to undefined. Values outside the
+ * category's list are ACCEPTED: the live app's Other/Custom flow stores
+ * free-form text (`subcategory === '__other__' ? custom.trim() || '' :
+ * value`) and its backend has no vocabulary check — the category-scoped
+ * pickers are the guard, exactly as in production. The schema keeps the
+ * type/trim/length discipline.
  */
-export const supplyInputSchema = z
-  .object({
-    name: z.string().trim().min(1, "Supply name is required.").max(160, "Supply name is too long."),
-    category: z.enum(SUPPLY_CATEGORY_VALUES as [string, ...string[]]).default("Paint"),
-    subcategory: z
-      .string()
-      .max(60)
-      .optional()
-      .transform((v) =>
-        v === undefined || v === SUBCATEGORY_NONE || v === SUBCATEGORY_OTHER || v === "none"
-          ? undefined
-          : v,
-      ),
-    quantity: z.string().trim().min(1).max(40).default("1"),
-    condition: z.enum(SUPPLY_CONDITION_VALUES as [string, ...string[]]).default("ok"),
-    location: optionalText(200),
-    notes: optionalText(4000),
-    barcode: optionalText(120),
-    photo: optionalText(MAX_PHOTO_DATA_URL_LENGTH),
-    assignedProjectId: optionalText(50),
-  })
-  .superRefine((data, ctx) => {
-    if (
-      data.subcategory !== undefined &&
-      !supplyTypeListFor(data.category).some((t) => t.value === data.subcategory)
-    ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["subcategory"],
-        message: "Pick a subcategory from the category's list.",
-      });
-    }
-  });
+export const supplyInputSchema = z.object({
+  name: z.string().trim().min(1, "Supply name is required.").max(160, "Supply name is too long."),
+  category: z.enum(SUPPLY_CATEGORY_VALUES as [string, ...string[]]).default("Paint"),
+  subcategory: z
+    .string()
+    .max(60)
+    .optional()
+    .transform((v) =>
+      v === undefined || v === SUBCATEGORY_NONE || v === SUBCATEGORY_OTHER || v === "none"
+        ? undefined
+        : v,
+    ),
+  quantity: z.string().trim().min(1).max(40).default("1"),
+  condition: z.enum(SUPPLY_CONDITION_VALUES as [string, ...string[]]).default("ok"),
+  location: optionalText(200),
+  notes: optionalText(4000),
+  barcode: optionalText(120),
+  photo: optionalText(MAX_PHOTO_DATA_URL_LENGTH),
+  assignedProjectId: optionalText(50),
+});
 
 export const chatMessageSchema = z.object({
   message: z.string().trim().min(1, "Message cannot be empty.").max(500, "Message is too long (500 characters max)."),

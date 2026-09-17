@@ -181,15 +181,17 @@ describe("supply actions", () => {
     }
   });
 
-  it("rejects a subcategory from the wrong category", async () => {
+  it("stores a custom subcategory from the Other/Custom flow (live parity)", async () => {
+    // The live app's __other__ flow persists free-form text with no backend
+    // vocabulary check; the pickers are the guard.
     const result = await studio.createSupply({
       name: "Wrong combo",
       category: "Paper",
-      subcategory: "Palette knives",
+      subcategory: "Palette knives", // a Brush-list value — tolerated like custom text
       quantity: "1",
     });
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(updatedResultIsValidation(result)).toBe(true);
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.data.subcategory).toBe("Palette knives");
   });
 
   it("assigns and unassigns a supply to a project with ownership checks", async () => {

@@ -81,7 +81,9 @@ Prisma 6.19.2 + SQLite · Zod 4.3.5 · ESLint 9.
   dark palette in the same `@theme` block. No `.dark` toggling.
 - Use the `ast-*` palette classes (`text-ast-lavender`, `border-ast-purple/35`,
   `bg-[#120724]` cards, `bg-[#050009]` canvas) — match the token table in
-  README rather than inventing new colors.
+  README rather than inventing new colors. The login card is the one
+  sanctioned literal-border exception (`border-[#5B3FD3]`, from the live
+  app's custom CSS, distinct from the utility purple).
 
 ### Data layer (Prisma + SQLite)
 
@@ -129,27 +131,35 @@ not secret — rotate before any public deployment).
 ### Testing Strategy
 
 Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
-`src/**/*.test.ts`). The suite (97 tests) pins:
+`src/**/*.test.ts`). The suite (109 tests) pins:
 
 - **Studio-domain vocabulary** — the per-category `SUPPLY_TYPE_LISTS` in the
   live app's tokens (Paint/Brush/Pastel/Paper/Canvas/Medium/Other categories,
   capitalized Paint subcategories, ok/low/critical conditions), the modal's
-  picker option order, the NEW-badge window, and quantity parsing
-  (integers, decimals, a/b fractions).
+  picker option order, the NEW-badge window, quantity parsing (integers,
+  decimals, a/b fractions), the edit-panel budget mapping (unset → "0" in the
+  form, blank → null on submit), and the two live unassigned-option strings
+  (create vs edit surfaces).
+- **Design tokens** (`design-tokens.test.ts`) — the `@theme` literal hex
+  values, pinned to the live app's *compiled utility classes* (the rendered
+  ground truth): purple `#5a3a8e`, yellow `#ffd5a8`, coral `#ff7a7a` plus
+  the six glow shadows. The live `:root` CSS-variable block carries three
+  different (vestigial) values — never align to it.
 - **Live style maps** (`studio-domain.test.ts`) — the production bundle's
   stock-filter switch ("Low Stock" matches low AND critical; "Out of Stock"
   critical only) and the `jz`/`Mz`/`Jz` status-pill/chip/condition maps,
   extracted verbatim from the deployed JS, so chips and pills cannot drift
   from the live rendering.
 - **Boundary contracts** (`validation.test.ts`) — photo data-URL caps
-  (client 300 KB ↔ server 400k chars), per-category subcategory
-  cross-validation, and the import schema's acceptance of the live wire
-  shape.
+  (client 300 KB ↔ server 400k chars), the Other/Custom free-form
+  subcategory flow (live parity: the pickers are the vocabulary guard, the
+  schema enforces type/trim/length), and the import schema's acceptance of
+  the live wire shape.
 - **Wire format** (`export-payload.test.ts`) — the export payload's exact
   field set (`title`, `subcategory`, `supplyIds`, numeric `qty`/`quantity`/
-  `quantityValue`, `isNew`, status omitted when ok) and the import
-  normalizer's handling of both live and legacy clone shapes, including
-  relation remapping.
+  `quantityValue`, `isNew`, status omitted when ok, unset `budget`/`barcode`
+  as `""`, `imageUrl: null`) and the import normalizer's handling of both
+  live and legacy clone shapes, including relation remapping.
 - **Rate limiting** (`rate-limit.test.ts`) — fixed-window allow/block,
   rollover, per-key isolation, cooldown reporting, bounded memory.
 - **Inspiration detail** — schema acceptance, corrupt-JSON degradation to
@@ -172,7 +182,8 @@ a browser after every change:
 3. Add + edit a supply (per-category subcategory picker; post-create the
    view switches to the supply list with All/Low Stock/Out of Stock tabs).
 4. Project/supply detail panels: chips open panels; assign supplies from
-   the project panel; delete with the native confirm.
+   the project panel; delete with the native confirm; Edit swaps the panel
+   for the inline edit form (save returns to the updated detail panel).
 5. Chat send (message appears and survives reload — polling works).
 6. Export Data → the original app's JSON shape downloads; Import JSON with
    it (or a live-app export) → success notice, assignments intact.

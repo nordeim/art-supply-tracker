@@ -69,7 +69,10 @@ function toExportedProject(project: ProjectDto, supplyIds: string[], now: number
     updatedAt: project.updatedAt,
     images: project.photos,
     imagePaths: [] as string[],
-    budget: project.budget,
+    // The live app's in-memory model defaults budget to "" (its create
+    // path does `budget: e.budget ?? ''`); a fresh live export captured
+    // 2026-09-17 shows `"budget": ""` for unset budgets.
+    budget: project.budget ?? ("" as const),
     isNew: isNewItem(project.createdAt, now),
   };
 }
@@ -83,13 +86,16 @@ function toExportedSupply(supply: SupplyDto, now: number) {
     subcategory: supply.subcategory,
     itemType: null,
     unit: null,
-    barcode: supply.barcode,
+    barcode: supply.barcode ?? "",
     tags: [] as string[],
     quantityValue,
     quantity: quantityValue,
     location: supply.location,
     notes: supply.notes,
     imageKey: null,
+    // The live export's storage-backed URL slot — always null for the
+    // clone (photos are inline data URLs, carried by `image`).
+    imageUrl: null,
     createdAt: supply.createdAt,
     updatedAt: supply.updatedAt,
     usedInProjectIds: [] as string[],

@@ -108,14 +108,31 @@ describe("supplyInputSchema", () => {
     expect(parsed.success).toBe(true);
   });
 
-  it("rejects a subcategory outside the chosen category's list", () => {
+  it("accepts a custom subcategory from the Other/Custom flow (live parity)", () => {
+    // The live app's __other__ flow stores free-form custom text (its save
+    // path does `subcategory === '__other__' ? custom.trim() || '' : value`),
+    // and its backend has no vocabulary check — the pickers are the guard.
+    const parsed = supplyInputSchema.safeParse({
+      name: "Dry Brush Kit",
+      category: "Brush",
+      subcategory: "Dry brush",
+      quantity: "1",
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.subcategory).toBe("Dry brush");
+  });
+
+  it("tolerates cross-list subcategory values (the boundary cannot tell custom text from them)", () => {
+    // The live app accepts any string here; the category-scoping is enforced
+    // by the pickers, not the backend. The schema keeps type/length/sentinel
+    // discipline only.
     const parsed = supplyInputSchema.safeParse({
       name: "Wrong combo",
       category: "Paper",
       subcategory: "Palette knives", // a Brush subcategory
       quantity: "1",
     });
-    expect(parsed.success).toBe(false);
+    expect(parsed.success).toBe(true);
   });
 
   it("rejects unknown categories", () => {

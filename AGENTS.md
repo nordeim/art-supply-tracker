@@ -11,7 +11,7 @@ Run from the repo root. Bun is the package manager — use `bun`, never `npm`/`y
 | `bun run dev` | Dev server on :3000 |
 | `bun run lint` | ESLint (next/core-web-vitals + next/typescript) |
 | `bun run typecheck` | `tsc --noEmit`, strict |
-| `bun run test` | Vitest — 97 tests: domain vocabulary, bundle-pinned status/condition style maps, validation, export/import wire format, rate limiting, action layer (each action file runs against a throwaway SQLite DB) |
+| `bun run test` | Vitest — 109 tests: domain vocabulary, bundle-pinned status/condition style maps, design-token literals, validation, export/import wire format, rate limiting, action layer (each action file runs against a throwaway SQLite DB) |
 | `bun run db:push` | Push `prisma/schema.prisma` to SQLite (`db/custom.db`) — required after schema edits |
 | `bun run db:generate` | Regenerate Prisma Client |
 | `bun run db:seed` | Idempotent seed: demo user, 5 chat messages, 15 inspiration entries |
@@ -37,13 +37,15 @@ runs the same gate on every push.
   errors are logged server-side and flattened to a safe `INTERNAL` error.
   The only route handler is the `/api` health probe.
 - **Zod at every boundary** (`src/lib/validation.ts`). SQLite has no enums —
-  status/category/subcategory/condition are strings validated against the
-  single-source lists in `src/lib/studio-domain.ts`: category tokens are the
-  live app's singular values (`Paint`, `Brush`, `Pastel`, `Paper`, `Canvas`,
-  `Medium`, `Other`), conditions are `ok | low | critical`, and supply
-  subcategories come from the per-category `SUPPLY_TYPE_LISTS` (the supply
-  modal's picker is category-scoped; "Other" hides it). Never accept
-  free-form values for them.
+  status/category/condition are strings validated against the single-source
+  lists in `src/lib/studio-domain.ts`: category tokens are the live app's
+  singular values (`Paint`, `Brush`, `Pastel`, `Paper`, `Canvas`, `Medium`,
+  `Other`), conditions are `ok | low | critical`. Supply subcategories come
+  from the per-category `SUPPLY_TYPE_LISTS` (the picker is category-scoped;
+  "Other" hides it) — but the "Other / Custom…" flow stores free-form text
+  (≤ 60 chars), so the schema enforces type/trim/length only, exactly like
+  the live app whose pickers are the vocabulary guard. Never accept
+  free-form values for category or condition.
 - **Auth seam:** `src/lib/auth.ts` — scrypt password hashes (`scrypt:salt:hash`
   format), opaque session tokens in the httpOnly `ast_session` cookie,
   `getCurrentUser()` resolves session → user. Actions derive `userId` from
@@ -52,7 +54,8 @@ runs the same gate on every push.
   IP per minute).
 - **Wire format:** export/import payloads are built and normalized in
   `src/lib/export-payload.ts` to match the ORIGINAL app's JSON shape
-  (`title`/`subcategory`/`status`/numeric `qty`/`supplyIds`/`isNew`); the
+  (`title`/`subcategory`/`status`/numeric `qty`/`supplyIds`/`isNew`; unset
+  `budget`/`barcode` export as `""` — the live app's in-memory defaults); the
   legacy clone shape imports through the same normalizer. The live app's
   project→`supplyIds` relation maps onto our internal
   `Supply.assignedProjectId`.
@@ -69,7 +72,11 @@ runs the same gate on every push.
   extra exports fail the build.
 - **Tailwind v4 CSS-first:** design tokens live in the `@theme` block of
   `src/app/globals.css` as literal hex (`--color-ast-turquoise: #2ec4b6` →
-  `text-ast-turquoise`). There is no `tailwind.config.js` — do not add one.
+  `text-ast-turquoise`), pinned to the live app's *compiled utility*
+  values by `src/lib/design-tokens.test.ts` (purple `#5a3a8e`, yellow
+  `#ffd5a8`, coral `#ff7a7a` — the live `:root` variables for these three
+  are vestigial and must NOT be copied). There is no `tailwind.config.js` —
+  do not add one.
   `var()` chains inside `@theme` are dropped by the build; keep values
   literal (the one exception: `--font-sans` references `--font-inter`).
 - **The studio is always dark** — shadcn semantic tokens (`--color-background`
@@ -78,6 +85,10 @@ runs the same gate on every push.
 - **Chat polling** (`studio-chat.tsx`) skips ticks when
   `document.visibilityState !== "visible"` and re-pins to the bottom only if
   the reader was already near the bottom.
+- **Editing is inline** — the detail panels' Edit buttons swap the panel
+  for the edit form in the same chip-row slot (`project-edit-panel.tsx`,
+  `supply-edit-panel.tsx`); the centered modals are CREATE-only, mirroring
+  the live app's edit-in-place UX.
 - **Photos are data URLs**, downscaled client-side to ≤ 1024px JPEG q0.8 and
   rejected if > 300 KB encoded — the server cap is
   `MAX_PHOTO_DATA_URL_LENGTH` (400,000 chars) in `src/lib/studio-domain.ts`,

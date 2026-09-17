@@ -1,9 +1,9 @@
-# AST Studio — Master Project Architecture Document (PAD) v1.2
+# AST Studio — Master Project Architecture Document (PAD) v1.3
 
 **Classification:** Internal Engineering Reference
 **Status:** DEFINITIVE, PRODUCTION-LOCKED BLUEPRINT
 **Companion Document:** `README.md` (onboarding), `AGENTS.md` (agent instructions), `CLAUDE.md` (engineering standards)
-**Last Updated:** 2026-09-17
+**Last Updated:** 2026-09-17 (r4)
 **Audience:** Senior Engineers, Tech Leads, DevOps, and Onboarding Engineers
 **Rule:** Every architectural decision in this document traces to a specific rationale.
 Nothing is here "because it's popular."
@@ -553,13 +553,13 @@ erDiagram
 |---|---|---|
 | `ast-turquoise` | `#2ec4b6` | Studio Tools, projects chrome, Need help? |
 | `ast-cyan` | `#00e6ff` | My Studio heading, links, selected chip names |
-| `ast-purple` | `#5b3fd3` | Card borders (25–40% opacity) |
+| `ast-purple` | `#5a3a8e` | Card borders (25–40% opacity) — live utility value |
 | `ast-lavender` | `#b78bff` | Section eyebrows, field labels, sidebar widgets |
 | `ast-pink` | `#ff4db8` | Supplies chrome, community, primary CTAs |
 | `ast-blue` | `#4a69d6` | Utility buttons, gradient end |
 | `ast-electric-blue` | `#2e64ff` | Planned status, active tiles, quote text |
-| `ast-coral` | `#ffe0cc` | Needs Sorting bucket, unknown-status fallback |
-| `ast-yellow` | `#f4f27a` | On Hold status, low-condition icon, Close buttons |
+| `ast-coral` | `#ff7a7a` | Needs Sorting bucket, unknown-status fallback — live utility value |
+| `ast-yellow` | `#ffd5a8` | On Hold status, low-condition icon, Close/Cancel/Delete buttons — live utility value |
 | `ast-orange` | `#ffb85c` | Warm accents |
 | `ast-body` | `#fff4d6` | Body text (60–90% opacity) |
 | `ast-muted` | `#dcc7ff` | Login marketing copy, secondary text |
@@ -571,8 +571,14 @@ erDiagram
 Glow shadows (`--shadow-ast-pink`/`-turquoise`/`-blue`/`-cyan`/`-lavender`/
 `-warm`) are 24–28px radial blobs; the two scrollbar rails
 (`.scrollbar-left` turquoise→blue, `.scrollbar-right` pink→purple) come
-from the production CSS bundle. All values extracted verbatim from the
-live app's generated CSS (`assets/index-BNZKRdTa.css`, captured 2026-09-17).
+from the production CSS bundle. All values are pinned to the live app's
+*compiled utility classes* — the rendered ground truth — and guarded by
+`src/lib/design-tokens.test.ts`. The live bundle also ships a `:root`
+CSS-variable block whose purple/yellow/coral values (`#5b3fd3`/`#f4f27a`/
+`#ffe0cc`) differ from the utilities; those variables are vestigial (no
+rule resolves them) and must not be treated as the palette. The login
+card's 1px border uses the literal `#5B3FD3` from the live app's custom
+CSS — distinct from the utility purple.
 
 ### 5.3 Component Primitives
 
@@ -651,8 +657,8 @@ live app's generated CSS (`assets/index-BNZKRdTa.css`, captured 2026-09-17).
 | Category | Count | Location | Framework |
 |---|---|---|---|
 | Static | — | `eslint .` / `tsc --noEmit` | ESLint 9 + TS 5.9 strict |
-| Automated unit | 80 tests | `src/lib/*.test.ts` — studio-domain (incl. bundle-pinned style maps), validation, export-payload, rate-limit, inspiration | Vitest (node env, `@/` alias) |
-| Automated action | 17 tests | `src/actions/studio.test.ts` (throwaway SQLite DB, mocked auth seam) | Vitest |
+| Automated unit | 91 tests | `src/lib/*.test.ts` — studio-domain (incl. bundle-pinned style maps + edit-panel budget/option mapping), design-tokens (globals.css literal pinning), validation, export-payload, rate-limit, inspiration | Vitest (node env, `@/` alias) |
+| Automated action | 18 tests | `src/actions/studio.test.ts` (throwaway SQLite DB, mocked auth seam) | Vitest |
 | Manual golden paths | 11 flows | README "Testing & Quality" | Browser-executed |
 | CI verify-gate | — | `.github/workflows/verify-gate.yml` (lint + typecheck + test + build) | GitHub Actions |
 
@@ -672,6 +678,11 @@ the `@/` alias, node environment, `src/**/*.test.ts`). They pin:
   `supplyDetailConditionIcon`) extracted from the deployed JS, pinning
   pills, chip borders, hover/selected treatments, and condition icons to
   the production rendering.
+- **Design tokens** (`design-tokens.test.ts`) — reads `globals.css` and
+  pins every `@theme` literal (palette + glow shadows) to the live app's
+  compiled utility classes, preventing a repeat of the r3 regression where
+  three tokens were aligned to the live bundle's vestigial `:root`
+  variables instead of the utilities that actually render.
 - **Inspiration detail domain** — `inspirationDetailSchema` acceptance
   (quote/spotlight shapes, tag caps), `parseInspirationDetail` degradation
   (null / corrupt JSON / non-object / schema-invalid → null), and

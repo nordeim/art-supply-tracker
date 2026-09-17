@@ -61,12 +61,8 @@ export function StudioApp({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [chatPanelOpen, setChatPanelOpen] = useState(false);
   const [supplyListNavToken, setSupplyListNavToken] = useState(0);
-  const [projectModal, setProjectModal] = useState<
-    { mode: "create" } | { mode: "edit"; project: ProjectDto } | null
-  >(null);
-  const [supplyModal, setSupplyModal] = useState<
-    { mode: "create" } | { mode: "edit"; supply: SupplyDto } | null
-  >(null);
+  const [projectModal, setProjectModal] = useState(false);
+  const [supplyModal, setSupplyModal] = useState(false);
   const [, startTransition] = useTransition();
   const importInputRef = useRef<HTMLInputElement>(null);
 
@@ -144,16 +140,20 @@ export function StudioApp({
       .catch(() => window.alert("Could not read file. Import cancelled."));
   }
 
-  function handleSupplySaved(supply: SupplyDto, isEdit: boolean) {
-    setSupplyList((list) =>
-      isEdit ? list.map((s) => (s.id === supply.id ? supply : s)) : [supply, ...list],
-    );
-    setSupplyModal(null);
-    if (!isEdit) {
-      // The live app navigates to the supplies list after creating one.
-      setView("supplies");
-      setSupplyListNavToken((token) => token + 1);
-    }
+  function handleSupplyCreated(supply: SupplyDto) {
+    setSupplyList((list) => [supply, ...list]);
+    setSupplyModal(false);
+    // The live app navigates to the supplies list after creating one.
+    setView("supplies");
+    setSupplyListNavToken((token) => token + 1);
+  }
+
+  function handleProjectSaved(project: ProjectDto) {
+    setProjectList((list) => list.map((p) => (p.id === project.id ? project : p)));
+  }
+
+  function handleSupplySaved(supply: SupplyDto) {
+    setSupplyList((list) => list.map((s) => (s.id === supply.id ? supply : s)));
   }
 
   function handleProjectDeleted(projectId: string) {
@@ -182,8 +182,8 @@ export function StudioApp({
           supplies={supplyList}
           onExport={handleExport}
           onImportClick={() => importInputRef.current?.click()}
-          onNewProject={() => setProjectModal({ mode: "create" })}
-          onEditProject={(project) => setProjectModal({ mode: "edit", project })}
+          onNewProject={() => setProjectModal(true)}
+          onProjectSaved={handleProjectSaved}
           onProjectDeleted={handleProjectDeleted}
           onSupplyAssignmentChanged={(supply) =>
             setSupplyList((list) => list.map((s) => (s.id === supply.id ? supply : s)))
@@ -197,8 +197,8 @@ export function StudioApp({
           projects={projectList}
           onExport={handleExport}
           onImportClick={() => importInputRef.current?.click()}
-          onNewSupply={() => setSupplyModal({ mode: "create" })}
-          onEditSupply={(supply) => setSupplyModal({ mode: "edit", supply })}
+          onNewSupply={() => setSupplyModal(true)}
+          onSupplySaved={handleSupplySaved}
           initialSubView={supplyListNavToken > 0 ? "list" : "grid"}
           onSupplyDeleted={handleSupplyDeleted}
         />
@@ -223,7 +223,7 @@ export function StudioApp({
           inspiration={inspiration}
           onNewProject={() => {
             setSidebarOpen(false);
-            setProjectModal({ mode: "create" });
+            setProjectModal(true);
           }}
           onCloseSidebar={() => setSidebarOpen(false)}
           sidebarOpen={sidebarOpen}
@@ -299,25 +299,19 @@ export function StudioApp({
 
       {projectModal && (
         <ProjectModal
-          initial={projectModal.mode === "edit" ? projectModal.project : null}
-          onClose={() => setProjectModal(null)}
-          onSaved={(saved, isEdit) => {
-            setProjectList((list) =>
-              isEdit
-                ? list.map((p) => (p.id === saved.id ? saved : p))
-                : [saved, ...list],
-            );
-            setProjectModal(null);
+          onClose={() => setProjectModal(false)}
+          onSaved={(saved) => {
+            setProjectList((list) => [saved, ...list]);
+            setProjectModal(false);
           }}
         />
       )}
 
       {supplyModal && (
         <SupplyModal
-          initial={supplyModal.mode === "edit" ? supplyModal.supply : null}
           projects={projectList}
-          onClose={() => setSupplyModal(null)}
-          onSaved={handleSupplySaved}
+          onClose={() => setSupplyModal(false)}
+          onSaved={handleSupplyCreated}
         />
       )}
     </main>
@@ -352,7 +346,7 @@ function StudioHeader({
             type="button"
             className="flex items-center gap-2 rounded-xl border border-ast-purple/30 bg-white/5 px-3 py-1.5 text-sm text-pink-300 transition hover:border-ast-yellow/70 hover:bg-ast-yellow/20 hover:text-ast-yellow"
           >
-            <span aria-hidden="true">✧</span>What was I working on?
+            <span>✧</span>What was I working on?
           </button>
           <span className="bg-gradient-to-r from-cyan-400 via-blue-500 to-pink-500 bg-clip-text text-sm font-medium text-transparent">
             {email}

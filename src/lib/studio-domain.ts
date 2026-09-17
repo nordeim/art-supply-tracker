@@ -102,6 +102,35 @@ export const SUPPLY_CONDITIONS = [
 export type SupplyCondition = (typeof SUPPLY_CONDITIONS)[number]["value"];
 
 /**
+ * The live app's two "no project" option strings. The CREATE modal renders
+ * "Unassigned — Studio inventory" while the EDIT panel renders
+ * "— Studio inventory (unassigned) —" — both extracted verbatim from the
+ * deployed bundle (verified 2026-09-17 via the live DOM).
+ */
+export const UNASSIGNED_OPTION_CREATE = "Unassigned — Studio inventory";
+export const UNASSIGNED_OPTION_EDIT = "— Studio inventory (unassigned) —";
+
+/**
+ * Budget value for the edit panel's number input. The live edit form mounts
+ * with value="0" when the project has no budget (its state model uses 0 for
+ * unset), so the clone renders the same default rather than an empty field.
+ */
+export function budgetEditValue(budget: number | null): string {
+  return budget === null ? "0" : String(budget);
+}
+
+/**
+ * Inverse of budgetEditValue for the edit panel's submit: blank or invalid
+ * input means "no budget" (null), matching the create modal's optional field.
+ */
+export function budgetFromEditInput(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (trimmed === "") return null;
+  const value = Number(trimmed);
+  return Number.isFinite(value) && value >= 0 ? value : null;
+}
+
+/**
  * Server-side cap for photo data URLs. The modals reject anything above
  * 300 * 1024 characters after client-side downscaling; this cap adds
  * headroom so the boundary never rejects what the client contract allows.

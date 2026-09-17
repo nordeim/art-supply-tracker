@@ -21,6 +21,7 @@ import {
   projectStatusPillClasses,
 } from "@/lib/studio-domain";
 import { ProjectDetailPanel } from "@/components/studio/project-detail-panel";
+import { ProjectEditPanel } from "@/components/studio/project-edit-panel";
 
 interface ProjectsViewProps {
   projects: ProjectDto[];
@@ -28,7 +29,7 @@ interface ProjectsViewProps {
   onExport: () => void;
   onImportClick: () => void;
   onNewProject: () => void;
-  onEditProject: (project: ProjectDto) => void;
+  onProjectSaved: (project: ProjectDto) => void;
   onProjectDeleted: (projectId: string) => void;
   onSupplyAssignmentChanged: (supply: SupplyDto) => void;
 }
@@ -51,12 +52,14 @@ export function ProjectsView({
   onExport,
   onImportClick,
   onNewProject,
-  onEditProject,
+  onProjectSaved,
   onProjectDeleted,
   onSupplyAssignmentChanged,
 }: ProjectsViewProps) {
   const [subView, setSubView] = useState<ProjectsSubView | null>(null);
   const [openProjectId, setOpenProjectId] = useState<string | null>(null);
+  // The live app swaps the detail panel for the inline edit form in place.
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
 
   const byStatus = useMemo(() => {
     const groups = new Map<string, ProjectDto[]>();
@@ -140,12 +143,22 @@ export function ProjectsView({
           supplies={supplies}
           byStatus={byStatus}
           openProjectId={openProjectId}
-          onOpenProject={(id) => setOpenProjectId((current) => (current === id ? null : id))}
-          onEditProject={onEditProject}
+          onOpenProject={(id) => {
+            setOpenProjectId((current) => (current === id ? null : id));
+            setEditingProjectId(null);
+          }}
+          editingProjectId={editingProjectId}
+          onEditProject={(project) => setEditingProjectId(project.id)}
+          onProjectEditClosed={() => setEditingProjectId(null)}
+          onProjectSaved={(saved) => {
+            onProjectSaved(saved);
+            setEditingProjectId(null);
+          }}
           openProject={openProject}
           onProjectDeleted={(id) => {
             onProjectDeleted(id);
             setOpenProjectId(null);
+            setEditingProjectId(null);
           }}
           onSupplyAssignmentChanged={onSupplyAssignmentChanged}
         />
@@ -334,7 +347,10 @@ function ProjectsSubViewPanel({
   byStatus,
   openProjectId,
   onOpenProject,
+  editingProjectId,
   onEditProject,
+  onProjectEditClosed,
+  onProjectSaved,
   openProject,
   onProjectDeleted,
   onSupplyAssignmentChanged,
@@ -345,7 +361,10 @@ function ProjectsSubViewPanel({
   byStatus: { groups: Map<string, ProjectDto[]>; unsorted: ProjectDto[] };
   openProjectId: string | null;
   onOpenProject: (id: string) => void;
+  editingProjectId: string | null;
   onEditProject: (project: ProjectDto) => void;
+  onProjectEditClosed: () => void;
+  onProjectSaved: (project: ProjectDto) => void;
   openProject: ProjectDto | null;
   onProjectDeleted: (projectId: string) => void;
   onSupplyAssignmentChanged: (supply: SupplyDto) => void;
@@ -408,14 +427,22 @@ function ProjectsSubViewPanel({
                 ))}
               </div>
               {openProject && row.some((p) => p.id === openProject.id) && (
-                <ProjectDetailPanel
-                  project={openProject}
-                  supplies={supplies}
-                  onClose={() => onOpenProject(openProject.id)}
-                  onEdit={onEditProject}
-                  onDeleted={onProjectDeleted}
-                  onSupplyAssignmentChanged={onSupplyAssignmentChanged}
-                />
+                editingProjectId === openProject.id ? (
+                  <ProjectEditPanel
+                    project={openProject}
+                    onCancel={onProjectEditClosed}
+                    onSaved={onProjectSaved}
+                  />
+                ) : (
+                  <ProjectDetailPanel
+                    project={openProject}
+                    supplies={supplies}
+                    onClose={() => onOpenProject(openProject.id)}
+                    onEdit={onEditProject}
+                    onDeleted={onProjectDeleted}
+                    onSupplyAssignmentChanged={onSupplyAssignmentChanged}
+                  />
+                )
               )}
             </div>
           ))}
