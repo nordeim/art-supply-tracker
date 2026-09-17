@@ -65,24 +65,29 @@
   --color-input: #2a1d4a;
   --color-ring: #2ec4b6;
 
-  --radius-sm: 0.75rem;
-  --radius-md: 0.875rem;
-  --radius-lg: 1rem;
-  --radius-xl: 1.25rem;
+  /* Radius scale — the live app's Tailwind v3 defaults (verified against
+   * its compiled CSS: .rounded-lg{border-radius:.5rem}, .rounded-xl{.75rem}).
+   * Do NOT restore the scaffold's larger shadcn values here — every card,
+   * button, and chip renders visibly rounder than the live app when these
+   * drift (r8; pinned by design-tokens.test.ts). */
+  --radius-sm: 0.125rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
 }
 
 /*
- * Font tokens must live in `@theme inline`: the --font-inter variable is
- * injected on <body> by next/font's generated class (not on :root), so a
- * plain @theme var() chain resolves to the guaranteed-invalid value at the
- * :root level and every font-sans element silently falls back to the
- * system stack (verified against the running app: computed --font-sans on
- * :root was empty). `@theme inline` bakes the var() chain into the utility
- * itself, where it resolves against the body-scoped next/font variable —
- * matching the live app, which renders InterVariable/Inter everywhere.
+ * Font resolution parity — r8. The live app (AWS Amplify UI) ships ZERO
+ * webfonts: its document.fonts set is empty and this exact stack resolves
+ * to system fonts on every visitor's machine. The clone previously loaded
+ * next/font's self-hosted Inter (a different build with slightly wider
+ * advance widths), which re-wrapped the Studio Memory text onto a second
+ * line and inflated the header pill widths. The stack below is the live's
+ * computed font-family verbatim — do not "upgrade" it to a webfont and do
+ * not re-add a next/font variable (pinned by design-tokens.test.ts).
  */
 @theme inline {
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-sans: InterVariable, "Inter var", Inter, -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Oxygen, Ubuntu, Cantarell, "Open Sans", sans-serif;
 }
 
 :root {

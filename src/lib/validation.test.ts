@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  deriveDisplayName,
   importPayloadSchema,
   normalizedImportPayloadSchema,
   projectInputSchema,
+  signUpSchema,
   supplyInputSchema,
 } from "@/lib/validation";
 
@@ -344,5 +346,36 @@ describe("normalizedImportPayloadSchema", () => {
       projects: [{ ...normalized.projects[0], photos }],
     });
     expect(parsed.success).toBe(false);
+  });
+});
+
+describe("signUpSchema + deriveDisplayName (live Cognito form shape)", () => {
+  it("accepts the live's email + password form (no display name required)", () => {
+    const parsed = signUpSchema.safeParse({
+      email: "artist@example.com",
+      password: "StudioDemo2026!",
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("still tolerates a client-supplied display name (back-compat)", () => {
+    const parsed = signUpSchema.safeParse({
+      email: "artist@example.com",
+      password: "StudioDemo2026!",
+      displayName: "Named Artist",
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.displayName).toBe("Named Artist");
+  });
+
+  it("derives the display name from the email local part like the chat username", () => {
+    expect(deriveDisplayName("kimsart@gmail.com")).toBe("kimsart");
+    expect(deriveDisplayName("Jane.Doe+studio@Example.COM")).toBe("Jane.Doe+studio");
+  });
+
+  it("degrades gracefully for malformed emails", () => {
+    // Unreachable in practice (emailSchema runs first) — documents the
+    // degradation: empty local part falls back to "Artist".
+    expect(deriveDisplayName("@localhost")).toBe("Artist");
   });
 });

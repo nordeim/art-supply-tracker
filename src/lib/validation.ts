@@ -23,7 +23,8 @@ const emailSchema = z
 
 const passwordSchema = z
   .string()
-  .min(8, "Password must be at least 8 characters.")
+  // The live app's Amplify copy, byte-for-byte (no trailing period).
+  .min(8, "Password must have at least 8 characters")
   .max(128, "Password is too long.");
 
 export const signInSchema = z.object({
@@ -34,8 +35,26 @@ export const signInSchema = z.object({
 export const signUpSchema = z.object({
   email: emailSchema,
   password: passwordSchema,
-  displayName: z.string().trim().min(1, "Display name is required.").max(60, "Display name is too long."),
+  // The live app's Cognito sign-up asks only for email + password (+ client
+  // confirm); the display name is derived server-side (see deriveDisplayName).
+  displayName: z
+    .string()
+    .trim()
+    .min(1, "Display name is required.")
+    .max(60, "Display name is too long.")
+    .optional(),
 });
+
+/**
+ * Derives the user's display name from the email local part — the same
+ * convention the community chat uses for its usernames (the live app never
+ * collects a display name on sign-up). Degrades to "Artist" for malformed
+ * addresses so the required Prisma field always has a value.
+ */
+export function deriveDisplayName(email: string): string {
+  const localPart = email.split("@")[0]?.trim();
+  return localPart && localPart.length > 0 ? localPart.slice(0, 60) : "Artist";
+}
 
 const optionalText = (max: number) =>
   z

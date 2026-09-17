@@ -131,7 +131,7 @@ not secret — rotate before any public deployment).
 ### Testing Strategy
 
 Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
-`src/**/*.test.ts`). The suite (134 tests) pins:
+`src/**/*.test.ts`). The suite (180 tests) pins:
 
 - **Studio-domain vocabulary** — the per-category `SUPPLY_TYPE_LISTS` in the
   live app's tokens (Paint/Brush/Pastel/Paper/Canvas/Medium/Other categories,
@@ -143,8 +143,11 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
 - **Design tokens** (`design-tokens.test.ts`) — the `@theme` literal hex
   values, pinned to the live app's *compiled utility classes* (the rendered
   ground truth): purple `#5a3a8e`, yellow `#ffd5a8`, coral `#ff7a7a` plus
-  the six glow shadows. The live `:root` CSS-variable block carries three
-  different (vestigial) values — never align to it.
+  the six glow shadows, the Tailwind-v3 radius scale (rounded-sm/md/lg/xl
+  = 2/6/8/12px), and the zero-webfont `--font-sans` stack (the live ships
+  no webfont; a re-introduced `next/font` re-wraps text). The live `:root`
+  CSS-variable block carries three different (vestigial) values — never
+  align to it.
 - **Live style maps** (`studio-domain.test.ts`) — the production bundle's
   stock-filter switch ("Low Stock" matches low AND critical; "Out of Stock"
   critical only) and the `jz`/`Mz`/`Jz` status-pill/chip/condition maps,
@@ -180,6 +183,16 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
   own typos ("KIm", "brower") included; the corrected spellings are
   asserted absent so the demo studio cannot drift from the production
   rendering.
+- **Login / header / chat-panel fidelity** (`login-fidelity.test.ts`,
+  `chat-fidelity.test.ts`) — file-content pins on the live's measured
+  DOM: the header logo's intrinsic 1068×269 dimensions with responsive
+  classes (no inline style), the Amplify login chrome (equal-width tabs
+  with the 2px gray/turquoise top strip, the eye toggle as the input's
+  right segment with near-invisible `#0d1a26` icons, `#89949f` borders,
+  `#9ca3af` placeholders, the invisible-typing `#0d1a26` input quirk, the
+  mobile h1 leading 1.25), the sticky community header + scroll-container
+  split (the sticky `top-4` displacement is load-bearing), and the
+  absence of chat auto-scroll (the live has none).
 - **Action layer** (`src/actions/studio.test.ts`) — the mutation surface
   against a throwaway SQLite database with the auth seam mocked: CRUD,
   ownership/IDOR checks, supply assignment, delete-side-effects,

@@ -327,7 +327,11 @@ export function StudioApp({
 
         {/* Community column — desktop glass card + mobile slide-in drawer. */}
         <aside className="hidden min-h-0 overflow-hidden rounded-3xl border border-ast-pink/40 bg-[#0B0018] p-4 backdrop-blur-xl md:col-span-2 md:block">
-          <CommunityContent messages={chatMessages} memoryText={user.lastWorkedOn} />
+          <CommunityContent
+            messages={chatMessages}
+            memoryText={user.lastWorkedOn}
+            chatScrollClass="scrollbar-right max-h-[calc(100vh-16rem)] space-y-4 overflow-y-auto pr-1"
+          />
         </aside>
       </div>
 
@@ -345,7 +349,7 @@ export function StudioApp({
         aria-label="Community chat"
         aria-hidden={!chatPanelOpen}
         inert={!chatPanelOpen}
-        className={`fixed inset-y-0 right-0 z-50 w-4/5 max-w-xs overflow-y-auto scrollbar-right rounded-l-3xl border-l border-ast-pink/40 bg-[#0B0018] p-4 backdrop-blur-xl transition-transform duration-300 md:hidden ${
+        className={`fixed inset-y-0 right-0 z-50 w-4/5 max-w-xs overflow-y-auto rounded-l-3xl border-l border-ast-pink/40 bg-[#0B0018] p-4 backdrop-blur-xl transition-transform duration-300 md:hidden ${
           chatPanelOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
@@ -356,7 +360,11 @@ export function StudioApp({
         >
           ✕ Close
         </button>
-        <CommunityContent messages={chatMessages} memoryText={user.lastWorkedOn} />
+        <CommunityContent
+          messages={chatMessages}
+          memoryText={user.lastWorkedOn}
+          chatScrollClass="space-y-4"
+        />
       </aside>
 
       <input
@@ -408,11 +416,10 @@ function StudioHeader({
           <Image
             src="/assets/ast_logo_horizontal_cropped.png"
             alt="ArtSupplyTracker"
-            width={320}
-            height={56}
+            width={1068}
+            height={269}
             priority
-            style={{ height: "auto", width: "auto", maxWidth: "320px" }}
-            className="inline h-10 object-contain md:h-12 lg:h-14"
+            className="h-10 md:h-12 lg:h-14 w-auto max-w-[320px] object-contain"
           />
         </div>
         <div className="flex min-w-fit items-center gap-3">
@@ -443,31 +450,41 @@ function StudioHeader({
 function CommunityContent({
   messages,
   memoryText,
+  chatScrollClass,
 }: {
   messages: ChatMessageDto[];
   memoryText: string;
+  chatScrollClass: string;
 }) {
   return (
-    <div className="space-y-3">
-      <div>
-        <p className="text-xs uppercase tracking-[0.3em] text-ast-pink">Community</p>
-        <h2 className="mt-2 text-lg font-semibold text-[#FF2FB3]">Studio Chat</h2>
+    <>
+      {/* The live splits the panel here: a sticky community header (its
+       * top-4 displacement is what pushes the header 16px into view) and a
+       * separately scrolling chat container (max-h at desktop; plain
+       * space-y-4 in the mobile drawer, which scrolls itself). */}
+      <div className="sticky top-4 z-10 mb-4 space-y-3">
+        <div>
+          <p className="text-xs uppercase tracking-[0.3em] text-ast-pink">Community</p>
+          <h2 className="mt-2 text-lg font-semibold text-[#FF2FB3]">Studio Chat</h2>
+        </div>
+        <div className="rounded-2xl border border-ast-purple/35 bg-[#120724] p-3">
+          <p className="text-sm font-semibold text-ast-lavender">Studio Memory</p>
+          <p className="mt-1 text-xs text-ast-body/70">
+            {memoryText
+              ? `You were working on ${memoryText}.`
+              : "Your studio history will appear here."}
+          </p>
+        </div>
+        <div className="rounded-2xl border border-ast-turquoise/30 bg-[#120724] p-3">
+          <p className="text-sm font-semibold text-ast-turquoise">Need help?</p>
+          <p className="mt-1 text-xs text-ast-body/70">
+            Ask how to add supplies, track condition, or prep for a show.
+          </p>
+        </div>
       </div>
-      <div className="rounded-2xl border border-ast-purple/35 bg-[#120724] p-3">
-        <p className="text-sm font-semibold text-ast-lavender">Studio Memory</p>
-        <p className="mt-1 text-xs text-ast-body/70">
-          {memoryText
-            ? `You were working on ${memoryText}.`
-            : "Your studio history will appear here."}
-        </p>
+      <div className={chatScrollClass}>
+        <StudioChat initialMessages={messages} />
       </div>
-      <div className="rounded-2xl border border-ast-turquoise/30 bg-[#120724] p-3">
-        <p className="text-sm font-semibold text-ast-turquoise">Need help?</p>
-        <p className="mt-1 text-xs text-ast-body/70">
-          Ask how to add supplies, track condition, or prep for a show.
-        </p>
-      </div>
-      <StudioChat initialMessages={messages} />
-    </div>
+    </>
   );
 }

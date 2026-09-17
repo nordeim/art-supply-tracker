@@ -141,7 +141,7 @@ app's focusRequest semantics), the inspiration rail panels, and the
 import/export surface — leaving the studio pristine. It doubles as the
 regression suite for the post-create navigation contract.
 
-Automated tests (Vitest, 134 tests) pin the studio-domain vocabulary
+Automated tests (Vitest, 180 tests) pin the studio-domain vocabulary
 (per-category supply subcategory lists in the live app's tokens), the
 production bundle's status/condition style maps (project status pills,
 chip borders with per-status hover/selected treatments, supply condition
@@ -157,7 +157,13 @@ resolver ("art-history-today" / "partner" expand their panels; "quote"
 and the hardcoded "spotlight-kevin-lewis" are the live's inert
 sections), the seeded community-chat fidelity (the live history's five
 messages pinned byte-for-byte — the live author's own typos, "KIm" and
-"brower", included and guarded against silent "correction"), and the
+"brower", included and guarded against silent "correction"), the login +
+header + chat panel fidelity (file-content pins on the live's measured
+Amplify geometry: the responsive logo's intrinsic 1068×269 aspect, the
+Tailwind-v3 radius scale, the zero-webfont InterVariable stack, the sticky
+community header + scroll-container split, the eye-toggle's
+input-segment chrome and near-invisible #0d1a26 icons, the invisible-typing
+input quirk, and the tab strip's 2px gray/turquoise top border), and the
 full action surface
 against a throwaway SQLite database (CRUD, ownership/IDOR checks,
 assignment, import — including the mid-import failure that must roll back
@@ -232,7 +238,8 @@ Headline gradient: `linear-gradient(90deg, #00E6FF, #2E64FF, #8D5CFF,
 | Robustness remediation (r5) | ✅ Complete | Post-create supplies navigation parity (away-and-back → category grid; re-click keeps the sub-view), import hardening — `normalizedImportPayloadSchema` enforcement (array caps, string lengths, vocabulary enums) and single-transaction atomicity (a failed restore never empties the studio), "All <Category>" breadcrumb + empty-state parity (tabs hidden on empty lists, no create button in the filtered-empty state), `inert` on closed drawers, one chat poller per viewport, `pickToday` dedupe, import-alert refresh fallback, committed `scripts/smoke_functional.py` |
 | Focus-flow parity (r6) | ✅ Complete | Recent Projects rail focuses a project like the live app ("All Projects" list + detail panel, sticky across away-and-back — the live focusRequest semantics, bundle-extracted and DOM-verified), the sidebar's TODAY IN ART HISTORY / PARTNERS rail buttons auto-expand their Feed panels (`resolveInspirationFocus` with the live's inert "quote" / "spotlight-kevin-lewis" quirks pinned by tests), the dashboard Studio Spotlight card navigates to the Feed; live account restored to the reference pristine state (131 tests, 23 smoke checks) |
 | Seed-fidelity pass (r7) | ✅ Complete | Fresh full-surface recon (four-view + mobile VLM comparison of live vs clone — parity; all 15 inspiration entries, chat timestamps, and detail-panel content byte-verified against the live DOM; 23/23 smoke + all gates green) found one residual gap: the seeded chat history had silently "corrected" the live author's two typos. The seed now mirrors the live messages byte-for-byte ("KIm", "brower" — pinned by the new seed-fidelity test so they cannot drift again), local demo DB re-seeded and browser-verified (134 tests, 23 smoke checks) |
-| Verification | ✅ Complete | Lint + typecheck + 134 tests + production build clean; VLM screenshot comparison of all four views (plus the mobile dashboard) vs the live app (near-identical); 23-check functional smoke suite (CRUD, filters, panels, modals, navigation regression, focus flows) |
+| Pixel-parity pass (r8) | ✅ Complete | Post-hydration DOM recon (the live renders different pre-hydration markup — steady-state measurements are the only ground truth) closed the last visual gaps: responsive header logo (intrinsic 1068×269 aspect, h-10/12/14 classes — header 88px desktop / 126px mobile, logo 222×56 / 159×40), Tailwind-v3 radius scale (rounded-lg/xl = 8/12px, not the scaffold's 16/20px — card histograms identical), zero-webfont font parity (the live ships no webfont; its InterVariable stack resolves to system fonts — the clone's self-hosted Inter had wider metrics that re-wrapped the Studio Memory text), the chat panel's sticky-header + scroll-container split (community rows at the live's exact coordinates), login Amplify chrome fidelity (equal-width tabs with the 2px gray/turquoise top strip, the eye toggle as the input's right segment with near-invisible #0d1a26 icons, #89949f borders, #9ca3af placeholders, the invisible-typing #0d1a26 input quirk, mobile h1 leading 1.25, Confirm-Password signup, Reset Password view, Amplify error copy), mobile chat drawer scrollbar parity, chat auto-scroll removal (the live has none) — 180 tests, 23 smoke checks, VLM parity on all views + login at both viewports |
+| Verification | ✅ Complete | Lint + typecheck + 180 tests + production build clean; VLM screenshot comparison of all four views (plus the mobile dashboard and the login page at both viewports) vs the live app (parity); 23-check functional smoke suite (CRUD, filters, panels, modals, navigation regression, focus flows) |
 | Documentation | ✅ Complete | README, AGENTS.md, CLAUDE.md, Project_Architecture_Document.md |
 
 Known intentional gaps (mirroring the original beta's placeholders): the

@@ -25,7 +25,7 @@ import {
   type ActionResult,
 } from "@/lib/result";
 import { consumeRateLimit } from "@/lib/rate-limit";
-import { signInSchema, signUpSchema } from "@/lib/validation";
+import { deriveDisplayName, signInSchema, signUpSchema } from "@/lib/validation";
 
 const SIGN_IN_RATE_LIMIT = { limit: 5, windowMs: 60_000 };
 
@@ -68,8 +68,9 @@ export async function signInAction(
   try {
     const user = await db.user.findUnique({ where: { email } });
     // Uniform error for unknown email and wrong password — no account probing.
+    // The copy is the live app's Amplify wording, byte-for-byte.
     if (!user || !verifyPassword(password, user.passwordHash)) {
-      return validationError("Incorrect email or password.");
+      return validationError("Incorrect username or password.");
     }
     await createSession(user.id);
     return { ok: true, data: { email: user.email, displayName: user.displayName } };
@@ -86,7 +87,11 @@ export async function signUpAction(
   if (!parsed.success) {
     return validationError(parsed.error.issues[0]?.message ?? "Please check the form and try again.");
   }
-  const { email, password, displayName } = parsed.data;
+  const { email, password } = parsed.data;
+  // The live app's Cognito sign-up collects only email + password; the
+  // display name is derived from the email local part (chat-username
+  // convention) so the required Prisma field always has a value.
+  const displayName = parsed.data.displayName ?? deriveDisplayName(email);
 
   try {
     const existing = await db.user.findUnique({ where: { email } });

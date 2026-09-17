@@ -1,12 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "AST Studio",
@@ -28,7 +21,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans antialiased`}>
+      {/* The live app (Amplify UI) ships no webfont — its font-family stack
+       * resolves to system fonts on every machine. Do not re-add next/font
+       * here: the self-hosted Inter build has wider advance widths than the
+       * live's resolution and visibly re-wraps text (r8; pinned by
+         design-tokens.test.ts). */}
+      <body className="font-sans antialiased">
         {children}
       </body>
     </html>

@@ -25,6 +25,11 @@ const cssPath = join(
   "../app/globals.css",
 );
 const css = readFileSync(cssPath, "utf8");
+const layoutPath = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "../app/layout.tsx",
+);
+const layout = readFileSync(layoutPath, "utf8");
 
 function token(name: string): string {
   const match = new RegExp(`--${name}:\\s*([^;]+);`).exec(css);
@@ -71,5 +76,60 @@ describe("AST glow shadows (live bundle verbatim)", () => {
     expect(token("shadow-ast-cyan")).toBe("0 0 28px 0 rgba(0, 230, 255, 0.35)");
     expect(token("shadow-ast-lavender")).toBe("0 0 28px 0 rgba(183, 139, 255, 0.4)");
     expect(token("shadow-ast-warm")).toBe("0 0 24px 0 rgba(255, 213, 168, 0.35)");
+  });
+});
+
+/**
+ * Radius scale — r8. The scaffold's @theme carried shadcn's larger radius
+ * tokens (sm/md/lg/xl = 0.75/0.875/1/1.25rem), so every `rounded-lg`/`
+ * rounded-xl` surface rendered 16px/20px while the live app (Tailwind v3
+ * defaults) renders 8px/12px. Verified against the live's compiled CSS
+ * (2026-09-17): `.rounded-lg{border-radius:.5rem}` and
+ * `.rounded-xl{border-radius:.75rem}`; the live's DOM histogram shows 12px
+ * (24 elements) + 8px (6 elements) on the dashboard where the clone showed
+ * 20px + 16px. The tokens are pinned here so the scaffold scale cannot
+ * silently return.
+ */
+describe("radius token scale (live Tailwind-v3 defaults)", () => {
+  it("renders rounded-sm at the live's 0.125rem", () => {
+    expect(token("radius-sm")).toBe("0.125rem");
+  });
+
+  it("renders rounded-md at the live's 0.375rem", () => {
+    expect(token("radius-md")).toBe("0.375rem");
+  });
+
+  it("renders rounded-lg at the live's compiled .5rem", () => {
+    expect(token("radius-lg")).toBe("0.5rem");
+  });
+
+  it("renders rounded-xl at the live's compiled .75rem", () => {
+    expect(token("radius-xl")).toBe("0.75rem");
+  });
+});
+
+/**
+ * Font resolution parity — r8. The live app (AWS Amplify UI) ships ZERO
+ * webfonts: document.fonts is empty and its stack resolves to system
+ * fonts on every visitor's machine. The clone had next/font's
+ * self-hosted Inter (a different build than InterVariable with slightly
+ * wider advance widths), which re-wrapped the Studio Memory text onto a
+ * second line and inflated the header pill widths. Parity requires the
+ * identical stack so both apps resolve fonts the same way everywhere.
+ */
+describe("font resolution (live ships no webfont)", () => {
+  it("uses the live's exact font stack verbatim", () => {
+    expect(token("font-sans")).toBe(
+      'InterVariable, "Inter var", Inter, -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Oxygen, Ubuntu, Cantarell, "Open Sans", sans-serif',
+    );
+  });
+
+  it("loads no webfont (the live renders with system fonts only)", () => {
+    // Strip comments so the explanatory note below the <html> tag (which
+    // names next/font as the thing NOT to re-add) does not trip the pin.
+    const code = layout.replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(code).not.toMatch(/from "next\/font/);
+    expect(code).not.toMatch(/Inter\(\{/);
+    expect(code).not.toMatch(/inter\.variable/);
   });
 });

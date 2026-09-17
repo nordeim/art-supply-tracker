@@ -1,9 +1,9 @@
-# AST Studio — Master Project Architecture Document (PAD) v1.6
+# AST Studio — Master Project Architecture Document (PAD) v1.7
 
 **Classification:** Internal Engineering Reference
 **Status:** DEFINITIVE, PRODUCTION-LOCKED BLUEPRINT
 **Companion Document:** `README.md` (onboarding), `AGENTS.md` (agent instructions), `CLAUDE.md` (engineering standards)
-**Last Updated:** 2026-09-17 (r7)
+**Last Updated:** 2026-09-17 (r8)
 **Audience:** Senior Engineers, Tech Leads, DevOps, and Onboarding Engineers
 **Rule:** Every architectural decision in this document traces to a specific rationale.
 Nothing is here "because it's popular."
@@ -91,6 +91,34 @@ Nothing is here "because it's popular."
   carries an operator-account test message ("Hello from clone test",
   Sep 16 — prior-agent residue) that has no delete affordance in the
   live UI and is deliberately NOT part of the seeded community content.
+- `[R8]` Session-11 pixel-parity pass (2026-09-17): post-hydration DOM
+  recon (the live renders DIFFERENT pre-hydration markup — its logo
+  hydrates from a 320×81 inline-styled img to responsive classes; only
+  steady-state measurements are ground truth) closed the final visual
+  gaps: the header logo now passes the file's intrinsic 1068×269 aspect
+  with the `h-10 md:h-12 lg:h-14 w-auto max-w-[320px] object-contain`
+  classes and no inline style (header 88px desktop / 126px mobile — was
+  113px with every panel shifted 25px); the radius scale is the live's
+  Tailwind-v3 defaults (`rounded-lg`/`xl` = 8/12px — the shadcn scaffold
+  had 16/20px); the app ships ZERO webfonts (the live's
+  `document.fonts` is empty — its InterVariable stack resolves to system
+  fonts; the clone's self-hosted next/font Inter had wider advance widths
+  that re-wrapped the Studio Memory text and inflated header pills); the
+  chat panel is split into the live's `sticky top-4` community header +
+  `max-h-[calc(100vh-16rem)]` scroll container (the sticky displacement
+  is load-bearing — all community rows now sit at the live's exact
+  coordinates); the chat's stickToBottom auto-scroll was removed (the
+  live bundle has no scroll logic); login Amplify chrome completed — the
+  eye toggle as the input's right segment (1px #89949f y/r borders,
+  0-4-4-0 radii, near-invisible #0d1a26 icons), #9ca3af placeholders,
+  the invisible-typing #0d1a26 input text quirk (pixel-verified by
+  typing into the live field), the 2px gray/turquoise tab-strip top
+  border, the mobile h1 leading 1.25, and `deriveDisplayName` replacing
+  the live's absent display-name field. Pinned by the new
+  `login-fidelity.test.ts` and `chat-fidelity.test.ts` (file-content
+  pattern) plus the extended `design-tokens.test.ts`; 180 tests total,
+  23 smoke checks, VLM parity on all four views and the login page at
+  both viewports.
 
 ---
 
@@ -629,13 +657,16 @@ erDiagram
 
 ### 5.1 Typographic System
 
-- **Typeface:** Inter (latin subset, 100–900 variable) via `next/font`,
-  exposed as `--font-inter` on `<body>` and wired through an
-  `@theme inline` block — the `font-sans` utility inlines the
-  `var(--font-inter)` chain so it resolves against the body-scoped
-  next/font variable. (A plain `@theme` var() chain resolves to the
-  guaranteed-invalid value at `:root` and every element silently falls
-  back to the system stack — verified empirically and fixed in r3.)
+- **Typeface:** NONE is shipped — the app loads zero webfonts (r8).
+  `font-sans` resolves the live app's exact stack verbatim
+  (`InterVariable, "Inter var", Inter, -apple-system, BlinkMacSystemFont,
+  "Helvetica Neue", "Segoe UI", Oxygen, Ubuntu, Cantarell, "Open Sans",
+  sans-serif`) in an `@theme inline` block: the live's `document.fonts`
+  is empty (Amplify UI's default stack with no bundled font), so both
+  apps render with the visitor's system fonts. Do NOT re-introduce
+  `next/font` — its self-hosted Inter build has wider advance widths than
+  the live's resolution and visibly re-wraps text (the Studio Memory
+  line, header pill widths); pinned by `design-tokens.test.ts`.
 - **Scale:** `text-xs` (eyebrows, 10–11 px with `tracking-[0.25em]`–
   `[0.35em]` uppercase) → `text-sm` body → `text-lg`/`text-xl` card titles →
   `text-3xl` page headline with the four-stop cyan→blue→violet→pink
@@ -752,7 +783,7 @@ CSS — distinct from the utility purple.
 | Category | Count | Location | Framework |
 |---|---|---|---|
 | Static | — | `eslint .` / `tsc --noEmit` | ESLint 9 + TS 5.9 strict |
-| Automated unit | 111 tests | `src/lib/*.test.ts` — studio-domain (incl. bundle-pinned style maps + edit-panel budget/option mapping), design-tokens (globals.css literal pinning), validation (incl. the normalized import gate), export-payload, rate-limit, inspiration (incl. the rail section resolver with the live's inert "quote" / "spotlight-kevin-lewis" quirks), seed-fidelity (scripts/seed.ts pinned to the live chat byte-for-byte, typos included) | Vitest (node env, `@/` alias) |
+| Automated unit | 157 tests | `src/lib/*.test.ts` — studio-domain (incl. bundle-pinned style maps + edit-panel budget/option mapping), design-tokens (globals.css literal pinning incl. the Tailwind-v3 radius scale and the zero-webfont stack), validation (incl. the normalized import gate), export-payload, rate-limit, inspiration (incl. the rail section resolver with the live's inert "quote" / "spotlight-kevin-lewis" quirks), seed-fidelity (scripts/seed.ts pinned to the live chat byte-for-byte, typos included), login-fidelity + chat-fidelity (the live's measured Amplify login chrome, logo aspect, and chat-panel structure) | Vitest (node env, `@/` alias) |
 | Automated action | 23 tests | `src/actions/studio.test.ts` (throwaway SQLite DB, mocked auth seam — incl. the mid-import rollback contract) | Vitest |
 | Manual golden paths | 11 flows | README "Testing & Quality" | Browser-executed (pinned by `scripts/smoke_functional.py`, 23 checks) |
 | CI verify-gate | — | `.github/workflows/verify-gate.yml` (lint + typecheck + test + build) | GitHub Actions |
@@ -899,6 +930,11 @@ public exposure).
 | Medium | ~~Supplies post-create navigation sticky~~ | After the first supply creation, every re-entry opened the flat list instead of the category grid (live returns to the grid) | **Resolved 2026-09-17 (r5)** — navigation resets the post-create token; pinned by the smoke suite |
 | Low | ~~"All <Category>" breadcrumb + empty-state drift~~ | Clone rendered the raw `__all__` sentinel, showed filter tabs on empty lists, and offered "+ Add Supply" in the filtered-empty state — none of which the live app does | **Resolved 2026-09-17 (r5)** — breadcrumb, tab, and button parity fixed and DOM-verified against the live app |
 | Low | ~~Seeded chat text silently corrected~~ | The demo seed had "fixed" two of the live author's typos ("KIm" → "Kim", "brower" → "browser"), drifting the clone's community content from the live rendering | **Resolved 2026-09-17 (r7)** — seed mirrors the live messages byte-for-byte, pinned by `seed-fidelity.test.ts` |
+| High | ~~Header logo rendered 320×81 at every viewport~~ | An inline `height:auto` defeated the responsive logo classes: the header was 113px (live: 88px), every main panel sat 25px low, and on mobile the ✧/email/Sign Out pills were pushed off-screen | **Resolved 2026-09-17 (r8)** — intrinsic 1068×269 dimensions + responsive classes, no inline style; pinned by `login-fidelity.test.ts` |
+| High | ~~Radius scale off by one token step~~ | The shadcn scaffold's `@theme` radii (sm/md/lg/xl = 12/14/16/20px) rendered every card visibly rounder than the live's Tailwind-v3 defaults (2/6/8/12px) | **Resolved 2026-09-17 (r8)** — token scale corrected and pinned; card radius histograms now identical |
+| Medium | ~~Font build mismatch re-wrapped text~~ | The clone's self-hosted next/font Inter has wider advance widths than the live's system-font resolution: the Studio Memory text wrapped to 2 lines and header pills inflated | **Resolved 2026-09-17 (r8)** — zero-webfont parity: the live's exact InterVariable stack, no `next/font` |
+| Medium | ~~Chat panel structure nested~~ | One `space-y-3` wrapper (vs the live's sticky header + scroll-container split) rendered the whole community column 16px high; the clone also auto-scrolled new messages (the live does not) | **Resolved 2026-09-17 (r8)** — `sticky top-4` header + `max-h` scroll container; auto-scroll removed; pinned by `chat-fidelity.test.ts` |
+| Medium | ~~Login Amplify chrome incomplete~~ | Missing eye-segment borders, wrong grays (#89949b vs #89949f), visible typed text (live renders invisible #0d1a26), no tab-strip top border, mobile h1 leading 1.25 | **Resolved 2026-09-17 (r8)** — all pinned by `login-fidelity.test.ts`; pixel-verified against the live |
 | Low | View state not URL-addressable | Browser back doesn't switch studio views | Accepted (ADR-001 consequence) |
 | Low | Chat avatar colors keyed to seeded usernames | New users get the default purple avatar | Accepted (matches original's initials behavior) |
 | Low | SQLite single-writer | No multi-process horizontal scale | Accepted (ADR-002); swap to Postgres by changing `provider` + URL if ever needed |

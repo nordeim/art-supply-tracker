@@ -3,12 +3,16 @@
 /**
  * Studio Chat — the community message wall with 5-second polling.
  *
- * Mirrors the live app: the chat card (bg-[#120724], ast_blue/20 border)
- * carries the "STUDIO CHAT" header, the scrollable message list (plain
- * purple avatar circles — no initials, matching production), and the
- * composer. Sends go through a Server Action; polling pauses when the tab
- * is hidden so background tabs stay quiet. The send button is disabled
- * until input is non-empty (exactly like the original).
+ * Mirrors the live app's bundle verbatim: the chat card (bg-[#120724],
+ * ast_blue/20 border, flex column) carries the "STUDIO CHAT" header,
+ * the message list (plain purple avatar circles — no initials, matching
+ * production; no custom scrollbar styling — the live list is plain
+ * overflow-y-auto), and the composer. Sends go through a Server Action;
+ * polling pauses when the tab is hidden so background tabs stay quiet.
+ * The live renders new messages WITHOUT scrolling anything (no scrollTop
+ * manipulation anywhere in its chat component) — no auto-scroll here
+ * either. The send button is disabled until input is non-empty (exactly
+ * like the original).
  */
 import { useEffect, useRef, useState, useTransition } from "react";
 
@@ -33,8 +37,6 @@ export function StudioChat({ initialMessages }: { initialMessages: ChatMessageDt
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const rootRef = useRef<HTMLDivElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
-  const stickToBottom = useRef(true);
 
   // Poll while the tab is visible; skip while hidden (no wasted action calls).
   // The shell renders this component twice (desktop column + mobile drawer,
@@ -58,20 +60,6 @@ export function StudioChat({ initialMessages }: { initialMessages: ChatMessageDt
     return () => clearInterval(interval);
   }, []);
 
-  // Keep the view pinned to the newest message unless the reader scrolled up.
-  useEffect(() => {
-    const list = listRef.current;
-    if (!list || !stickToBottom.current) return;
-    list.scrollTop = list.scrollHeight;
-  }, [messages]);
-
-  function onScroll() {
-    const list = listRef.current;
-    if (!list) return;
-    stickToBottom.current =
-      list.scrollHeight - list.scrollTop - list.clientHeight < 40;
-  }
-
   function onSend(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const text = draft.trim();
@@ -85,23 +73,20 @@ export function StudioChat({ initialMessages }: { initialMessages: ChatMessageDt
       }
       setMessages((list) => [...list, result.data]);
       setDraft("");
-      stickToBottom.current = true;
     });
   }
 
   return (
     <div
       ref={rootRef}
-      className="flex h-full min-w-0 flex-col overflow-hidden rounded-xl border border-ast-blue/20 bg-[#120724] p-4"
+      className="bg-[#120724] border border-ast-blue/20 rounded-xl p-4 h-full min-w-0 overflow-hidden flex flex-col"
     >
-      <h2 className="mb-4 text-sm font-bold text-ast-lavender/70">STUDIO CHAT</h2>
+      <h2 className="text-sm font-bold text-ast-lavender/70 mb-4">STUDIO CHAT</h2>
 
       <div
-        ref={listRef}
-        onScroll={onScroll}
         role="log"
         aria-label="Studio chat messages"
-        className="mb-4 flex-1 space-y-3 overflow-y-auto scrollbar-studio"
+        className="flex-1 space-y-3 mb-4 overflow-y-auto"
       >
         {messages.length === 0 && (
           <p className="text-xs text-ast-body/50">No messages yet.</p>
@@ -127,7 +112,7 @@ export function StudioChat({ initialMessages }: { initialMessages: ChatMessageDt
       </div>
 
       {error && (
-        <p role="alert" className="mb-2 text-xs text-ast-coral">
+        <p role="alert" className="mb-2 text-xs text-pink-300">
           {error}
         </p>
       )}

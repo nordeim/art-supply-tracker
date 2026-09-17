@@ -11,7 +11,7 @@ Run from the repo root. Bun is the package manager — use `bun`, never `npm`/`y
 | `bun run dev` | Dev server on :3000 |
 | `bun run lint` | ESLint (next/core-web-vitals + next/typescript) |
 | `bun run typecheck` | `tsc --noEmit`, strict |
-| `bun run test` | Vitest — 134 tests: domain vocabulary, bundle-pinned status/condition style maps, design-token literals, validation (incl. the normalized import gate), export/import wire format, rate limiting, the inspiration rail section resolver (incl. the live's inert "quote" / "spotlight-kevin-lewis" quirks), seeded chat-history fidelity (the live's five community messages byte-for-byte — the author's own typos, "KIm"/"brower", pinned so they cannot be silently "corrected"), action layer (each action file runs against a throwaway SQLite DB, incl. the mid-import rollback contract) |
+| `bun run test` | Vitest — 180 tests: domain vocabulary, bundle-pinned status/condition style maps, design-token literals (incl. the Tailwind-v3 radius scale and the zero-webfont InterVariable stack), validation (incl. the normalized import gate), export/import wire format, rate limiting, the inspiration rail section resolver (incl. the live's inert "quote" / "spotlight-kevin-lewis" quirks), seeded chat-history fidelity (the live's five community messages byte-for-byte — the author's own typos, "KIm"/"brower", pinned so they cannot be silently "corrected"), login/header/chat-panel fidelity (the responsive logo's intrinsic 1068×269 aspect, the Amplify eye-toggle chrome, the invisible-typing input quirk, the tab strip's 2px top border, the sticky community header + scroll-container split, and the absence of chat auto-scroll — the live has none), action layer (each action file runs against a throwaway SQLite DB, incl. the mid-import rollback contract) |
 | `python3 scripts/smoke_functional.py` | Browser-driven smoke suite (needs `agent-browser` CLI + running server) — 23 golden-path checks incl. the post-create supplies navigation regression and the Recent Projects sticky-focus flow; leaves the studio pristine |
 | `bun run db:push` | Push `prisma/schema.prisma` to SQLite (`db/custom.db`) — required after schema edits |
 | `bun run db:generate` | Regenerate Prisma Client |
@@ -93,16 +93,37 @@ runs the same gate on every push.
   `text-ast-turquoise`), pinned to the live app's *compiled utility*
   values by `src/lib/design-tokens.test.ts` (purple `#5a3a8e`, yellow
   `#ffd5a8`, coral `#ff7a7a` — the live `:root` variables for these three
-  are vestigial and must NOT be copied). There is no `tailwind.config.js` —
+  are vestigial and must NOT be copied; the radius scale is the live's
+  Tailwind-v3 defaults — `rounded-lg`/`xl` = 8/12px — do NOT restore the
+  shadcn scaffold's larger values). There is no `tailwind.config.js` —
   do not add one.
   `var()` chains inside `@theme` are dropped by the build; keep values
-  literal (the one exception: `--font-sans` references `--font-inter`).
+  literal (the one exception: `@theme inline` for `--font-sans`).
 - **The studio is always dark** — shadcn semantic tokens (`--color-background`
   etc.) are pinned to the dark palette directly in `@theme`; there is no
   `.dark` class toggle.
+- **The app ships ZERO webfonts** (r8): the live's `document.fonts` is empty
+  and its `InterVariable, "Inter var", Inter, -apple-system, …` stack
+  resolves to system fonts on every machine. Do NOT re-introduce
+  `next/font` — the self-hosted Inter build has wider advance widths than
+  the live's resolution and visibly re-wraps text (pinned by
+  `design-tokens.test.ts`).
+- **The header logo must pass its intrinsic dimensions** (1068×269) to
+  `next/image` with the `h-10 md:h-12 lg:h-14 w-auto max-w-[320px]
+  object-contain` classes and NO inline style — an inline `height:auto`
+  defeats the responsive classes and rendered the logo 320×81 at every
+  viewport (r8; pinned by `login-fidelity.test.ts`).
+- **The chat panel is split, not nested** (r8): the community header sits in
+  a `sticky top-4 z-10 mb-4 space-y-3` wrapper (its sticky displacement
+  is what positions the header 16px into view — a static wrapper renders
+  the whole column 16px high), and the chat card lives in a separate
+  scroll container (`scrollbar-right max-h-[calc(100vh-16rem)] …` at
+  desktop, plain `space-y-4` in the mobile drawer). The live has NO chat
+  auto-scroll — do not re-add stickToBottom/scrollTop logic (pinned by
+  `chat-fidelity.test.ts`).
 - **Chat polling** (`studio-chat.tsx`) skips ticks when
-  `document.visibilityState !== "visible"` and re-pins to the bottom only if
-  the reader was already near the bottom.
+  `document.visibilityState !== "visible"`; new messages render without
+  scrolling anything (the live's behavior).
 - **Editing is inline** — the detail panels' Edit buttons swap the panel
   for the edit form in the same chip-row slot (`project-edit-panel.tsx`,
   `supply-edit-panel.tsx`); the centered modals are CREATE-only, mirroring
