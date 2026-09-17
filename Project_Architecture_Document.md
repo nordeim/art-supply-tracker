@@ -1,9 +1,9 @@
-# AST Studio — Master Project Architecture Document (PAD) v1.5
+# AST Studio — Master Project Architecture Document (PAD) v1.6
 
 **Classification:** Internal Engineering Reference
 **Status:** DEFINITIVE, PRODUCTION-LOCKED BLUEPRINT
 **Companion Document:** `README.md` (onboarding), `AGENTS.md` (agent instructions), `CLAUDE.md` (engineering standards)
-**Last Updated:** 2026-09-17 (r6)
+**Last Updated:** 2026-09-17 (r7)
 **Audience:** Senior Engineers, Tech Leads, DevOps, and Onboarding Engineers
 **Rule:** Every architectural decision in this document traces to a specific rationale.
 Nothing is here "because it's popular."
@@ -77,6 +77,20 @@ Nothing is here "because it's popular."
   131 tests + 23 smoke checks; the live account was found with leftover
   parallel-session test data and restored to the reference pristine
   state (PROJECTS 0 / SUPPLIES 0).
+- `[R7]` Session-10 seed-fidelity pass (2026-09-17): a fresh
+  full-surface recon (four-view + mobile VLM comparison of the live app
+  vs the clone — parity across the board; all 15 inspiration entries,
+  chat timestamps, and detail-panel content byte-verified against the
+  live DOM; 23/23 smoke checks and all gates green on the pushed tree)
+  surfaced one residual gap: the seeded community chat had silently
+  "corrected" two of the live author's typos. `scripts/seed.ts` now
+  mirrors the live messages byte-for-byte ("hi This is KIm…",
+  "It's a brower app…"), guarded by the new `seed-fidelity.test.ts`
+  (the file-content test pattern established by `design-tokens.test.ts`)
+  so the typos cannot be silently re-"fixed"; 134 tests total. The live
+  carries an operator-account test message ("Hello from clone test",
+  Sep 16 — prior-agent residue) that has no delete affordance in the
+  live UI and is deliberately NOT part of the seeded community content.
 
 ---
 
@@ -738,7 +752,7 @@ CSS — distinct from the utility purple.
 | Category | Count | Location | Framework |
 |---|---|---|---|
 | Static | — | `eslint .` / `tsc --noEmit` | ESLint 9 + TS 5.9 strict |
-| Automated unit | 108 tests | `src/lib/*.test.ts` — studio-domain (incl. bundle-pinned style maps + edit-panel budget/option mapping), design-tokens (globals.css literal pinning), validation (incl. the normalized import gate), export-payload, rate-limit, inspiration (incl. the rail section resolver with the live's inert "quote" / "spotlight-kevin-lewis" quirks) | Vitest (node env, `@/` alias) |
+| Automated unit | 111 tests | `src/lib/*.test.ts` — studio-domain (incl. bundle-pinned style maps + edit-panel budget/option mapping), design-tokens (globals.css literal pinning), validation (incl. the normalized import gate), export-payload, rate-limit, inspiration (incl. the rail section resolver with the live's inert "quote" / "spotlight-kevin-lewis" quirks), seed-fidelity (scripts/seed.ts pinned to the live chat byte-for-byte, typos included) | Vitest (node env, `@/` alias) |
 | Automated action | 23 tests | `src/actions/studio.test.ts` (throwaway SQLite DB, mocked auth seam — incl. the mid-import rollback contract) | Vitest |
 | Manual golden paths | 11 flows | README "Testing & Quality" | Browser-executed (pinned by `scripts/smoke_functional.py`, 23 checks) |
 | CI verify-gate | — | `.github/workflows/verify-gate.yml` (lint + typecheck + test + build) | GitHub Actions |
@@ -884,6 +898,7 @@ public exposure).
 | Medium | ~~Import restore non-atomic~~ | Deletes committed before creates; a mid-import failure emptied the studio | **Resolved 2026-09-17 (r5)** — one interactive `db.$transaction` with rollback (pinned by a failure-injection test) |
 | Medium | ~~Supplies post-create navigation sticky~~ | After the first supply creation, every re-entry opened the flat list instead of the category grid (live returns to the grid) | **Resolved 2026-09-17 (r5)** — navigation resets the post-create token; pinned by the smoke suite |
 | Low | ~~"All <Category>" breadcrumb + empty-state drift~~ | Clone rendered the raw `__all__` sentinel, showed filter tabs on empty lists, and offered "+ Add Supply" in the filtered-empty state — none of which the live app does | **Resolved 2026-09-17 (r5)** — breadcrumb, tab, and button parity fixed and DOM-verified against the live app |
+| Low | ~~Seeded chat text silently corrected~~ | The demo seed had "fixed" two of the live author's typos ("KIm" → "Kim", "brower" → "browser"), drifting the clone's community content from the live rendering | **Resolved 2026-09-17 (r7)** — seed mirrors the live messages byte-for-byte, pinned by `seed-fidelity.test.ts` |
 | Low | View state not URL-addressable | Browser back doesn't switch studio views | Accepted (ADR-001 consequence) |
 | Low | Chat avatar colors keyed to seeded usernames | New users get the default purple avatar | Accepted (matches original's initials behavior) |
 | Low | SQLite single-writer | No multi-process horizontal scale | Accepted (ADR-002); swap to Postgres by changing `provider` + URL if ever needed |

@@ -44,10 +44,14 @@ async function seedChat() {
   if (count > 0) return;
 
   // Mirrors the live Studio Chat history (kimsart ↔ kevbo33w, June–July 2026).
+  // The two typos below ("KIm", "brower") are the live author's own, captured
+  // from the deployed app's DOM — do NOT "fix" them; the clone's contract is
+  // byte-for-byte fidelity with the live community content (pinned by
+  // src/lib/seed-fidelity.test.ts).
   const messages = [
-    { username: "kimsart", email: "kimsart@gmail.com", message: "hi This is Kim I hope you love this app", at: new Date("2026-06-13T20:40:00Z") },
+    { username: "kimsart", email: "kimsart@gmail.com", message: "hi This is KIm I hope you love this app", at: new Date("2026-06-13T20:40:00Z") },
     { username: "kevbo33w", email: "kevbo33w@gmail.com", message: "Hey Kim. Dig the app. Like the projects section. Can I download this app on my iPad? I found entering my paints individually to be cumbersome. But I like that I can add a photo.", at: new Date("2026-06-20T02:22:00Z") },
-    { username: "kimsart", email: "kimsart@gmail.com", message: "Yes! Yeah! It's a browser app for now, so you can log in from your iPad. You'd have to upload a photo and I will be adding the ability to take pictures this coming week", at: new Date("2026-06-20T05:57:00Z") },
+    { username: "kimsart", email: "kimsart@gmail.com", message: "Yes! Yeah! It's a brower app for now, so you can log in from your iPad. You'd have to upload a photo and I will be adding the ability to take pictures this coming week", at: new Date("2026-06-20T05:57:00Z") },
     { username: "kevbo33w", email: "kevbo33w@gmail.com", message: "Nice. Seems to be working", at: new Date("2026-06-20T21:54:00Z") },
     { username: "kimsart", email: "kimsart@gmail.com", message: "testing", at: new Date("2026-07-21T04:37:00Z") },
   ];

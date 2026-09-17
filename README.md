@@ -141,7 +141,7 @@ app's focusRequest semantics), the inspiration rail panels, and the
 import/export surface — leaving the studio pristine. It doubles as the
 regression suite for the post-create navigation contract.
 
-Automated tests (Vitest, 131 tests) pin the studio-domain vocabulary
+Automated tests (Vitest, 134 tests) pin the studio-domain vocabulary
 (per-category supply subcategory lists in the live app's tokens), the
 production bundle's status/condition style maps (project status pills,
 chip borders with per-status hover/selected treatments, supply condition
@@ -155,7 +155,10 @@ vocabulary enums), the export/import wire format (live-app shape with
 clone shape), the sign-in rate limiter, the inspiration rail section
 resolver ("art-history-today" / "partner" expand their panels; "quote"
 and the hardcoded "spotlight-kevin-lewis" are the live's inert
-sections), and the full action surface
+sections), the seeded community-chat fidelity (the live history's five
+messages pinned byte-for-byte — the live author's own typos, "KIm" and
+"brower", included and guarded against silent "correction"), and the
+full action surface
 against a throwaway SQLite database (CRUD, ownership/IDOR checks,
 assignment, import — including the mid-import failure that must roll back
 without emptying the studio).
@@ -228,7 +231,8 @@ Headline gradient: `linear-gradient(90deg, #00E6FF, #2E64FF, #8D5CFF,
 | Parity remediation (r4) | ✅ Complete | Corrected brand tokens to the live *utility* values (purple #5a3a8e, yellow #ffd5a8, coral #ff7a7a — pinned by a new design-tokens test), inline Edit Project/Edit Supply panels replacing edit modals, Amplify-chrome login restyle (sharp #5B3FD3-bordered card, text tabs, 4px inputs, #FE5FA7 button, eye-icon switch), Other/Custom free-form subcategory flow, live unassigned-option copy, unset budget/barcode exported as "", chat-input and ✧-button accessible-name parity (109 tests) |
 | Robustness remediation (r5) | ✅ Complete | Post-create supplies navigation parity (away-and-back → category grid; re-click keeps the sub-view), import hardening — `normalizedImportPayloadSchema` enforcement (array caps, string lengths, vocabulary enums) and single-transaction atomicity (a failed restore never empties the studio), "All <Category>" breadcrumb + empty-state parity (tabs hidden on empty lists, no create button in the filtered-empty state), `inert` on closed drawers, one chat poller per viewport, `pickToday` dedupe, import-alert refresh fallback, committed `scripts/smoke_functional.py` |
 | Focus-flow parity (r6) | ✅ Complete | Recent Projects rail focuses a project like the live app ("All Projects" list + detail panel, sticky across away-and-back — the live focusRequest semantics, bundle-extracted and DOM-verified), the sidebar's TODAY IN ART HISTORY / PARTNERS rail buttons auto-expand their Feed panels (`resolveInspirationFocus` with the live's inert "quote" / "spotlight-kevin-lewis" quirks pinned by tests), the dashboard Studio Spotlight card navigates to the Feed; live account restored to the reference pristine state (131 tests, 23 smoke checks) |
-| Verification | ✅ Complete | Lint + typecheck + 131 tests + production build clean; VLM screenshot comparison of all four views vs the live app (near-identical); 23-check functional smoke suite (CRUD, filters, panels, modals, navigation regression, focus flows) |
+| Seed-fidelity pass (r7) | ✅ Complete | Fresh full-surface recon (four-view + mobile VLM comparison of live vs clone — parity; all 15 inspiration entries, chat timestamps, and detail-panel content byte-verified against the live DOM; 23/23 smoke + all gates green) found one residual gap: the seeded chat history had silently "corrected" the live author's two typos. The seed now mirrors the live messages byte-for-byte ("KIm", "brower" — pinned by the new seed-fidelity test so they cannot drift again), local demo DB re-seeded and browser-verified (134 tests, 23 smoke checks) |
+| Verification | ✅ Complete | Lint + typecheck + 134 tests + production build clean; VLM screenshot comparison of all four views (plus the mobile dashboard) vs the live app (near-identical); 23-check functional smoke suite (CRUD, filters, panels, modals, navigation regression, focus flows) |
 | Documentation | ✅ Complete | README, AGENTS.md, CLAUDE.md, Project_Architecture_Document.md |
 
 Known intentional gaps (mirroring the original beta's placeholders): the

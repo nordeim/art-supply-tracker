@@ -11,7 +11,7 @@ Run from the repo root. Bun is the package manager — use `bun`, never `npm`/`y
 | `bun run dev` | Dev server on :3000 |
 | `bun run lint` | ESLint (next/core-web-vitals + next/typescript) |
 | `bun run typecheck` | `tsc --noEmit`, strict |
-| `bun run test` | Vitest — 131 tests: domain vocabulary, bundle-pinned status/condition style maps, design-token literals, validation (incl. the normalized import gate), export/import wire format, rate limiting, the inspiration rail section resolver (incl. the live's inert "quote" / "spotlight-kevin-lewis" quirks), action layer (each action file runs against a throwaway SQLite DB, incl. the mid-import rollback contract) |
+| `bun run test` | Vitest — 134 tests: domain vocabulary, bundle-pinned status/condition style maps, design-token literals, validation (incl. the normalized import gate), export/import wire format, rate limiting, the inspiration rail section resolver (incl. the live's inert "quote" / "spotlight-kevin-lewis" quirks), seeded chat-history fidelity (the live's five community messages byte-for-byte — the author's own typos, "KIm"/"brower", pinned so they cannot be silently "corrected"), action layer (each action file runs against a throwaway SQLite DB, incl. the mid-import rollback contract) |
 | `python3 scripts/smoke_functional.py` | Browser-driven smoke suite (needs `agent-browser` CLI + running server) — 23 golden-path checks incl. the post-create supplies navigation regression and the Recent Projects sticky-focus flow; leaves the studio pristine |
 | `bun run db:push` | Push `prisma/schema.prisma` to SQLite (`db/custom.db`) — required after schema edits |
 | `bun run db:generate` | Regenerate Prisma Client |

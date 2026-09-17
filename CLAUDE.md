@@ -131,7 +131,7 @@ not secret — rotate before any public deployment).
 ### Testing Strategy
 
 Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
-`src/**/*.test.ts`). The suite (131 tests) pins:
+`src/**/*.test.ts`). The suite (134 tests) pins:
 
 - **Studio-domain vocabulary** — the per-category `SUPPLY_TYPE_LISTS` in the
   live app's tokens (Paint/Brush/Pastel/Paper/Canvas/Medium/Other categories,
@@ -175,6 +175,11 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
   spotlight carries it, and the live's inert "quote" /
   "spotlight-kevin-lewis" sections resolving to no panel — pinned
   quirks).
+- **Seed fidelity** (`seed-fidelity.test.ts`) — the seeded community chat
+  mirrors the live app's five messages byte-for-byte, the live author's
+  own typos ("KIm", "brower") included; the corrected spellings are
+  asserted absent so the demo studio cannot drift from the production
+  rendering.
 - **Action layer** (`src/actions/studio.test.ts`) — the mutation surface
   against a throwaway SQLite database with the auth seam mocked: CRUD,
   ownership/IDOR checks, supply assignment, delete-side-effects,
