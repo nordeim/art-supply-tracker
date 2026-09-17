@@ -1,14 +1,14 @@
-# AST Studio — Master Project Architecture Document (PAD) v1.3
+# AST Studio — Master Project Architecture Document (PAD) v1.4
 
 **Classification:** Internal Engineering Reference
 **Status:** DEFINITIVE, PRODUCTION-LOCKED BLUEPRINT
 **Companion Document:** `README.md` (onboarding), `AGENTS.md` (agent instructions), `CLAUDE.md` (engineering standards)
-**Last Updated:** 2026-09-17 (r4)
+**Last Updated:** 2026-09-17 (r5)
 **Audience:** Senior Engineers, Tech Leads, DevOps, and Onboarding Engineers
 **Rule:** Every architectural decision in this document traces to a specific rationale.
 Nothing is here "because it's popular."
 
-#### Revision Block — v1.2 (Tracked Changes)
+#### Revision Block — v1.4 (Tracked Changes)
 
 - `[SYN]` Initial PAD generated alongside the v1.0 codebase — every section
   verified against the actual source tree and executed commands on
@@ -32,6 +32,34 @@ Nothing is here "because it's popular."
   `@theme inline` (fixes a silent system-font fallback), themed scrollbar
   rails. Verified by VLM screenshot comparison of all four views against
   the live site plus a 16-check functional smoke suite.
+- `[R4]` Session-7 visual parity remediation (2026-09-17): brand tokens
+  re-pinned to the live bundle's compiled utility ground truth (purple
+  `#5a3a8e`, yellow `#ffd5a8`, coral `#ff7a7a` — the live `:root`
+  variables for those three are vestigial; pinned by the new
+  `design-tokens.test.ts` so the trap cannot recur); edit flows rebuilt as
+  INLINE panels (`project-edit-panel.tsx` / `supply-edit-panel.tsx`) that
+  swap the detail panel in place (create stays a centered dialog), with the
+  live forms' exact structure (Planned-first status order in edit, budget
+  default 0, custom-subcategory block, Add-to-Project chip); login
+  restyled to the live Amplify chrome (sharp `#120724` card, 1px `#5B3FD3`
+  border, `#047d95`/`#304050` tabs, 4px inputs, `#FE5FA7` primary);
+  Other/Custom free-form subcategory flow (schema relaxed to live parity —
+  pickers are the vocabulary guard); exports emit unset budget/barcode as
+  `""` plus `imageUrl: null` in the live field order; shared photo
+  downscale helper extracted to `photo-data-url.ts` (109 tests).
+- `[R5]` Session-8 robustness + parity remediation (2026-09-17):
+  `normalizedImportPayloadSchema` now actually gates the import path
+  (§6.1's documented bounds are enforced: ≤500 projects / ≤1000 supplies,
+  string lengths, photo caps, vocabulary enums); the import restore is one
+  interactive `db.$transaction` (a mid-import failure rolls back instead
+  of emptying the studio); supplies post-create navigation parity
+  (away-and-back → category grid, re-click keeps the sub-view —
+  verified against the live app); "All <Category>" breadcrumb and
+  empty-state parity (no `__all__` segment, tabs hidden on empty lists,
+  no create button in the filtered-empty state); `inert` on closed
+  drawers; one chat poller per viewport; `pickToday` dedupe;
+  `scripts/smoke_functional.py` (17-check browser smoke suite);
+  121 tests total.
 
 ---
 
@@ -523,9 +551,10 @@ erDiagram
 - Schema changes: edit `schema.prisma` → `bun run db:push` (dev applies
   directly); no migration journal — reproducibility comes from schema +
   idempotent seed.
-- Import is a replace-restore: `db.$transaction` deletes the user's
-  supplies+projects then re-creates them from the validated payload —
-  never a merge (re-importing a file twice yields the same state).
+- Import is a replace-restore: one interactive `db.$transaction` deletes
+  the user's supplies+projects then re-creates them from the validated
+  payload — never a merge (re-importing a file twice yields the same
+  state), and a mid-import failure rolls the whole restore back.
 - Session expiry is checked per request (`expiresAt > now`); expired rows
   linger until overwritten (harmless, bounded by TTL).
 
@@ -610,11 +639,12 @@ CSS — distinct from the utility purple.
 | No account probing | Uniform "Incorrect email or password." for unknown email and bad password |
 | XSS-safe rendering | React text nodes only; no `dangerouslySetInnerHTML`; data-URL photos rendered via `next/image` |
 | SQL injection impossible | Prisma parameterized queries exclusively; no raw SQL except the health probe's `SELECT 1` |
-| Import validates structure + bounds | `importPayloadSchema` caps arrays (500/1000), string lengths, and vocabulary enums |
+| Import validates structure + bounds | `normalizedImportPayloadSchema` (validation.ts) gates the normalized payload inside `importStudioData`: caps arrays (500 projects / 1000 supplies), string lengths, photo caps, and vocabulary enums before anything is stored |
 | Secrets never committed | `.gitignore` rejects `.env*` (except example), `db/`, `*.key`, `ssh-key.txt`; push wrapper shreds materialized keys |
 | Timing-safe credential compare | `timingSafeEqual` on the derived scrypt buffer |
 | Sign-in throttling | `consumeRateLimit` (5 attempts / 60 s / IP) at the top of `signInAction` (ADR-009) |
-| Import normalizes before storing | `normalizeImportPayload` maps live + legacy shapes onto validated internal types |
+| Import normalizes before storing | `normalizeImportPayload` maps live + legacy shapes onto one internal payload; the schema gate then refuses out-of-contract data |
+| Import restore is atomic | delete + re-create run in ONE interactive `db.$transaction` — a mid-import failure rolls back instead of emptying the studio |
 
 ### 6.2 Security Utilities
 
@@ -657,9 +687,9 @@ CSS — distinct from the utility purple.
 | Category | Count | Location | Framework |
 |---|---|---|---|
 | Static | — | `eslint .` / `tsc --noEmit` | ESLint 9 + TS 5.9 strict |
-| Automated unit | 91 tests | `src/lib/*.test.ts` — studio-domain (incl. bundle-pinned style maps + edit-panel budget/option mapping), design-tokens (globals.css literal pinning), validation, export-payload, rate-limit, inspiration | Vitest (node env, `@/` alias) |
-| Automated action | 18 tests | `src/actions/studio.test.ts` (throwaway SQLite DB, mocked auth seam) | Vitest |
-| Manual golden paths | 11 flows | README "Testing & Quality" | Browser-executed |
+| Automated unit | 98 tests | `src/lib/*.test.ts` — studio-domain (incl. bundle-pinned style maps + edit-panel budget/option mapping), design-tokens (globals.css literal pinning), validation (incl. the normalized import gate), export-payload, rate-limit, inspiration | Vitest (node env, `@/` alias) |
+| Automated action | 23 tests | `src/actions/studio.test.ts` (throwaway SQLite DB, mocked auth seam — incl. the mid-import rollback contract) | Vitest |
+| Manual golden paths | 11 flows | README "Testing & Quality" | Browser-executed (pinned by `scripts/smoke_functional.py`, 17 checks) |
 | CI verify-gate | — | `.github/workflows/verify-gate.yml` (lint + typecheck + test + build) | GitHub Actions |
 
 ### 7.2 Test Patterns
@@ -742,10 +772,12 @@ self-contained.
 
 ### 8.4 CI/CD Pipeline
 
-No CI is configured in this repo (nothing fabricates a badge). The push
-gate is the operator contract: `lint` + `typecheck` green, then push via
-`docs/ssh_git_wrapper_v3.py` (main only, deploy key, shredded after use) —
-see `docs/how-to-git-push-using-ssh-wrapper_SKILL.md`.
+`.github/workflows/verify-gate.yml` runs the full gate (lint → typecheck →
+test → production build on Bun) on every push and pull request to `main`.
+The local push gate remains the operator contract: `lint` + `typecheck` +
+`test` + `build` green, then push via `docs/ssh_git_wrapper_v3.py`
+(main only, deploy key, shredded after use) — see
+`docs/how-to-git-push-using-ssh-wrapper_SKILL.md`.
 
 ---
 
@@ -797,6 +829,10 @@ public exposure).
 | Medium | ~~No automated test framework~~ | Regressions rely on manual golden paths | **Resolved 2026-09-16 (r1)** — Vitest suite added |
 | Medium | ~~Action layer untested~~ | The mutation surface relied on manual golden paths | **Resolved 2026-09-16 (r2)** — 17 action tests against a throwaway SQLite DB (CRUD, IDOR, assignment, import, chat) |
 | Medium | ~~No auth rate limiting~~ | Credential-stuffing surface on public deployments | **Resolved 2026-09-16 (r2)** — in-memory per-IP fixed-window limiter on `signInAction` (ADR-009) |
+| Medium | ~~Import bounds documented but not enforced~~ | `importPayloadSchema` existed but was never invoked; unbounded arrays and out-of-vocabulary values could be stored | **Resolved 2026-09-17 (r5)** — `normalizedImportPayloadSchema` gates the import path |
+| Medium | ~~Import restore non-atomic~~ | Deletes committed before creates; a mid-import failure emptied the studio | **Resolved 2026-09-17 (r5)** — one interactive `db.$transaction` with rollback (pinned by a failure-injection test) |
+| Medium | ~~Supplies post-create navigation sticky~~ | After the first supply creation, every re-entry opened the flat list instead of the category grid (live returns to the grid) | **Resolved 2026-09-17 (r5)** — navigation resets the post-create token; pinned by the smoke suite |
+| Low | ~~"All <Category>" breadcrumb + empty-state drift~~ | Clone rendered the raw `__all__` sentinel, showed filter tabs on empty lists, and offered "+ Add Supply" in the filtered-empty state — none of which the live app does | **Resolved 2026-09-17 (r5)** — breadcrumb, tab, and button parity fixed and DOM-verified against the live app |
 | Low | View state not URL-addressable | Browser back doesn't switch studio views | Accepted (ADR-001 consequence) |
 | Low | Chat avatar colors keyed to seeded usernames | New users get the default purple avatar | Accepted (matches original's initials behavior) |
 | Low | SQLite single-writer | No multi-process horizontal scale | Accepted (ADR-002); swap to Postgres by changing `provider` + URL if ever needed |

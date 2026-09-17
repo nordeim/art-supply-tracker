@@ -18,6 +18,7 @@ import {
 } from "@/lib/result";
 import {
   chatMessageSchema,
+  normalizedImportPayloadSchema,
   projectInputSchema,
   supplyInputSchema,
 } from "@/lib/validation";
@@ -442,48 +443,61 @@ export async function importStudioData(
     );
   }
 
+  // The documented import bounds (PAD §6.1): array caps, string lengths,
+  // photo caps, and the status/category/condition vocabulary enums. The
+  // normalizer is deliberately lenient so both dialects fold onto one shape;
+  // this gate is what actually refuses to store out-of-contract data.
+  const parsed = normalizedImportPayloadSchema.safeParse(normalized);
+  if (!parsed.success) {
+    return validationError(
+      "This export contains data the studio cannot import (unrecognized values or oversized content). Re-export from the app and try again.",
+    );
+  }
+
   try {
     // Replace the user's studio content wholesale — import is a restore, and
-    // merging would duplicate every re-imported row.
-    await db.$transaction([
-      db.supply.deleteMany({ where: { userId: user.id } }),
-      db.project.deleteMany({ where: { userId: user.id } }),
-    ]);
+    // merging would duplicate every re-imported row. Delete + re-create run
+    // inside ONE transaction: a mid-import failure rolls back, so a failed
+    // restore never leaves the studio empty.
+    await db.$transaction(async (tx) => {
+      await tx.supply.deleteMany({ where: { userId: user.id } });
+      await tx.project.deleteMany({ where: { userId: user.id } });
 
-    const createdProjectIds: string[] = [];
-    for (const project of normalized.projects) {
-      const row = await db.project.create({
-        data: {
-          userId: user.id,
-          name: project.name,
-          status: project.status,
-          budget: project.budget,
-          notes: project.notes,
-          photos: project.photos.length ? JSON.stringify(project.photos) : null,
-        },
-      });
-      createdProjectIds.push(row.id);
-    }
+      const createdProjectIds: string[] = [];
+      for (const project of normalized.projects) {
+        const row = await tx.project.create({
+          data: {
+            userId: user.id,
+            name: project.name,
+            status: project.status,
+            budget: project.budget,
+            notes: project.notes,
+            photos: project.photos.length ? JSON.stringify(project.photos) : null,
+          },
+        });
+        createdProjectIds.push(row.id);
+      }
 
-    resolveImportedAssignments(normalized, createdProjectIds);
+      resolveImportedAssignments(normalized, createdProjectIds);
 
-    for (const supply of normalized.supplies) {
-      await db.supply.create({
-        data: {
-          userId: user.id,
-          name: supply.name,
-          category: supply.category,
-          type: supply.subcategory,
-          quantity: supply.quantity,
-          condition: supply.condition,
-          location: supply.location,
-          notes: supply.notes,
-          barcode: supply.barcode,
-          photo: supply.photo,
-          assignedProjectId: supply.assignedProjectId,
-        },
-      });
-    }
+      for (const supply of normalized.supplies) {
+        await tx.supply.create({
+          data: {
+            userId: user.id,
+            name: supply.name,
+            category: supply.category,
+            type: supply.subcategory,
+            quantity: supply.quantity,
+            condition: supply.condition,
+            location: supply.location,
+            notes: supply.notes,
+            barcode: supply.barcode,
+            photo: supply.photo,
+            assignedProjectId: supply.assignedProjectId,
+          },
+        });
+      }
+    });
 
     return {
       ok: true,

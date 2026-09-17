@@ -11,7 +11,8 @@ Run from the repo root. Bun is the package manager — use `bun`, never `npm`/`y
 | `bun run dev` | Dev server on :3000 |
 | `bun run lint` | ESLint (next/core-web-vitals + next/typescript) |
 | `bun run typecheck` | `tsc --noEmit`, strict |
-| `bun run test` | Vitest — 109 tests: domain vocabulary, bundle-pinned status/condition style maps, design-token literals, validation, export/import wire format, rate limiting, action layer (each action file runs against a throwaway SQLite DB) |
+| `bun run test` | Vitest — 121 tests: domain vocabulary, bundle-pinned status/condition style maps, design-token literals, validation (incl. the normalized import gate), export/import wire format, rate limiting, action layer (each action file runs against a throwaway SQLite DB, incl. the mid-import rollback contract) |
+| `python3 scripts/smoke_functional.py` | Browser-driven smoke suite (needs `agent-browser` CLI + running server) — 17 golden-path checks incl. the post-create supplies navigation regression; leaves the studio pristine |
 | `bun run db:push` | Push `prisma/schema.prisma` to SQLite (`db/custom.db`) — required after schema edits |
 | `bun run db:generate` | Regenerate Prisma Client |
 | `bun run db:seed` | Idempotent seed: demo user, 5 chat messages, 15 inspiration entries |
@@ -58,7 +59,13 @@ runs the same gate on every push.
   `budget`/`barcode` export as `""` — the live app's in-memory defaults); the
   legacy clone shape imports through the same normalizer. The live app's
   project→`supplyIds` relation maps onto our internal
-  `Supply.assignedProjectId`.
+  `Supply.assignedProjectId`. The normalizer is deliberately lenient —
+  `normalizedImportPayloadSchema` (`src/lib/validation.ts`) is the gate
+  that enforces the documented bounds (≤500 projects / ≤1000 supplies,
+  string lengths, photo caps, status/category/condition enums) before
+  anything is stored, and the whole import (delete + re-create) runs in
+  ONE interactive `db.$transaction` so a failed restore rolls back
+  instead of emptying the studio.
 - **DTO discipline:** Prisma rows never reach the client; the mappers in
   `page.tsx` / `studio.ts` convert to the types in `src/lib/dto.ts`.
 - **First-paint data** is fetched in `page.tsx` and handed to `StudioApp` as

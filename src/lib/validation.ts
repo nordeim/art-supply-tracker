@@ -133,6 +133,44 @@ export const importPayloadSchema = z.object({
     .max(1000),
 });
 
+/**
+ * The gate for normalized import payloads — what `normalizeImportPayload`
+ * produces after both dialects (live-app and legacy clone) have been folded
+ * onto one shape. This is the enforcement point for the documented import
+ * bounds (PAD §6.1): array caps, string lengths, photo caps, and the
+ * status/category/condition vocabulary enums. `importStudioData` refuses to
+ * store anything this schema does not accept.
+ */
+export const normalizedImportPayloadSchema = z.object({
+  projects: z
+    .array(
+      z.object({
+        name: z.string().min(1).max(120),
+        status: z.enum(PROJECT_STATUS_VALUES as [string, ...string[]]),
+        budget: z.number().min(0).max(1_000_000).nullable(),
+        notes: z.string().max(4000).nullable(),
+        photos: z.array(z.string().max(MAX_PHOTO_DATA_URL_LENGTH)).max(10),
+      }),
+    )
+    .max(500),
+  supplies: z
+    .array(
+      z.object({
+        name: z.string().min(1).max(160),
+        category: z.enum(SUPPLY_CATEGORY_VALUES as [string, ...string[]]),
+        subcategory: z.string().max(60).nullable(),
+        quantity: z.string().min(1).max(40),
+        condition: z.enum(SUPPLY_CONDITION_VALUES as [string, ...string[]]),
+        location: z.string().max(200).nullable(),
+        notes: z.string().max(4000).nullable(),
+        barcode: z.string().max(120).nullable(),
+        photo: z.string().max(MAX_PHOTO_DATA_URL_LENGTH).nullable(),
+        assignedProjectId: z.string().max(60).nullable(),
+      }),
+    )
+    .max(1000),
+});
+
 export type SignInInput = z.infer<typeof signInSchema>;
 export type SignUpInput = z.infer<typeof signUpSchema>;
 export type ProjectInput = z.infer<typeof projectInputSchema>;

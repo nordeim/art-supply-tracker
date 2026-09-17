@@ -128,21 +128,32 @@ before exposing any public deployment.
 ```bash
 bun run lint        # ESLint (next/core-web-vitals + next/typescript)
 bun run typecheck   # tsc --noEmit (strict)
-bun run test        # Vitest — domain vocabulary, validation, export/import, rate limiting, action layer (temp SQLite)
-bun run dev         # then exercise the flows below
+bun run test        # Vitest — domain vocabulary, bundle-pinned style maps, validation (incl. the normalized import gate), export/import wire format, rate limiting, action layer (temp SQLite)
+bun run dev         # then exercise the flows below (or run the smoke suite)
 ```
 
-Automated tests (Vitest, 109 tests) pin the studio-domain vocabulary
+`python3 scripts/smoke_functional.py` drives the golden paths in a real
+browser (via the `agent-browser` CLI): sign-in, supply create → list,
+away-and-back → category grid, stock filters, chip detail panels,
+native-confirm deletes, project CRUD, and the import/export surface —
+leaving the studio pristine. It doubles as the regression suite for the
+post-create navigation contract.
+
+Automated tests (Vitest, 121 tests) pin the studio-domain vocabulary
 (per-category supply subcategory lists in the live app's tokens), the
 production bundle's status/condition style maps (project status pills,
 chip borders with per-status hover/selected treatments, supply condition
 pills, the detail-panel condition icon ternary, and the stock-filter switch
-where Low Stock matches low AND critical), the Zod boundary contracts
-(photo data-URL caps, per-category subcategory cross-validation), the
-export/import wire format (live-app shape with `title`/`subcategory`/
-`supplyIds`/numeric quantities, plus the legacy clone shape), the sign-in
-rate limiter, and the full action surface against a throwaway SQLite
-database (CRUD, ownership/IDOR checks, assignment, import, chat).
+where Low Stock matches low AND critical), the design-token literals
+(the live bundle's compiled utility ground truth), the Zod boundary
+contracts (photo data-URL caps, the Other/Custom free-form subcategory
+flow, and the normalized import gate — array caps, string lengths, and
+vocabulary enums), the export/import wire format (live-app shape with
+`title`/`subcategory`/`supplyIds`/numeric quantities, plus the legacy
+clone shape), the sign-in rate limiter, and the full action surface
+against a throwaway SQLite database (CRUD, ownership/IDOR checks,
+assignment, import — including the mid-import failure that must roll back
+without emptying the studio).
 
 Manual verification checklist (the golden paths):
 1. Sign in / create an account / sign out (6 rapid bad logins → throttled).
@@ -150,7 +161,9 @@ Manual verification checklist (the golden paths):
    In Progress only, matching the live app).
 3. Add a supply (per-category subcategory picker) → the view switches to
    the supply list with "All | Low Stock | Out of Stock" tabs; category
-   tiles show the "!" indicator for low/critical stock.
+   tiles show the "!" indicator for low/critical stock. Navigating away
+   and back returns to the category grid (only the immediate post-create
+   transition shows the flat list — the live app's behavior).
 4. Click a supply chip → detail panel; Delete with confirm; Edit Supply.
 5. Click a project chip → detail panel; assign supplies ("Pick supply…" →
    Assign / × remove); Delete with confirm; Edit Project.
@@ -208,7 +221,8 @@ Headline gradient: `linear-gradient(90deg, #00E6FF, #2E64FF, #8D5CFF,
 | Parity remediation (r2) | ✅ Complete | Live data vocabulary (Paint/Brush/… categories, ok/low/critical conditions, per-category subcategories), supply + project detail panels with Delete, "All/Low Stock/Out of Stock" filters, supply assignment from the project panel, byte-compatible export/import with the original app's wire format, photo validation fix, active-stat fix, mobile "Chat ☰" toggle, sign-in rate limiting, action-layer tests, CI verify-gate workflow |
 | Visual parity (r3) | ✅ Complete | Glass-card 12-column shell with per-panel accent borders, corrected brand tokens (purple/yellow/coral/orange + bg + glow shadows), per-view chrome (turquoise projects, pink supplies), bundle-pinned status pill/chip/condition style maps, rows-of-3 chip grids with in-row detail panels, gradient quote tiles, plain-purple chat avatars, native-alert import feedback, Inter via `@theme inline`, themed scrollbar rails (97 tests) |
 | Parity remediation (r4) | ✅ Complete | Corrected brand tokens to the live *utility* values (purple #5a3a8e, yellow #ffd5a8, coral #ff7a7a — pinned by a new design-tokens test), inline Edit Project/Edit Supply panels replacing edit modals, Amplify-chrome login restyle (sharp #5B3FD3-bordered card, text tabs, 4px inputs, #FE5FA7 button, eye-icon switch), Other/Custom free-form subcategory flow, live unassigned-option copy, unset budget/barcode exported as "", chat-input and ✧-button accessible-name parity (109 tests) |
-| Verification | ✅ Complete | Lint + typecheck + 109 tests + production build clean; VLM screenshot comparison of all four views vs the live app (near-identical); 16-check functional smoke suite (CRUD, filters, panels, modals) |
+| Robustness remediation (r5) | ✅ Complete | Post-create supplies navigation parity (away-and-back → category grid; re-click keeps the sub-view), import hardening — `normalizedImportPayloadSchema` enforcement (array caps, string lengths, vocabulary enums) and single-transaction atomicity (a failed restore never empties the studio), "All <Category>" breadcrumb + empty-state parity (tabs hidden on empty lists, no create button in the filtered-empty state), `inert` on closed drawers, one chat poller per viewport, `pickToday` dedupe, import-alert refresh fallback, committed `scripts/smoke_functional.py` |
+| Verification | ✅ Complete | Lint + typecheck + 121 tests + production build clean; VLM screenshot comparison of all four views vs the live app (near-identical); 17-check functional smoke suite (CRUD, filters, panels, modals, navigation regression) |
 | Documentation | ✅ Complete | README, AGENTS.md, CLAUDE.md, Project_Architecture_Document.md |
 
 Known intentional gaps (mirroring the original beta's placeholders): the

@@ -82,11 +82,20 @@ export function StudioApp({
     };
   }, [projectList, supplyList, inspiration]);
 
-  const navigate = useCallback((next: StudioView) => {
-    setView(next);
-    setSidebarOpen(false);
-    setChatPanelOpen(false);
-  }, []);
+  const navigate = useCallback(
+    (next: StudioView) => {
+      // Leaving the supplies view ends the post-create "list" navigation —
+      // the live app returns to the category grid on the next entry (only
+      // the immediate post-create transition opens the flat list).
+      if (view === "supplies" && next !== "supplies") {
+        setSupplyListNavToken(0);
+      }
+      setView(next);
+      setSidebarOpen(false);
+      setChatPanelOpen(false);
+    },
+    [view],
+  );
 
   function handleSignOut() {
     startTransition(async () => {
@@ -134,6 +143,12 @@ export function StudioApp({
           ]);
           if (projectsResult.ok) setProjectList(projectsResult.data);
           if (suppliesResult.ok) setSupplyList(suppliesResult.data);
+          if (!projectsResult.ok || !suppliesResult.ok) {
+            // The import itself succeeded but a re-read failed — fall back to
+            // the server render (the authoritative state) instead of showing
+            // a success notice over stale client data.
+            router.refresh();
+          }
           window.alert("Import successful.");
         });
       })
@@ -258,7 +273,9 @@ export function StudioApp({
         </aside>
       </div>
 
-      {/* Mobile chat drawer — the live app's fixed right panel. */}
+      {/* Mobile chat drawer — the live app's fixed right panel. `inert` keeps
+       * the closed drawer out of the keyboard tab order (aria-hidden alone
+       * leaves focusable children reachable). */}
       {chatPanelOpen && (
         <div
           className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm md:hidden"
@@ -269,6 +286,7 @@ export function StudioApp({
       <aside
         aria-label="Community chat"
         aria-hidden={!chatPanelOpen}
+        inert={!chatPanelOpen}
         className={`fixed inset-y-0 right-0 z-50 w-4/5 max-w-xs overflow-y-auto scrollbar-right rounded-l-3xl border-l border-ast-pink/40 bg-[#0B0018] p-4 backdrop-blur-xl transition-transform duration-300 md:hidden ${
           chatPanelOpen ? "translate-x-0" : "translate-x-full"
         }`}

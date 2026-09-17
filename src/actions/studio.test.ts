@@ -329,6 +329,139 @@ describe("import action", () => {
     expect(result.ok).toBe(false);
   });
 
+  it("rejects an import with more than 500 projects", async () => {
+    const projects = Array.from({ length: 501 }, (_, i) => ({
+      title: `Bulk project ${i}`,
+      status: "planned",
+    }));
+    const result = await studio.importStudioData({
+      app: "AST Studio",
+      version: 1,
+      projects,
+      supplies: [],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("VALIDATION");
+  });
+
+  it("rejects an import with a supply category outside the vocabulary", async () => {
+    const result = await studio.importStudioData({
+      app: "AST Studio",
+      version: 1,
+      projects: [],
+      supplies: [{ name: "Mystery", category: "NotACategory", qty: 1 }],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("VALIDATION");
+    // Nothing may be stored from a rejected import.
+    const supplies = await db.supply.findMany({ where: { userId: TEST_USER.id } });
+    expect(supplies.some((s) => s.name === "Mystery")).toBe(false);
+  });
+
+  it("rejects an import with an unrecognized project status", async () => {
+    const result = await studio.importStudioData({
+      app: "AST Studio",
+      version: 1,
+      projects: [{ title: "Odd status", status: "banana" }],
+      supplies: [],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("VALIDATION");
+  });
+
+  it("rejects an import with an oversized photo data URL", async () => {
+    const result = await studio.importStudioData({
+      app: "AST Studio",
+      version: 1,
+      projects: [],
+      supplies: [
+        {
+          name: "Heavy photo",
+          category: "Paint",
+          qty: 1,
+          image: `data:image/jpeg;base64,${"A".repeat(410_000)}`,
+        },
+      ],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("VALIDATION");
+  });
+
+  it("rejects an import with over-length notes", async () => {
+    const result = await studio.importStudioData({
+      app: "AST Studio",
+      version: 1,
+      projects: [],
+      supplies: [
+        { name: "Wordy", category: "Paint", qty: 1, notes: "n".repeat(4001) },
+      ],
+    });
+    expect(result.ok).toBe(false);
+  });
+
+  it("rolls back the studio when a row fails mid-import", async () => {
+    // Pre-existing data must survive a failed import (the restore is atomic).
+    const created = await studio.createProject({ name: "Keep me" });
+    expect(created.ok).toBe(true);
+
+    const original = db.$transaction.bind(db);
+    const spy = vi.spyOn(db, "$transaction").mockImplementation(
+      (async (arg: unknown) => {
+        if (typeof arg === "function") {
+          // Interactive-transaction form: run the callback against a tx that
+          // fails on the marked row, simulating a mid-import database error.
+          const tx = {
+            supply: {
+              deleteMany: async () => ({}),
+              create: async (args: { data: { name: string } }) => {
+                if (args.data.name === "Explode supply") throw new Error("boom");
+                return {
+                  id: `new-${Date.now()}-${Math.random()}`,
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
+                  ...args.data,
+                };
+              },
+            },
+            project: {
+              deleteMany: async () => ({}),
+              create: async (args: { data: Record<string, unknown> }) => ({
+                id: `new-${Date.now()}-${Math.random()}`,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                ...args.data,
+              }),
+            },
+          };
+          type TxLike = typeof tx;
+          return await (arg as (client: TxLike) => unknown)(tx);
+        }
+        return await original(arg as never);
+      }) as unknown as typeof db.$transaction,
+    );
+
+    let result: Awaited<ReturnType<typeof studio.importStudioData>>;
+    try {
+      result = await studio.importStudioData({
+        app: "AST Studio",
+        version: 1,
+        projects: [{ title: "Imported project", status: "planned" }],
+        supplies: [{ name: "Explode supply", category: "Paint", qty: 1 }],
+      });
+    } finally {
+      spy.mockRestore();
+    }
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("INTERNAL");
+
+    const after = await studio.listProjects();
+    expect(after.ok).toBe(true);
+    if (after.ok) {
+      expect(after.data.some((p) => p.name === "Keep me")).toBe(true);
+    }
+  });
+
   it("requires a session", async () => {
     currentUser = OTHER_USER;
     const foreign = await studio.listProjects();

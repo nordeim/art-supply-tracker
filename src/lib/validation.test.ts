@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   importPayloadSchema,
+  normalizedImportPayloadSchema,
   projectInputSchema,
   supplyInputSchema,
 } from "@/lib/validation";
@@ -260,6 +261,87 @@ describe("importPayloadSchema", () => {
       version: 1,
       projects: [],
       supplies: [],
+    });
+    expect(parsed.success).toBe(false);
+  });
+});
+
+describe("normalizedImportPayloadSchema", () => {
+  // A representative normalized payload (what normalizeImportPayload emits for
+  // a live-app export after the dialect fold).
+  const normalized = {
+    projects: [
+      {
+        name: "Live project",
+        status: "in-progress",
+        budget: 100,
+        notes: null,
+        photos: ["data:image/jpeg;base64,QUJD"],
+      },
+    ],
+    supplies: [
+      {
+        name: "Live supply",
+        category: "Brush",
+        subcategory: "Palette knives",
+        quantity: "2",
+        condition: "low",
+        location: null,
+        notes: null,
+        barcode: null,
+        photo: null,
+        assignedProjectId: "__imported__0",
+      },
+    ],
+  };
+
+  it("accepts a normalized live-app payload", () => {
+    expect(normalizedImportPayloadSchema.safeParse(normalized).success).toBe(true);
+  });
+
+  it("rejects a supply category outside the vocabulary", () => {
+    const parsed = normalizedImportPayloadSchema.safeParse({
+      ...normalized,
+      supplies: [{ ...normalized.supplies[0], category: "NotACategory" }],
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("rejects a project status outside the vocabulary", () => {
+    const parsed = normalizedImportPayloadSchema.safeParse({
+      ...normalized,
+      projects: [{ ...normalized.projects[0], status: "banana" }],
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("rejects more than 500 projects and 1000 supplies", () => {
+    const many = (n: number) => Array.from({ length: n }, () => normalized.projects[0]);
+    const manySupplies = (n: number) => Array.from({ length: n }, () => normalized.supplies[0]);
+    expect(
+      normalizedImportPayloadSchema.safeParse({ ...normalized, projects: many(501) }).success,
+    ).toBe(false);
+    expect(
+      normalizedImportPayloadSchema.safeParse({ ...normalized, supplies: manySupplies(1001) })
+        .success,
+    ).toBe(false);
+  });
+
+  it("rejects an oversized photo on the normalized supply", () => {
+    const parsed = normalizedImportPayloadSchema.safeParse({
+      ...normalized,
+      supplies: [
+        { ...normalized.supplies[0], photo: `data:image/jpeg;base64,${"A".repeat(400_001)}` },
+      ],
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("rejects more than 10 photos on a normalized project", () => {
+    const photos = Array.from({ length: 11 }, () => "data:image/jpeg;base64,QUJD");
+    const parsed = normalizedImportPayloadSchema.safeParse({
+      ...normalized,
+      projects: [{ ...normalized.projects[0], photos }],
     });
     expect(parsed.success).toBe(false);
   });

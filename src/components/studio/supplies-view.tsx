@@ -110,7 +110,11 @@ export function SuppliesView({
                   <span aria-hidden="true" className="text-ast-faint">
                     ›
                   </span>
-                  {subView.kind === "type" ? (
+                  {/* The "All <Category>" list is breadcrumb-identical to the
+                   * category view ("Art Supplies › Paint") — the live app
+                   * renders no third segment for it, unlike a specific type
+                   * ("Art Supplies › Paint › Watercolor"). */}
+                  {subView.kind === "type" && subView.typeValue !== "__all__" ? (
                     <button
                       type="button"
                       onClick={() => navigate({ kind: "category", category: subView.category })}
@@ -123,7 +127,7 @@ export function SuppliesView({
                   )}
                 </>
               )}
-              {subView.kind === "type" && (
+              {subView.kind === "type" && subView.typeValue !== "__all__" && (
                 <>
                   <span aria-hidden="true" className="text-ast-faint">
                     ›
@@ -360,26 +364,35 @@ function SuppliesSubViewPanel({
 
   return (
     <section>
-      <StockFilterTabs filter={stockFilter} onFilter={onStockFilter} />
+      {/* The live app shows the stock-filter tabs only when the list has
+       * supplies to filter (an empty list renders just the empty state), but
+       * keeps them once filtering is active — "No supplies match this filter."
+       * appears under the tabs. */}
+      {listedItems.length > 0 && <StockFilterTabs filter={stockFilter} onFilter={onStockFilter} />}
       {filtered.length === 0 ? (
         <div className="rounded-2xl border border-[#9F6BFF]/20 bg-[#9F6BFF]/5 px-6 py-10 text-center">
           <p className="mb-1 text-sm font-medium text-[#9F6BFF]/60">
             {subView.kind === "type" && subView.typeValue !== "__all__"
               ? subView.typeValue
-              : subView.kind === "category"
+              : subView.kind === "category" ||
+                  (subView.kind === "type" && subView.typeValue === "__all__")
                 ? categoryLabel
                 : ""}
           </p>
           <p className="text-sm text-ast-faint">
             {stockFilter !== "all" ? "No supplies match this filter." : "No supplies here yet."}
           </p>
-          <button
-            type="button"
-            onClick={onNewSupply}
-            className="mt-4 rounded-xl border border-ast-pink/30 bg-ast-pink/10 px-4 py-2 text-sm text-ast-pink transition hover:bg-ast-pink/20"
-          >
-            + Add Supply
-          </button>
+          {/* The live app's filter-empty state has no create affordance —
+           * only the plain empty list offers "+ Add Supply". */}
+          {stockFilter === "all" && (
+            <button
+              type="button"
+              onClick={onNewSupply}
+              className="mt-4 rounded-xl border border-ast-pink/30 bg-ast-pink/10 px-4 py-2 text-sm text-ast-pink transition hover:bg-ast-pink/20"
+            >
+              + Add Supply
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-3">

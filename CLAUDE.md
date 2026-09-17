@@ -131,7 +131,7 @@ not secret — rotate before any public deployment).
 ### Testing Strategy
 
 Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
-`src/**/*.test.ts`). The suite (109 tests) pins:
+`src/**/*.test.ts`). The suite (121 tests) pins:
 
 - **Studio-domain vocabulary** — the per-category `SUPPLY_TYPE_LISTS` in the
   live app's tokens (Paint/Brush/Pastel/Paper/Canvas/Medium/Other categories,
@@ -160,6 +160,12 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
   `quantityValue`, `isNew`, status omitted when ok, unset `budget`/`barcode`
   as `""`, `imageUrl: null`) and the import normalizer's handling of both
   live and legacy clone shapes, including relation remapping.
+- **Import gate** (`validation.test.ts` + `studio.test.ts`) —
+  `normalizedImportPayloadSchema` rejects out-of-vocabulary categories and
+  statuses, oversized arrays (500 projects / 1000 supplies), over-length
+  strings, and oversized photo payloads; the action layer refuses to store
+  them and rolls the studio back when a row fails mid-import (the whole
+  restore is one interactive transaction).
 - **Rate limiting** (`rate-limit.test.ts`) — fixed-window allow/block,
   rollover, per-key isolation, cooldown reporting, bounded memory.
 - **Inspiration detail** — schema acceptance, corrupt-JSON degradation to
@@ -170,7 +176,12 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
   live/legacy import, chat validation.
 
 Run `bun run test` — new domain logic in `src/lib` and new actions require
-tests first (red → green).
+tests first (red → green). Golden paths that live in the browser (view
+navigation, modals, detail panels) are additionally pinned by
+`python3 scripts/smoke_functional.py` (17 checks, needs the `agent-browser`
+CLI and a running server) — notably the post-create supplies navigation
+contract: create → flat list, away-and-back → category grid, re-click on
+Supplies keeps the current sub-view.
 
 The broader verification contract is the golden-path checklist, exercised in
 a browser after every change:

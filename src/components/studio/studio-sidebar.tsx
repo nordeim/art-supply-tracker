@@ -12,6 +12,7 @@
  * borders, and the active view's tile renders highlighted (electric blue).
  */
 import type { InspirationEntryDto, ProjectDto } from "@/lib/dto";
+import { pickToday } from "@/lib/inspiration";
 import type { StudioView } from "@/components/studio/studio-app";
 
 interface StudioSidebarProps {
@@ -34,13 +35,13 @@ function quoteOfTheDay(inspiration: InspirationEntryDto[]) {
 }
 
 function artHistoryToday(inspiration: InspirationEntryDto[]) {
-  const entries = inspiration.filter((e) => e.type === "art_history" && e.date);
-  const today = new Date().toISOString().split("T")[0] ?? "";
-  const past = entries
-    .filter((e) => (e.date ?? "") <= today)
-    .sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
-  if (past[0]) return past[0];
-  return [...entries].sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""))[0];
+  // Same contract as the inspiration view: pickToday expects its input
+  // sorted ascending by date and returns the most recent on-or-before-today
+  // entry (falling back to the earliest upcoming one).
+  const entries = inspiration
+    .filter((e) => e.type === "art_history" && e.date)
+    .sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""));
+  return pickToday(entries);
 }
 
 export function StudioSidebar(props: StudioSidebarProps) {
@@ -55,7 +56,8 @@ export function StudioSidebar(props: StudioSidebarProps) {
         {content}
       </aside>
 
-      {/* Mobile drawer */}
+      {/* Mobile drawer — `inert` keeps the closed drawer out of the keyboard
+       * tab order (aria-hidden alone leaves focusable children reachable). */}
       <div
         className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity md:hidden ${
           sidebarOpen ? "opacity-100" : "pointer-events-none opacity-0"
@@ -66,6 +68,7 @@ export function StudioSidebar(props: StudioSidebarProps) {
       <nav
         aria-label="Studio tools"
         aria-hidden={!sidebarOpen}
+        inert={!sidebarOpen}
         className={`fixed inset-y-0 left-0 z-50 w-4/5 max-w-xs overflow-y-auto scrollbar-left rounded-r-3xl border-r border-ast-turquoise/30 bg-[#0B0018] p-4 backdrop-blur-xl transition-transform duration-300 md:hidden ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}

@@ -54,6 +54,9 @@ export function parseInspirationDetail(raw: string | null): InspirationDetail | 
  * Picks the "today" art-history entry: the most recent dated entry on or
  * before the current date, falling back to the first upcoming entry so the
  * Today feed never renders empty while the timeline has content.
+ *
+ * Precondition: `history` must already be sorted ascending by date (the
+ * inspiration view and the sidebar rail both sort before calling).
  */
 export function pickToday<
   T extends { date: string | null },

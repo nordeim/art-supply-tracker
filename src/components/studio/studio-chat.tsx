@@ -32,13 +32,20 @@ export function StudioChat({ initialMessages }: { initialMessages: ChatMessageDt
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const rootRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const stickToBottom = useRef(true);
 
   // Poll while the tab is visible; skip while hidden (no wasted action calls).
+  // The shell renders this component twice (desktop column + mobile drawer,
+  // mirroring the live DOM) — the offsetParent check skips the instance the
+  // current viewport is not displaying (Tailwind's md: display rules), so
+  // only one instance polls per viewport.
   useEffect(() => {
     const interval = setInterval(() => {
       if (document.visibilityState !== "visible") return;
+      const root = rootRef.current;
+      if (root && root.offsetParent === null) return; // hidden by breakpoint
       startTransition(async () => {
         const result = await listChatMessages();
         if (result.ok) {
@@ -83,7 +90,10 @@ export function StudioChat({ initialMessages }: { initialMessages: ChatMessageDt
   }
 
   return (
-    <div className="flex h-full min-w-0 flex-col overflow-hidden rounded-xl border border-ast-blue/20 bg-[#120724] p-4">
+    <div
+      ref={rootRef}
+      className="flex h-full min-w-0 flex-col overflow-hidden rounded-xl border border-ast-blue/20 bg-[#120724] p-4"
+    >
       <h2 className="mb-4 text-sm font-bold text-ast-lavender/70">STUDIO CHAT</h2>
 
       <div
