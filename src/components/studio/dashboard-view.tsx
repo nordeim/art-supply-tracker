@@ -11,11 +11,16 @@ import Image from "next/image";
 interface DashboardViewProps {
   onExport: () => void;
   onImportClick: () => void;
+  /** The Studio Spotlight card navigates to the inspiration Feed on the
+   * live app (with a hardcoded "spotlight-kevin-lewis" section that matches
+   * no seeded entry — the feed opens without a panel). */
+  onOpenSpotlight: () => void;
 }
 
 export function DashboardView({
   onExport,
   onImportClick,
+  onOpenSpotlight,
 }: DashboardViewProps) {
   return (
     <div className="studio-fade">
@@ -33,7 +38,7 @@ export function DashboardView({
         <PartnerSpotlightCard />
         <ArtHistoryCard />
         <ArtistQuoteCard />
-        <StudioSpotlightCard />
+        <StudioSpotlightCard onClick={onOpenSpotlight} />
       </div>
 
       <div className="mt-6 flex justify-end gap-4">
@@ -122,9 +127,12 @@ function ArtistQuoteCard() {
   );
 }
 
-function StudioSpotlightCard() {
+function StudioSpotlightCard({ onClick }: { onClick: () => void }) {
   return (
-    <section className="cursor-pointer rounded-2xl border border-ast-pink/40 bg-[#120724] p-6 transition hover:brightness-110">
+    <section
+      onClick={onClick}
+      className="cursor-pointer rounded-2xl border border-ast-pink/40 bg-[#120724] p-6 transition hover:brightness-110"
+    >
       <p className="mb-3 text-xs uppercase tracking-[0.25em] text-ast-pink">
         Studio Spotlight
       </p>

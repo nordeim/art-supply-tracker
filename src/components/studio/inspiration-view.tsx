@@ -12,20 +12,45 @@
  * directly below their section, exactly like the beta.
  */
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { InspirationEntryDto } from "@/lib/dto";
-import { pickToday } from "@/lib/inspiration";
+import { pickToday, resolveInspirationFocus } from "@/lib/inspiration";
 
 type FeedTab = "today" | "history" | "inspire";
 
 interface InspirationViewProps {
   inspiration: InspirationEntryDto[];
+  /** The rail navigation section (the live app's location state): 
+   * "art-history-today" / "partner" auto-expand their detail panels;
+   * "quote" and "spotlight-*" are the live's inert sections (the quote
+   * section is never consumed; the hardcoded "spotlight-kevin-lewis" id
+   * matches no seeded entry) — the spotlight ones still scroll the Studio
+   * Spotlight row into view, exactly like the deployed app. */
+  initialSection: string | null;
 }
 
-export function InspirationView({ inspiration }: InspirationViewProps) {
+export function InspirationView({
+  inspiration,
+  initialSection,
+}: InspirationViewProps) {
   const [tab, setTab] = useState<FeedTab>("today");
-  const [activeId, setActiveId] = useState<string | null>(null);
+  // The live Feed's section semantics: a rail navigation auto-expands the
+  // matching detail panel (art-history-today / partner); "quote" and the
+  // hardcoded "spotlight-kevin-lewis" resolve to no panel (the live's
+  // inert sections). Null sections — plain stat-tile navigation — never
+  // touch the current panel. Implemented with React's "adjust state during
+  // render" pattern (initializers cover the mount, the comparison updates).
+  const [activeId, setActiveId] = useState<string | null>(() =>
+    resolveInspirationFocus(initialSection, inspiration),
+  );
+  const [prevSection, setPrevSection] = useState<string | null>(initialSection);
+  if (initialSection !== prevSection) {
+    setPrevSection(initialSection);
+    const focusId = resolveInspirationFocus(initialSection, inspiration);
+    if (focusId) setActiveId(focusId);
+  }
+  const spotlightRowRef = useRef<HTMLDivElement | null>(null);
 
   const quotes = inspiration.filter((e) => e.type === "artist_quote");
   const spotlights = inspiration.filter((e) => e.type === "studio_spotlight");
@@ -35,6 +60,21 @@ export function InspirationView({ inspiration }: InspirationViewProps) {
   const partners = inspiration.filter((e) => e.type === "partner");
   const today = pickToday(history);
   const activeEntry = inspiration.find((e) => e.id === activeId) ?? null;
+
+  // Spotlight sections scroll their row into view even when the hardcoded
+  // id resolves to no panel — the live app's scrollIntoView behavior (a DOM
+  // side effect, so an effect is the right home for it; the timeout matches
+  // the live's 60ms debounce).
+  useEffect(() => {
+    if (!initialSection?.startsWith("spotlight-")) return;
+    const timer = setTimeout(() => {
+      spotlightRowRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
+    }, 60);
+    return () => clearTimeout(timer);
+  }, [initialSection]);
 
   return (
     <div className="studio-fade flex h-full flex-col">
@@ -101,7 +141,7 @@ export function InspirationView({ inspiration }: InspirationViewProps) {
               )}
             </div>
 
-            <div>
+            <div ref={spotlightRowRef}>
               <p className="mb-2 px-0.5 text-[10px] font-bold uppercase tracking-wider text-ast-faint">
                 Studio Spotlight
               </p>

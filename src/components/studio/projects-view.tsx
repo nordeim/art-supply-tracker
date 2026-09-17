@@ -26,6 +26,11 @@ import { ProjectEditPanel } from "@/components/studio/project-edit-panel";
 interface ProjectsViewProps {
   projects: ProjectDto[];
   supplies: SupplyDto[];
+  /** The sticky focus token from the Recent Projects rail (the live app's
+   * focusRequest): on every mount — and on every rail re-click while
+   * mounted — the view switches to the "All Projects" list and opens the
+   * focused project's detail panel. Null leaves the tiles untouched. */
+  focusRequest: { id: string; key: number } | null;
   onExport: () => void;
   onImportClick: () => void;
   onNewProject: () => void;
@@ -49,6 +54,7 @@ const GROUPS_COPY =
 export function ProjectsView({
   projects,
   supplies,
+  focusRequest,
   onExport,
   onImportClick,
   onNewProject,
@@ -56,10 +62,28 @@ export function ProjectsView({
   onProjectDeleted,
   onSupplyAssignmentChanged,
 }: ProjectsViewProps) {
-  const [subView, setSubView] = useState<ProjectsSubView | null>(null);
-  const [openProjectId, setOpenProjectId] = useState<string | null>(null);
+  // The live app's focusRequest semantics: the "All Projects" list opens with
+  // the focused project's detail panel on every projects-view entry (the
+  // token is sticky in the shell) and on every rail re-click while mounted.
+  // Implemented with React's "adjust state during render" pattern — the
+  // initializers cover the sticky-focus mount, the comparison covers updates.
+  const [subView, setSubView] = useState<ProjectsSubView | null>(() =>
+    focusRequest ? { kind: "all" } : null,
+  );
+  const [openProjectId, setOpenProjectId] = useState<string | null>(() =>
+    focusRequest?.id ?? null,
+  );
   // The live app swaps the detail panel for the inline edit form in place.
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [prevFocus, setPrevFocus] = useState(focusRequest);
+  if (focusRequest !== prevFocus) {
+    setPrevFocus(focusRequest);
+    if (focusRequest?.id != null) {
+      setOpenProjectId(focusRequest.id);
+      setSubView({ kind: "all" });
+      setEditingProjectId(null);
+    }
+  }
 
   const byStatus = useMemo(() => {
     const groups = new Map<string, ProjectDto[]>();

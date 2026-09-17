@@ -67,3 +67,42 @@ export function pickToday<
   if (past.length > 0) return past[past.length - 1] ?? null;
   return history[0] ?? null;
 }
+
+/**
+ * Resolves a sidebar/dashboard rail navigation "section" to the Feed entry
+ * whose detail panel should auto-expand — mirroring the live app's Feed
+ * component (extracted from the deployed bundle):
+ *
+ * - "art-history-today" → the pickToday art-history entry's id
+ * - "partner" → the first partner entry's id
+ * - "spotlight-<id>" → that spotlight entry's id when a seeded spotlight
+ *   carries it (the live's two callers pass the hardcoded
+ *   "spotlight-kevin-lewis", which matches none of its seeded entries —
+ *   and none of ours, whose ids are cuids — so nothing expands there)
+ * - "quote" is never consumed by the live Feed → no panel (pinned quirk)
+ *
+ * Precondition: like pickToday, the art-history slice is sorted ascending
+ * by date before it reaches this function (the caller passes the view's
+ * already-sorted timeline).
+ */
+export function resolveInspirationFocus<
+  T extends { id: string; type: string; date: string | null },
+>(section: string | null, entries: T[]): string | null {
+  if (!section) return null;
+  if (section === "art-history-today") {
+    const history = entries
+      .filter((e) => e.type === "art_history" && e.date)
+      .sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""));
+    return pickToday(history)?.id ?? null;
+  }
+  if (section === "partner") {
+    return entries.find((e) => e.type === "partner")?.id ?? null;
+  }
+  if (section.startsWith("spotlight-")) {
+    const id = section.slice("spotlight-".length);
+    return entries.some((e) => e.type === "studio_spotlight" && e.id === id)
+      ? id
+      : null;
+  }
+  return null;
+}

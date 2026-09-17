@@ -28,14 +28,14 @@ Node runs, with zero cloud dependencies.
 | Feature | What it does |
 |---|---|
 | 🔐 Auth gate | Sign In / Create Account tabs, show-password toggle, forgot-password notice — scrypt-hashed passwords, httpOnly opaque session cookies, per-IP sign-in rate limiting (5 attempts / minute) |
-| 🏠 Dashboard | "Today in the Studio" — Partner Spotlight, Art History, Artist Quote, Studio Spotlight cards; the header's ✧ memory button is inert, exactly like the live app |
+| 🏠 Dashboard | "Today in the Studio" — Partner Spotlight, Art History, Artist Quote, Studio Spotlight cards; the Studio Spotlight card navigates to the inspiration Feed (the live's hardcoded section opens no panel); the header's ✧ memory button is inert, exactly like the live app |
 | 🎨 Projects | Status columns (Planned / In Progress / On Hold / Completed), Needs Sorting bucket, create/edit modal with budget, notes, and photo attachments |
-| 🗂️ Project detail panels | Click a project chip → detail panel with NEW badge, status pill, image well, budget, supply assignment ("Pick supply…" + Assign / × remove), Delete (with confirm), Edit Project — which swaps the panel for the live app's INLINE edit form in the same slot (single column, Planned-first status order, budget defaulting to 0) |
+| 🗂️ Project detail panels | Click a project chip → detail panel with NEW badge, status pill, image well, budget, supply assignment ("Pick supply…" + Assign / × remove), Delete (with confirm), Edit Project — which swaps the panel for the live app's INLINE edit form in the same slot (single column, Planned-first status order, budget defaulting to 0). The sidebar's Recent Projects tiles focus a project the way the live app does: the "All Projects" list opens with that project's panel, and the focus is sticky — every later projects-view entry re-opens it (the live's focusRequest semantics) |
 | 🖌️ Supplies | Category grid (Paint, Brushes & Tools, Pastels, Paper, Canvas & Board, Mediums, Other) with per-category counts, low-stock "!" indicators, condition tracking, barcode + location fields, project assignment |
 | 🏷️ Per-category subcategories | The supply modal's Subcategory picker follows the category (Paint → Watercolor…, Brushes & Tools → Palette knives…, hidden for Other) with an "Other / Custom…" free-form input — exactly the live app's option lists and custom flow |
 | 📋 Supply detail panels | Click a supply chip → detail panel (Category / Subcategory / Quantity / Location) with Delete (with confirm) and Edit Supply — which swaps the panel for the live app's INLINE edit form (pink chrome, Notes as a single-line input, distinct edit placeholders like "e.g., 2 or 1/2" / "e.g., 012345678901", "Add to Project" with the current-assignment chip) |
 | 🔍 Stock filters | "All | Low Stock | Out of Stock" tabs on every supply list — Low Stock matches low AND critical, Out of Stock critical only (the live bundle's filter switch) — with the live app's "No supplies match this filter." empty state |
-| ✨ Inspiration | Today / Art History / Inspire Me feed tabs, artist quotes, studio spotlights, partner placeholders (15 seeded entries) |
+| ✨ Inspiration | Today / Art History / Inspire Me feed tabs, artist quotes, studio spotlights, partner placeholders (15 seeded entries); the sidebar's TODAY IN ART HISTORY and PARTNERS rail buttons auto-expand their detail panels on the Feed (the live's location-state sections), while QUOTE OF THE DAY and STUDIO SPOTLIGHT navigate without a panel — the live's inert sections, pinned by tests |
 | 💬 Studio Chat | Community message wall with 5-second polling that pauses on hidden tabs |
 | 📦 Import / Export | Round-trip JSON backup in the ORIGINAL app's wire format (`title`, `subcategory`, `quantityValue`/`qty`, `supplyIds`, `isNew`, unset `budget`/`barcode` as `""` — the live app's in-memory defaults) — live-app exports import here and vice versa; the legacy clone format imports too |
 | 📱 Responsive | Desktop: three glass cards (sidebar / main / chat) in a 12-column grid, each rounded-3xl on the blurred `#0B0018` canvas with per-panel accent borders and internal scrolling; mobile: slide-in drawers with the "☰ Studio Tools" / "Chat ☰" toggle bar |
@@ -135,11 +135,13 @@ bun run dev         # then exercise the flows below (or run the smoke suite)
 `python3 scripts/smoke_functional.py` drives the golden paths in a real
 browser (via the `agent-browser` CLI): sign-in, supply create → list,
 away-and-back → category grid, stock filters, chip detail panels,
-native-confirm deletes, project CRUD, and the import/export surface —
-leaving the studio pristine. It doubles as the regression suite for the
-post-create navigation contract.
+native-confirm deletes, project CRUD, the Recent Projects focus flow
+(rail click → list + panel, sticky across away-and-back — the live
+app's focusRequest semantics), the inspiration rail panels, and the
+import/export surface — leaving the studio pristine. It doubles as the
+regression suite for the post-create navigation contract.
 
-Automated tests (Vitest, 121 tests) pin the studio-domain vocabulary
+Automated tests (Vitest, 131 tests) pin the studio-domain vocabulary
 (per-category supply subcategory lists in the live app's tokens), the
 production bundle's status/condition style maps (project status pills,
 chip borders with per-status hover/selected treatments, supply condition
@@ -150,7 +152,10 @@ contracts (photo data-URL caps, the Other/Custom free-form subcategory
 flow, and the normalized import gate — array caps, string lengths, and
 vocabulary enums), the export/import wire format (live-app shape with
 `title`/`subcategory`/`supplyIds`/numeric quantities, plus the legacy
-clone shape), the sign-in rate limiter, and the full action surface
+clone shape), the sign-in rate limiter, the inspiration rail section
+resolver ("art-history-today" / "partner" expand their panels; "quote"
+and the hardcoded "spotlight-kevin-lewis" are the live's inert
+sections), and the full action surface
 against a throwaway SQLite database (CRUD, ownership/IDOR checks,
 assignment, import — including the mid-import failure that must roll back
 without emptying the studio).
@@ -222,7 +227,8 @@ Headline gradient: `linear-gradient(90deg, #00E6FF, #2E64FF, #8D5CFF,
 | Visual parity (r3) | ✅ Complete | Glass-card 12-column shell with per-panel accent borders, corrected brand tokens (purple/yellow/coral/orange + bg + glow shadows), per-view chrome (turquoise projects, pink supplies), bundle-pinned status pill/chip/condition style maps, rows-of-3 chip grids with in-row detail panels, gradient quote tiles, plain-purple chat avatars, native-alert import feedback, Inter via `@theme inline`, themed scrollbar rails (97 tests) |
 | Parity remediation (r4) | ✅ Complete | Corrected brand tokens to the live *utility* values (purple #5a3a8e, yellow #ffd5a8, coral #ff7a7a — pinned by a new design-tokens test), inline Edit Project/Edit Supply panels replacing edit modals, Amplify-chrome login restyle (sharp #5B3FD3-bordered card, text tabs, 4px inputs, #FE5FA7 button, eye-icon switch), Other/Custom free-form subcategory flow, live unassigned-option copy, unset budget/barcode exported as "", chat-input and ✧-button accessible-name parity (109 tests) |
 | Robustness remediation (r5) | ✅ Complete | Post-create supplies navigation parity (away-and-back → category grid; re-click keeps the sub-view), import hardening — `normalizedImportPayloadSchema` enforcement (array caps, string lengths, vocabulary enums) and single-transaction atomicity (a failed restore never empties the studio), "All <Category>" breadcrumb + empty-state parity (tabs hidden on empty lists, no create button in the filtered-empty state), `inert` on closed drawers, one chat poller per viewport, `pickToday` dedupe, import-alert refresh fallback, committed `scripts/smoke_functional.py` |
-| Verification | ✅ Complete | Lint + typecheck + 121 tests + production build clean; VLM screenshot comparison of all four views vs the live app (near-identical); 17-check functional smoke suite (CRUD, filters, panels, modals, navigation regression) |
+| Focus-flow parity (r6) | ✅ Complete | Recent Projects rail focuses a project like the live app ("All Projects" list + detail panel, sticky across away-and-back — the live focusRequest semantics, bundle-extracted and DOM-verified), the sidebar's TODAY IN ART HISTORY / PARTNERS rail buttons auto-expand their Feed panels (`resolveInspirationFocus` with the live's inert "quote" / "spotlight-kevin-lewis" quirks pinned by tests), the dashboard Studio Spotlight card navigates to the Feed; live account restored to the reference pristine state (131 tests, 23 smoke checks) |
+| Verification | ✅ Complete | Lint + typecheck + 131 tests + production build clean; VLM screenshot comparison of all four views vs the live app (near-identical); 23-check functional smoke suite (CRUD, filters, panels, modals, navigation regression, focus flows) |
 | Documentation | ✅ Complete | README, AGENTS.md, CLAUDE.md, Project_Architecture_Document.md |
 
 Known intentional gaps (mirroring the original beta's placeholders): the

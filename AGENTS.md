@@ -11,8 +11,8 @@ Run from the repo root. Bun is the package manager — use `bun`, never `npm`/`y
 | `bun run dev` | Dev server on :3000 |
 | `bun run lint` | ESLint (next/core-web-vitals + next/typescript) |
 | `bun run typecheck` | `tsc --noEmit`, strict |
-| `bun run test` | Vitest — 121 tests: domain vocabulary, bundle-pinned status/condition style maps, design-token literals, validation (incl. the normalized import gate), export/import wire format, rate limiting, action layer (each action file runs against a throwaway SQLite DB, incl. the mid-import rollback contract) |
-| `python3 scripts/smoke_functional.py` | Browser-driven smoke suite (needs `agent-browser` CLI + running server) — 17 golden-path checks incl. the post-create supplies navigation regression; leaves the studio pristine |
+| `bun run test` | Vitest — 131 tests: domain vocabulary, bundle-pinned status/condition style maps, design-token literals, validation (incl. the normalized import gate), export/import wire format, rate limiting, the inspiration rail section resolver (incl. the live's inert "quote" / "spotlight-kevin-lewis" quirks), action layer (each action file runs against a throwaway SQLite DB, incl. the mid-import rollback contract) |
+| `python3 scripts/smoke_functional.py` | Browser-driven smoke suite (needs `agent-browser` CLI + running server) — 23 golden-path checks incl. the post-create supplies navigation regression and the Recent Projects sticky-focus flow; leaves the studio pristine |
 | `bun run db:push` | Push `prisma/schema.prisma` to SQLite (`db/custom.db`) — required after schema edits |
 | `bun run db:generate` | Regenerate Prisma Client |
 | `bun run db:seed` | Idempotent seed: demo user, 5 chat messages, 15 inspiration entries |
@@ -71,6 +71,17 @@ runs the same gate on every push.
 - **First-paint data** is fetched in `page.tsx` and handed to `StudioApp` as
   typed props; after mutations the client updates React state from action
   results (no global data store).
+- **Rail focus flows (the live app's focusRequest / location-state
+  sections):** a Recent Projects rail click stores a sticky
+  `{ id, key }` focus token in `StudioApp` — every projects-view mount
+  re-opens the "All Projects" list with that project's detail panel
+  (away-and-back included) until the session ends; the inspiration rail
+  carries a per-navigation section (`"art-history-today"` / `"partner"`
+  expand their Feed panels via `resolveInspirationFocus`, while
+  `"quote"` and the hardcoded `"spotlight-kevin-lewis"` are the live's
+  inert sections — the quirks are pinned by tests, do not "fix" them).
+  A plain INSPO stat-tile click travels WITHOUT a section (never expands
+  a panel) and never collapses one that is already open.
 
 ## Framework quirks (verified the hard way)
 

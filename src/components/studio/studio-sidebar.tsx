@@ -22,6 +22,13 @@ interface StudioSidebarProps {
   currentView: StudioView;
   projects: ProjectDto[];
   inspiration: InspirationEntryDto[];
+  /** Recent Projects rail click — the live app focuses the project (list +
+   * detail panel) instead of just switching views. */
+  onFocusProject: (projectId: string) => void;
+  /** Inspiration rail click — navigates with the live app's section state
+   * ("art-history-today" / "partner" expand their detail panels; the
+   * quote and spotlight sections resolve to no panel by design). */
+  onOpenInspirationSection: (section: string) => void;
   onNewProject: () => void;
   sidebarOpen: boolean;
   onCloseSidebar: () => void;
@@ -92,6 +99,8 @@ function SidebarContent({
   currentView,
   projects,
   inspiration,
+  onFocusProject,
+  onOpenInspirationSection,
   onNewProject,
 }: StudioSidebarProps) {
   const quote = quoteOfTheDay(inspiration);
@@ -179,7 +188,7 @@ function SidebarContent({
                 <RecentProjectTile
                   key={project.id}
                   project={project}
-                  onClick={() => navigate("projects")}
+                  onClick={() => onFocusProject(project.id)}
                 />
               ))}
             </div>
@@ -194,7 +203,7 @@ function SidebarContent({
             {spotlight && (
               <button
                 type="button"
-                onClick={() => navigate("inspiration")}
+                onClick={() => onOpenInspirationSection("spotlight-kevin-lewis")}
                 className="w-full overflow-hidden rounded-xl border border-ast-purple/30 bg-[#120724] text-left transition hover:border-ast-purple/60"
               >
                 <div className="h-9 bg-gradient-to-r from-ast-electric-blue/50 via-ast-purple/50 to-ast-pink/40" />
@@ -211,7 +220,7 @@ function SidebarContent({
             {quote && (
               <button
                 type="button"
-                onClick={() => navigate("inspiration")}
+                onClick={() => onOpenInspirationSection("quote")}
                 className="w-full rounded-xl border border-ast-turquoise/20 bg-[#120724] px-3 py-2.5 text-left transition hover:border-ast-turquoise/50"
               >
                 <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ast-turquoise">
@@ -229,7 +238,7 @@ function SidebarContent({
             {history && (
               <button
                 type="button"
-                onClick={() => navigate("inspiration")}
+                onClick={() => onOpenInspirationSection("art-history-today")}
                 className="w-full rounded-xl border border-ast-lavender/20 bg-[#120724] px-3 py-2.5 text-left transition hover:border-ast-lavender/50"
               >
                 <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ast-lavender">
@@ -244,7 +253,7 @@ function SidebarContent({
             {partners && (
               <button
                 type="button"
-                onClick={() => navigate("inspiration")}
+                onClick={() => onOpenInspirationSection("partner")}
                 className="w-full rounded-xl border border-ast-blue/25 bg-[#120724] px-3 py-2.5 text-left transition hover:border-ast-blue/50"
               >
                 <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ast-lavender">

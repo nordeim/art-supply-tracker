@@ -39,6 +39,18 @@ import { SupplyModal } from "@/components/studio/supply-modal";
 
 export type StudioView = "dashboard" | "projects" | "supplies" | "inspiration";
 
+/**
+ * The sticky project-focus token (the live app's focusRequest): a Recent
+ * Projects rail click stores the project plus a per-click key, and every
+ * later projects-view mount re-opens the "All Projects" list with that
+ * project's detail panel — exactly like the live SPA, where the focus sits
+ * in the shell's state and is never cleared within the session.
+ */
+export interface ProjectFocusRequest {
+  id: string;
+  key: number;
+}
+
 interface StudioAppProps {
   user: UserDto;
   projects: ProjectDto[];
@@ -61,6 +73,17 @@ export function StudioApp({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [chatPanelOpen, setChatPanelOpen] = useState(false);
   const [supplyListNavToken, setSupplyListNavToken] = useState(0);
+  // The live app's focusRequest — sticky for the whole session (see the
+  // interface doc above). Keyed per click so re-focusing the same project
+  // re-fires the effect, mirroring the live's location-key semantics.
+  const [projectFocusRequest, setProjectFocusRequest] =
+    useState<ProjectFocusRequest | null>(null);
+  // The inspiration rail's navigation section — the live app carries it in
+  // the router location state, so it is per-navigation: a plain INSPO
+  // stat-tile click travels without a section and never expands a panel.
+  const [inspirationSection, setInspirationSection] = useState<string | null>(
+    null,
+  );
   const [projectModal, setProjectModal] = useState(false);
   const [supplyModal, setSupplyModal] = useState(false);
   const [, startTransition] = useTransition();
@@ -90,12 +113,38 @@ export function StudioApp({
       if (view === "supplies" && next !== "supplies") {
         setSupplyListNavToken(0);
       }
+      // Entering inspiration through the stat tile is a plain navigation on
+      // the live app — no location-state section, so no panel auto-expands.
+      // (The rail buttons go through openInspirationSection instead.)
+      if (next === "inspiration") {
+        setInspirationSection(null);
+      }
       setView(next);
       setSidebarOpen(false);
       setChatPanelOpen(false);
     },
     [view],
   );
+
+  /** Recent Projects rail click — focus the project like the live app:
+   * switch to the projects view, open the "All Projects" list, and open
+   * that project's detail panel. The focus stays sticky for the session. */
+  const focusProject = useCallback((projectId: string) => {
+    setProjectFocusRequest({ id: projectId, key: Date.now() });
+    setView("projects");
+    setSidebarOpen(false);
+    setChatPanelOpen(false);
+  }, []);
+
+  /** Inspiration rail click — navigate with the live app's section state so
+   * the Feed auto-expands the matching detail panel (art history / partner);
+   * the quote and spotlight sections resolve to no panel by design. */
+  const openInspirationSection = useCallback((section: string) => {
+    setInspirationSection(section);
+    setView("inspiration");
+    setSidebarOpen(false);
+    setChatPanelOpen(false);
+  }, []);
 
   function handleSignOut() {
     startTransition(async () => {
@@ -189,12 +238,14 @@ export function StudioApp({
         <DashboardView
           onExport={handleExport}
           onImportClick={() => importInputRef.current?.click()}
+          onOpenSpotlight={() => openInspirationSection("spotlight-kevin-lewis")}
         />
       )}
       {view === "projects" && (
         <ProjectsView
           projects={projectList}
           supplies={supplyList}
+          focusRequest={projectFocusRequest}
           onExport={handleExport}
           onImportClick={() => importInputRef.current?.click()}
           onNewProject={() => setProjectModal(true)}
@@ -218,7 +269,12 @@ export function StudioApp({
           onSupplyDeleted={handleSupplyDeleted}
         />
       )}
-      {view === "inspiration" && <InspirationView inspiration={inspiration} />}
+      {view === "inspiration" && (
+        <InspirationView
+          inspiration={inspiration}
+          initialSection={inspirationSection}
+        />
+      )}
     </>
   );
 
@@ -236,6 +292,8 @@ export function StudioApp({
           currentView={view}
           projects={projectList}
           inspiration={inspiration}
+          onFocusProject={focusProject}
+          onOpenInspirationSection={openInspirationSection}
           onNewProject={() => {
             setSidebarOpen(false);
             setProjectModal(true);

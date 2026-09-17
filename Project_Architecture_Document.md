@@ -1,14 +1,14 @@
-# AST Studio — Master Project Architecture Document (PAD) v1.4
+# AST Studio — Master Project Architecture Document (PAD) v1.5
 
 **Classification:** Internal Engineering Reference
 **Status:** DEFINITIVE, PRODUCTION-LOCKED BLUEPRINT
 **Companion Document:** `README.md` (onboarding), `AGENTS.md` (agent instructions), `CLAUDE.md` (engineering standards)
-**Last Updated:** 2026-09-17 (r5)
+**Last Updated:** 2026-09-17 (r6)
 **Audience:** Senior Engineers, Tech Leads, DevOps, and Onboarding Engineers
 **Rule:** Every architectural decision in this document traces to a specific rationale.
 Nothing is here "because it's popular."
 
-#### Revision Block — v1.4 (Tracked Changes)
+#### Revision Block — v1.5 (Tracked Changes)
 
 - `[SYN]` Initial PAD generated alongside the v1.0 codebase — every section
   verified against the actual source tree and executed commands on
@@ -60,6 +60,23 @@ Nothing is here "because it's popular."
   drawers; one chat poller per viewport; `pickToday` dedupe;
   `scripts/smoke_functional.py` (17-check browser smoke suite);
   121 tests total.
+- `[R6]` Session-9 focus-flow parity remediation (2026-09-17): the
+  Recent Projects rail now focuses a project exactly like the live app
+  (a sticky `{ id, key }` focusRequest in `StudioApp` — every
+  projects-view mount opens the "All Projects" list with that project's
+  detail panel, sticky across away-and-back and the breadcrumb reset;
+  bundle-extracted from the live `Lz`/`HB` components and DOM-verified
+  three times against the deployed app); the inspiration rail carries
+  per-navigation sections (`resolveInspirationFocus` in
+  `src/lib/inspiration.ts` — "art-history-today" / "partner" auto-expand
+  their Feed panels, while "quote" and the hardcoded
+  "spotlight-kevin-lewis" are the live's inert sections, pinned by
+  tests); the dashboard's Studio Spotlight card navigates to the Feed
+  (the live's dead spotlight section — scroll, no panel); a plain INSPO
+  stat-tile click never expands nor collapses a panel (live-verified);
+  131 tests + 23 smoke checks; the live account was found with leftover
+  parallel-session test data and restored to the reference pristine
+  state (PROJECTS 0 / SUPPLIES 0).
 
 ---
 
@@ -453,6 +470,40 @@ useEffect(() => {
 survives re-renders via empty deps; errors deliberately do not surface
 (noisy-5s-banner > a brief staleness gap).
 
+**Pattern 5 — the rail focus flows (the live app's focusRequest /
+location-state sections):**
+
+```typescript
+// src/components/studio/studio-app.tsx (excerpt) — the sticky focus token
+const [projectFocusRequest, setProjectFocusRequest] =
+  useState<ProjectFocusRequest | null>(null);
+
+const focusProject = useCallback((projectId: string) => {
+  setProjectFocusRequest({ id: projectId, key: Date.now() });  // key => re-click re-fires
+  setView("projects");
+}, []);
+
+// src/components/studio/projects-view.tsx (excerpt) — consume on mount/update
+const [subView, setSubView] = useState<ProjectsSubView | null>(() =>
+  focusRequest ? { kind: "all" } : null,                    // sticky-focus mount
+);
+if (focusRequest !== prevFocus) { /* adjust state during render */ }
+```
+
+*Why this pattern:* the live SPA holds the focus in its never-cleared
+shell state (extracted from the deployed `HB`/`Lz` bundle), so every
+projects-view entry re-opens the "All Projects" list with the focused
+project's panel — sticky across away-and-back and the breadcrumb reset.
+The clone reproduces the *observable* contract with React's
+"adjust state during render" pattern (initializers cover the mount, the
+comparison covers rail re-clicks; `Date.now()` keys mirror the live's
+per-navigation location key). The inspiration rail mirrors the live's
+*per-navigation* sections instead: `resolveInspirationFocus` maps
+"art-history-today" / "partner" to the entry whose panel auto-expands,
+while "quote" and the hardcoded "spotlight-kevin-lewis" are the live's
+inert sections (pinned quirks) and a plain INSPO stat-tile click never
+expands nor collapses a panel.
+
 ---
 
 ## 4. Data Architecture
@@ -687,9 +738,9 @@ CSS — distinct from the utility purple.
 | Category | Count | Location | Framework |
 |---|---|---|---|
 | Static | — | `eslint .` / `tsc --noEmit` | ESLint 9 + TS 5.9 strict |
-| Automated unit | 98 tests | `src/lib/*.test.ts` — studio-domain (incl. bundle-pinned style maps + edit-panel budget/option mapping), design-tokens (globals.css literal pinning), validation (incl. the normalized import gate), export-payload, rate-limit, inspiration | Vitest (node env, `@/` alias) |
+| Automated unit | 108 tests | `src/lib/*.test.ts` — studio-domain (incl. bundle-pinned style maps + edit-panel budget/option mapping), design-tokens (globals.css literal pinning), validation (incl. the normalized import gate), export-payload, rate-limit, inspiration (incl. the rail section resolver with the live's inert "quote" / "spotlight-kevin-lewis" quirks) | Vitest (node env, `@/` alias) |
 | Automated action | 23 tests | `src/actions/studio.test.ts` (throwaway SQLite DB, mocked auth seam — incl. the mid-import rollback contract) | Vitest |
-| Manual golden paths | 11 flows | README "Testing & Quality" | Browser-executed (pinned by `scripts/smoke_functional.py`, 17 checks) |
+| Manual golden paths | 11 flows | README "Testing & Quality" | Browser-executed (pinned by `scripts/smoke_functional.py`, 23 checks) |
 | CI verify-gate | — | `.github/workflows/verify-gate.yml` (lint + typecheck + test + build) | GitHub Actions |
 
 ### 7.2 Test Patterns

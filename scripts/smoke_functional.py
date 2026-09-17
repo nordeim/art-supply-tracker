@@ -321,6 +321,36 @@ def main() -> int:
         wait_for("document.body.innerText.includes('Edit Project') ? 'true' : 'false'"),
     )
 
+    # 6b. Recent Projects rail → sticky focus flow (live focusRequest) -------
+    click_named("STUDIO TOOLS My Studio")
+    time.sleep(1)
+    run(
+        [
+            "eval",
+            "Array.from(document.querySelectorAll('aside button'))"
+            f".find(b=>b.textContent.includes('{MARK}'))?.click()",
+        ]
+    )
+    check(
+        "recent-project rail opens list + detail panel",
+        wait_for(
+            "!document.body.innerText.includes('Bodies of work')"
+            " && document.body.innerText.includes('Edit Project') ? 'true' : 'false'"
+        ),
+    )
+    # The focus is sticky on the live app: away-and-back re-opens the
+    # "All Projects" list with the focused project's panel.
+    click_named("STUDIO TOOLS My Studio")
+    time.sleep(1)
+    click_named("PROJECTS")
+    check(
+        "sticky focus re-opens list + panel after away-and-back",
+        wait_for(
+            "!document.body.innerText.includes('Bodies of work')"
+            " && document.body.innerText.includes('Edit Project') ? 'true' : 'false'"
+        ),
+    )
+
     if not args.keep:
         run(
             [
@@ -337,7 +367,68 @@ def main() -> int:
             ),
         )
 
-    # 7. Import/export surface present in every view ---------------------------
+    # 7. Inspiration rail + dashboard spotlight navigation ---------------------
+    click_named("STUDIO TOOLS My Studio")
+    time.sleep(1)
+    # The dashboard's Studio Spotlight card navigates to the inspiration
+    # Feed (no panel — the live's hardcoded section matches no entry).
+    run(
+        [
+            "eval",
+            "Array.from(document.querySelectorAll('main section'))"
+            ".find(s=>s.querySelector('h2')?.textContent?.trim()==='Kevin Lewis')"
+            "?.click()",
+        ]
+    )
+    check(
+        "dashboard spotlight card navigates to the Feed",
+        wait_for("document.body.innerText.includes('Inspire Me') ? 'true' : 'false'"),
+    )
+
+    # The TODAY IN ART HISTORY rail button expands the art-history panel.
+    click_named("STUDIO TOOLS My Studio")
+    time.sleep(1)
+    run(
+        [
+            "eval",
+            "Array.from(document.querySelectorAll('aside button'))"
+            ".find(b=>b.textContent.includes('Today in Art History'))?.click()",
+        ]
+    )
+    check(
+        "art-history rail expands its detail panel",
+        wait_for("document.body.innerText.includes('Rijksmuseum') ? 'true' : 'false'"),
+    )
+
+    # The PARTNERS rail button expands the partner panel; a plain INSPO
+    # stat-tile click afterwards travels without a section (no panel).
+    click_named("STUDIO TOOLS My Studio")
+    time.sleep(1)
+    run(
+        [
+            "eval",
+            "Array.from(document.querySelectorAll('aside button'))"
+            ".find(b=>b.textContent.includes('Partners'))?.click()",
+        ]
+    )
+    check(
+        "partners rail expands its detail panel",
+        wait_for("document.body.innerText.includes('Product demos') ? 'true' : 'false'"),
+    )
+    # A plain INSPO stat-tile re-click while the Feed is open keeps the
+    # current panel (the live's section state is per-navigation; a plain
+    # navigation carries no section, so the expanded panel is untouched).
+    click_named("INSPO")
+    check(
+        "plain INSPO re-click keeps the open panel (live behavior)",
+        wait_for(
+            "document.body.innerText.includes('Inspire Me')"
+            " && document.body.innerText.includes('Product demos')"
+            " ? 'true' : 'false'"
+        ),
+    )
+
+    # 8. Import/export surface present in every view ---------------------------
     for view, tile in (
         ("dashboard", "STUDIO TOOLS My Studio"),
         ("projects", "PROJECTS"),

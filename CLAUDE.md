@@ -131,7 +131,7 @@ not secret — rotate before any public deployment).
 ### Testing Strategy
 
 Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
-`src/**/*.test.ts`). The suite (121 tests) pins:
+`src/**/*.test.ts`). The suite (131 tests) pins:
 
 - **Studio-domain vocabulary** — the per-category `SUPPLY_TYPE_LISTS` in the
   live app's tokens (Paint/Brush/Pastel/Paper/Canvas/Medium/Other categories,
@@ -169,7 +169,12 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
 - **Rate limiting** (`rate-limit.test.ts`) — fixed-window allow/block,
   rollover, per-key isolation, cooldown reporting, bounded memory.
 - **Inspiration detail** — schema acceptance, corrupt-JSON degradation to
-  null, today-entry selection.
+  null, today-entry selection, and the rail section resolver
+  (`resolveInspirationFocus`: "art-history-today" → the pickToday entry,
+  "partner" → the first partner, "spotlight-<id>" only when a seeded
+  spotlight carries it, and the live's inert "quote" /
+  "spotlight-kevin-lewis" sections resolving to no panel — pinned
+  quirks).
 - **Action layer** (`src/actions/studio.test.ts`) — the mutation surface
   against a throwaway SQLite database with the auth seam mocked: CRUD,
   ownership/IDOR checks, supply assignment, delete-side-effects,
@@ -178,10 +183,12 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
 Run `bun run test` — new domain logic in `src/lib` and new actions require
 tests first (red → green). Golden paths that live in the browser (view
 navigation, modals, detail panels) are additionally pinned by
-`python3 scripts/smoke_functional.py` (17 checks, needs the `agent-browser`
+`python3 scripts/smoke_functional.py` (23 checks, needs the `agent-browser`
 CLI and a running server) — notably the post-create supplies navigation
 contract: create → flat list, away-and-back → category grid, re-click on
-Supplies keeps the current sub-view.
+Supplies keeps the current sub-view; and the Recent Projects focus flow:
+rail click → "All Projects" list + that project's panel, sticky across
+away-and-back (the live app's focusRequest semantics).
 
 The broader verification contract is the golden-path checklist, exercised in
 a browser after every change:

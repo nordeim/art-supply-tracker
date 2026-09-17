@@ -1,0 +1,26 @@
+Session 9 — the focus-flow parity pass, continuing from session 8's verified state (main @ 7a4b3d6, 121 tests green, four-view visual parity).
+
+Started from the pushed tree and re-validated the whole baseline: all gates green (lint, typecheck, 121 tests, production build; skills/ excluded from every gate — eslint ignores, tsconfig exclude, vitest include), docs re-read against the source, and a fresh four-view VLM comparison of the live site vs the clone (dashboard, projects, supplies, inspiration: PARITY, the only accepted deltas being account data and the dev-only Next.js badge). The projects view needed a like-for-like re-comparison at the same sub-view (live was on the post-deletion "All Projects" empty list; the clone on the tiles root — both render identically at each state).
+
+Live-account hygiene first: the account carried leftover agent test data ("ZZ Parity Test Project" + "ZZ Parity Test Paint" — not from session 8, which ended pristine). Verified the reference dashboard image expects the empty state (PROJECTS 0 / SUPPLIES 0 / INSPO 15), then deleted both rows through the real UI, restoring the account to the reference state.
+
+Then the deep behavioral recon that drove this session — every contract verified three times against the deployed app and cross-checked against its minified bundle (byte-level, applying the L-9 lesson: the display layer swallows `[h`-style sequences, so the Lz state destructuring read as `,,g]` until hex-dumped as `[h,g]`):
+
+- A sidebar **Recent Projects** tile click navigates to the projects view, opens the "All Projects" list, and opens that project's detail panel.
+- The focus is **sticky**: navigating away and back re-opens the list plus the panel — even after using the breadcrumb to return to the tiles first. Root cause in the live bundle: the shell (`HB`) stores a focusRequest that nothing ever clears, and the projects view (`Lz`) consumes it on every mount via an effect (`i(a.id), g(null), m('list')`). Status filters (Planned etc.) do NOT persist — only the mode and the focused selection do.
+- The sidebar's inspiration rail carries per-navigation sections: TODAY IN ART HISTORY and PARTNERS auto-expand their detail panels on the Feed; QUOTE OF THE DAY and STUDIO SPOTLIGHT navigate only — the live's own inert sections ("quote" is never consumed; the hardcoded "spotlight-kevin-lewis" id matches no seeded entry). The dashboard's Studio Spotlight card navigates to the Feed with the same dead section. A plain INSPO stat-tile click never expands a panel, and never collapses one that is already open (live-verified with an expanded partner panel).
+- Supplies contracts re-confirmed: away-and-back → category grid; projects fresh entry → tiles; re-click while on a view → no-op.
+
+Remediation (TDD): RED — ten failing unit tests for the new `resolveInspirationFocus` (rail section → entry-id resolution, including the two inert-section quirks pinned so they cannot silently "improve") plus six new smoke checks for the browser flows. GREEN — the sticky `{ id, key }` project focus token in `StudioApp` (keyed per click to mirror the live's location-key re-fire), consumed by `ProjectsView` through React's "adjust state during render" pattern (initializers cover the sticky-focus mount, the comparison covers rail re-clicks); the inspiration section state in `StudioApp` consumed the same way, with the spotlight scroll (`scrollIntoView`, 60ms) for the dead spotlight sections; the dashboard Studio Spotlight card wired to navigate; the sidebar's rail buttons and Recent Projects tiles re-wired through the new focus handlers (desktop aside + mobile drawer share the same content, so one change covers both).
+
+The new `react-hooks/set-state-in-effect` lint rule rejected the first implementation (synchronous setState in an effect body) — refactored to the React-documented render-time adjustment pattern, which also made the mount case explicit.
+
+Verification: lint ✓, typecheck ✓, 131/131 tests ✓ (121 + 10 new resolver tests), production build from a clean `.next` ✓, smoke suite 23/23 (17 prior + 6 new: recent-project focus, sticky focus across away-and-back, dashboard spotlight card, art-history rail panel, partner rail panel, plain-INSPO panel persistence). Browser-verified side-by-side against the live for every fixed flow, including the breadcrumb-reset-then-away-and-back edge and the mobile drawer's focus tile. Both studios left pristine (clone 0/0; live 0/0, re-verified after cleaning my own recon rows too).
+
+Documentation aligned: README (r6 status row, feature table, 131-test description, 23-check smoke suite), AGENTS.md (rail-focus invariants, counts), CLAUDE.md (resolver test bullet, smoke checks), PAD v1.5 (revision block [R6], §3.3 Pattern 5 — the rail focus flows, §7.1 distribution 108 unit + 23 action), and this session record.
+
+**Session 9 complete — focus-flow parity achieved.**
+
+**Verification:** all claims executed and observed this session; the only accepted divergences remain documented; the live account is pristine (PROJECTS 0 / SUPPLIES 0 / INSPO 15).
+
+**Suggested next steps:** watch the CI verify-gate run on the pushed commit; if further live drift is suspected, re-run the four-view VLM comparison first (it is the cheapest full-surface check), then the smoke suite.
