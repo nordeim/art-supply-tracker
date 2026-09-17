@@ -1,9 +1,9 @@
-# AST Studio — Master Project Architecture Document (PAD) v1.8
+# AST Studio — Master Project Architecture Document (PAD) v1.9
 
 **Classification:** Internal Engineering Reference
 **Status:** DEFINITIVE, PRODUCTION-LOCKED BLUEPRINT
 **Companion Document:** `README.md` (onboarding), `AGENTS.md` (agent instructions), `CLAUDE.md` (engineering standards)
-**Last Updated:** 2026-09-17 (r9)
+**Last Updated:** 2026-09-18 (r10)
 **Audience:** Senior Engineers, Tech Leads, DevOps, and Onboarding Engineers
 **Rule:** Every architectural decision in this document traces to a specific rationale.
 Nothing is here "because it's popular."
@@ -152,6 +152,32 @@ Nothing is here "because it's popular."
   51px forgot pin was a pre-hydration artifact). Pinned by the extended
   `login-fidelity.test.ts` + `validation.test.ts`; 202 tests total,
   23 smoke checks, all gates green.
+- `[R10]` Session-15 drawer-scrim pass (2026-09-18): a fresh recon on the
+  r9 tree (9 VLM comparisons of the desktop views, the mobile views, the
+  drawers, and the login page at both viewports — plus DOM spot-checks:
+  header 1920×88 + logo 222×56, the desktop chat structure rows
+  (Community 1620/121, hi 1669/414, brower 1669/632, testing 1669/818),
+  the memory popover (1620,185) 267×66, the desktop login card
+  (494,464) 480×429, chat timestamps, and a live export-payload capture
+  (byte-identical `app`/`version`/`projects`/`supplies` shape) — all at
+  parity) surfaced one residual chrome gap: the mobile drawer scrim. The
+  live renders ONE shared scrim — `fixed inset-0 z-40 bg-black/60
+  md:hidden` — a plain 60% dim with NO backdrop blur, stacked below the
+  z-50 drawers, and mounted/unmounted instantly (measured at click-time:
+  the scrim is gone while the drawer is still mid-slide). The clone had
+  `backdrop-blur-sm` on the scrim (visibly blurring the underlying page —
+  VLM flagged it unprompted), z-50 (same layer as the drawers), and a
+  `transition-opacity` fade on the sidebar's scrim. Fixed in
+  `studio-app.tsx` + `studio-sidebar.tsx` (the sidebar scrim also became
+  conditionally mounted, matching the live's unmount behavior) and
+  pinned by the new `drawer-fidelity.test.ts` (7 pins). Two accepted
+  divergences re-confirmed and documented: the mobile login card's 0.5px
+  fractional offset (the live's 357px card centers in its 358px content
+  column — Amplify internal responsive layout; desktop identical) and the
+  live chat's prior-agent residue message (the mobile chat input sits
+  78px lower on the live purely from that extra row). 209 tests total,
+  23 smoke checks, all gates green, VLM PARITY on the fixed drawer
+  pairs.
 
 ---
 
@@ -816,7 +842,7 @@ CSS — distinct from the utility purple.
 | Category | Count | Location | Framework |
 |---|---|---|---|
 | Static | — | `eslint .` / `tsc --noEmit` | ESLint 9 + TS 5.9 strict |
-| Automated unit | 179 tests | `src/lib/*.test.ts` — studio-domain (incl. bundle-pinned style maps + edit-panel budget/option mapping), design-tokens (globals.css literal pinning incl. the Tailwind-v3 radius scale and the zero-webfont stack), validation (incl. the normalized import gate, the Cognito password-policy rules + permissive sign-in schema), export-payload, rate-limit, inspiration (incl. the rail section resolver with the live's inert "quote" / "spotlight-kevin-lewis" quirks), seed-fidelity (scripts/seed.ts pinned to the live chat byte-for-byte, typos included), login-fidelity + chat-fidelity (the live's measured Amplify login chrome incl. the alert-box error chrome, policy stack, reset-confirmation view, and content-width link buttons; logo aspect; chat-panel structure) | Vitest (node env, `@/` alias) |
+| Automated unit | 186 tests | `src/lib/*.test.ts` — studio-domain (incl. bundle-pinned style maps + edit-panel budget/option mapping), design-tokens (globals.css literal pinning incl. the Tailwind-v3 radius scale and the zero-webfont stack), validation (incl. the normalized import gate, the Cognito password-policy rules + permissive sign-in schema), export-payload, rate-limit, inspiration (incl. the rail section resolver with the live's inert "quote" / "spotlight-kevin-lewis" quirks), seed-fidelity (scripts/seed.ts pinned to the live chat byte-for-byte, typos included), login-fidelity + chat-fidelity (the live's measured Amplify login chrome incl. the alert-box error chrome, policy stack, reset-confirmation view, and content-width link buttons; logo aspect; chat-panel structure), drawer-fidelity (the mobile drawers' shared z-40 no-blur scrim with instant mount/unmount) | Vitest (node env, `@/` alias) |
 | Automated action | 23 tests | `src/actions/studio.test.ts` (throwaway SQLite DB, mocked auth seam — incl. the mid-import rollback contract) | Vitest |
 | Manual golden paths | 11 flows | README "Testing & Quality" | Browser-executed (pinned by `scripts/smoke_functional.py`, 23 checks) |
 | CI verify-gate | — | `.github/workflows/verify-gate.yml` (lint + typecheck + test + build) | GitHub Actions |
@@ -969,6 +995,8 @@ public exposure).
 | Medium | ~~Chat panel structure nested~~ | One `space-y-3` wrapper (vs the live's sticky header + scroll-container split) rendered the whole community column 16px high; the clone also auto-scrolled new messages (the live does not) | **Resolved 2026-09-17 (r8)** — `sticky top-4` header + `max-h` scroll container; auto-scroll removed; pinned by `chat-fidelity.test.ts` |
 | Medium | ~~Login Amplify chrome incomplete~~ | Missing eye-segment borders, wrong grays (#89949b vs #89949f), visible typed text (live renders invisible #0d1a26), no tab-strip top border, mobile h1 leading 1.25 | **Resolved 2026-09-17 (r8)** — all pinned by `login-fidelity.test.ts`; pixel-verified against the live |
 | High | ~~Auth error chrome and reset flow diverged~~ | Server errors rendered as bare paragraphs (the live uses the Amplify alert box with icon + dismiss); the reset flow dead-ended on a static support notice instead of the live's Code/New Password confirmation view; signup lacked the Cognito password-policy rule stack; duplicate-email copy diverged; link buttons were full-width | **Resolved 2026-09-17 (r9)** — Amplify alert box (bg #FCE9E9, warning/X SVG paths, working dismiss), the full confirmation view (Submit answers with the live's invalid-code rejection — no mailer, the honest simulation), the policy-rule stack + mismatch line, "User already exists" copy, native validation, content-width 35px link buttons; all DOM-verified byte-identical against the live and pinned by tests |
+| Medium | ~~Mobile drawer scrim chrome diverged~~ | The clone's drawer scrim carried `backdrop-blur-sm` (visibly blurring the page behind the drawer — the live only dims), floated at z-50 (the live's scrim is z-40, below the z-50 drawers), and the sidebar's scrim faded via transition-opacity (the live mounts/unmounts instantly) | **Resolved 2026-09-18 (r10)** — both scrims render the live's shared `fixed inset-0 z-40 bg-black/60 md:hidden` shape; the sidebar scrim became conditionally mounted (instant, unmounts when closed); pinned by `drawer-fidelity.test.ts`; VLM-verified PARITY on both drawer pairs |
+| Low | Mobile login card offset by 0.5px | The live's card is 357px centered in its 358px content column (x=16.5 — Amplify internal responsive fractional layout); the clone fills the column (358px at x=16). Desktop is byte-identical (480×429 at 494,464) | Accepted (sub-pixel, below the visibility threshold — reproducing it would require guessing Amplify's viewport-dependent internal CSS) |
 | Low | View state not URL-addressable | Browser back doesn't switch studio views | Accepted (ADR-001 consequence) |
 | Low | Chat avatar colors keyed to seeded usernames | New users get the default purple avatar | Accepted (matches original's initials behavior) |
 | Low | SQLite single-writer | No multi-process horizontal scale | Accepted (ADR-002); swap to Postgres by changing `provider` + URL if ever needed |

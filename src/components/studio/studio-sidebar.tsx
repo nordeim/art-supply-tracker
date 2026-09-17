@@ -64,14 +64,17 @@ export function StudioSidebar(props: StudioSidebarProps) {
       </aside>
 
       {/* Mobile drawer — `inert` keeps the closed drawer out of the keyboard
-       * tab order (aria-hidden alone leaves focusable children reachable). */}
-      <div
-        className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity md:hidden ${
-          sidebarOpen ? "opacity-100" : "pointer-events-none opacity-0"
-        }`}
-        onClick={onCloseSidebar}
-        aria-hidden="true"
-      />
+       * tab order (aria-hidden alone leaves focusable children reachable).
+       * The scrim is the live's shared chrome verbatim (r10): z-40, plain
+       * black/60 dim, NO backdrop blur, instant mount/unmount — the live's
+       * scrim unmounts at click-time while the drawer still animates out. */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 md:hidden"
+          onClick={onCloseSidebar}
+          aria-hidden="true"
+        />
+      )}
       <nav
         aria-label="Studio tools"
         aria-hidden={!sidebarOpen}

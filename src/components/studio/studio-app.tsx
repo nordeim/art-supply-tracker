@@ -337,10 +337,12 @@ export function StudioApp({
 
       {/* Mobile chat drawer — the live app's fixed right panel. `inert` keeps
        * the closed drawer out of the keyboard tab order (aria-hidden alone
-       * leaves focusable children reachable). */}
+       * leaves focusable children reachable). The scrim is the live's shared
+       * chrome verbatim (r10): z-40, plain black/60 dim, NO backdrop blur,
+       * instant mount/unmount while the drawer itself animates. */}
       {chatPanelOpen && (
         <div
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 z-40 bg-black/60 md:hidden"
           onClick={() => setChatPanelOpen(false)}
           aria-hidden="true"
         />

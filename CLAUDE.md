@@ -131,7 +131,7 @@ not secret — rotate before any public deployment).
 ### Testing Strategy
 
 Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
-`src/**/*.test.ts`). The suite (202 tests) pins:
+`src/**/*.test.ts`). The suite (209 tests) pins:
 
 - **Studio-domain vocabulary** — the per-category `SUPPLY_TYPE_LISTS` in the
   live app's tokens (Paint/Brush/Pastel/Paper/Canvas/Medium/Other categories,
@@ -203,6 +203,12 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
   native-validation attribute set, the sticky community header +
   scroll-container split (the sticky `top-4` displacement is load-bearing),
   and the absence of chat auto-scroll (the live has none).
+- **Drawer-scrim fidelity** (`drawer-fidelity.test.ts`) — file-content pins
+  on the live's measured mobile chrome: both drawer scrims render the
+  live's shared `fixed inset-0 z-40 bg-black/60 md:hidden` shape — no
+  backdrop blur (the page dims, never blurs), z-40 below the z-50
+  drawers, and instant mount/unmount (the live's scrim unmounts at
+  click-time while the drawer still animates out — no opacity fade).
 - **Action layer** (`src/actions/studio.test.ts`) — the mutation surface
   against a throwaway SQLite database with the auth seam mocked: CRUD,
   ownership/IDOR checks, supply assignment, delete-side-effects,

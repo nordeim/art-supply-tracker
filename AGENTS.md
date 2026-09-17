@@ -11,7 +11,7 @@ Run from the repo root. Bun is the package manager — use `bun`, never `npm`/`y
 | `bun run dev` | Dev server on :3000 |
 | `bun run lint` | ESLint (next/core-web-vitals + next/typescript) |
 | `bun run typecheck` | `tsc --noEmit`, strict |
-| `bun run test` | Vitest — 202 tests: domain vocabulary, bundle-pinned status/condition style maps, design-token literals (incl. the Tailwind-v3 radius scale and the zero-webfont InterVariable stack), validation (incl. the normalized import gate, the Cognito password-policy rules, and the permissive sign-in schema), export/import wire format, rate limiting, the inspiration rail section resolver (incl. the live's inert "quote" / "spotlight-kevin-lewis" quirks), seeded chat-history fidelity (the live's five community messages byte-for-byte — the author's own typos, "KIm"/"brower", pinned so they cannot be silently "corrected"), login/header/chat-panel fidelity (the responsive logo's intrinsic 1068×269 aspect, the Amplify eye-toggle chrome, the invisible-typing input quirk, the tab strip's 2px top border, the sticky community header + scroll-container split, the absence of chat auto-scroll, the pale-pink dismissible Amplify alert box with its exact warning/X icon paths, the Cognito policy-rule stack, the Reset Password confirmation view, the content-width 35px link buttons, and the native-validation attribute set), action layer (each action file runs against a throwaway SQLite DB, incl. the mid-import rollback contract) |
+| `bun run test` | Vitest — 209 tests: domain vocabulary, bundle-pinned status/condition style maps, design-token literals (incl. the Tailwind-v3 radius scale and the zero-webfont InterVariable stack), validation (incl. the normalized import gate, the Cognito password-policy rules, and the permissive sign-in schema), export/import wire format, rate limiting, the inspiration rail section resolver (incl. the live's inert "quote" / "spotlight-kevin-lewis" quirks), seeded chat-history fidelity (the live's five community messages byte-for-byte — the author's own typos, "KIm"/"brower", pinned so they cannot be silently "corrected"), login/header/chat-panel fidelity (the responsive logo's intrinsic 1068×269 aspect, the Amplify eye-toggle chrome, the invisible-typing input quirk, the tab strip's 2px top border, the sticky community header + scroll-container split, the absence of chat auto-scroll, the pale-pink dismissible Amplify alert box with its exact warning/X icon paths, the Cognito policy-rule stack, the Reset Password confirmation view, the content-width 35px link buttons, and the native-validation attribute set), drawer-scrim fidelity (the mobile drawers' shared `fixed inset-0 z-40 bg-black/60 md:hidden` scrim — no blur, below the z-50 drawers, instant mount/unmount), action layer (each action file runs against a throwaway SQLite DB, incl. the mid-import rollback contract) |
 | `python3 scripts/smoke_functional.py` | Browser-driven smoke suite (needs `agent-browser` CLI + running server) — 23 golden-path checks incl. the post-create supplies navigation regression and the Recent Projects sticky-focus flow; leaves the studio pristine |
 | `bun run db:push` | Push `prisma/schema.prisma` to SQLite (`db/custom.db`) — required after schema edits |
 | `bun run db:generate` | Regenerate Prisma Client |
@@ -142,6 +142,13 @@ runs the same gate on every push.
   desktop, plain `space-y-4` in the mobile drawer). The live has NO chat
   auto-scroll — do not re-add stickToBottom/scrollTop logic (pinned by
   `chat-fidelity.test.ts`).
+- **The mobile drawer scrim is the live's shared chrome (r10)**: both
+  drawers dim the page behind ONE scrim shape — `fixed inset-0 z-40
+  bg-black/60 md:hidden` — with NO backdrop blur (the page dims, never
+  blurs), z-40 (below the z-50 drawers), and instant mount/unmount
+  (measured: the live's scrim is gone at click-time while the drawer
+  still animates out; no transition-opacity fade). Pinned by
+  `drawer-fidelity.test.ts`.
 - **Chat polling** (`studio-chat.tsx`) skips ticks when
   `document.visibilityState !== "visible"`; new messages render without
   scrolling anything (the live's behavior).
