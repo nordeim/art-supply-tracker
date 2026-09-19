@@ -77,6 +77,13 @@ Prisma 6.19.2 + SQLite · Zod 4.3.5 · ESLint 9.
   values only (`var()` chains are dropped by the build; `--font-sans` is the
   sole sanctioned var() reference). No `tailwind.config.js` exists; don't add
   one.
+- The Tailwind DEFAULT palette is pinned to the live's v3 values (r14):
+  `--color-pink-200/300/400/500`, `--color-cyan-400`, and
+  `--color-blue-400/500` in the `@theme` block carry the live's TW3 hex
+  values, because TW4's re-derived oklch palette drifts (up to 34/channel).
+  Default-family classes (`border-pink-400/60` etc.) are SAFE to use and
+  match the live DOM's class strings verbatim — do not convert them to
+  literals, and pin any NEW default family before using it.
 - The hover variant is overridden to the live's semantics:
   `@custom-variant hover (&:hover);` (r13) — the live's Tailwind v3 has no
   `@media (hover: hover)` guard, so its hover tints apply (and stick) on
@@ -140,7 +147,7 @@ not secret — rotate before any public deployment).
 ### Testing Strategy
 
 Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
-`src/**/*.test.ts`). The suite (247 tests) pins:
+`src/**/*.test.ts`). The suite (260 tests) pins:
 
 - **Studio-domain vocabulary** — the per-category `SUPPLY_TYPE_LISTS` in the
   live app's tokens (Paint/Brush/Pastel/Paper/Canvas/Medium/Other categories,
@@ -257,6 +264,12 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
   Tailwind-v3 plain-`:hover` semantics (r13-F2) and the corrected theme
   comment (the `:root` purple/yellow are NOT dead — the hyphenated
   families resolve them).
+- **Default-palette pins** (in `design-tokens.test.ts`, r14) — the seven
+  DEFAULT-family tokens (`pink-200/300/400/500`, `cyan-400`,
+  `blue-400/500`) pinned to the live's Tailwind-v3 values with a negative
+  pin on TW4's drift values, plus usage-site class-string pins (the Sign
+  Out button, the memory button's text, the email gradient, the barcode
+  focus trio, the chat alert) guarding the class-string parity contract.
 - **Action layer** (`src/actions/studio.test.ts`) — the mutation surface
   against a throwaway SQLite database with the auth seam mocked: CRUD,
   ownership/IDOR checks, supply assignment, delete-side-effects (incl. the

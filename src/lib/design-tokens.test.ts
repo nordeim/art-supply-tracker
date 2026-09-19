@@ -80,6 +80,132 @@ describe("AST glow shadows (live bundle verbatim)", () => {
 });
 
 /**
+ * Tailwind DEFAULT palette pins — r14. The live app runs Tailwind v3, whose
+ * default palette values the app uses on seven surfaces (the Sign Out
+ * button, the memory button's text, the header email gradient, the barcode
+ * fields' focus chrome, the chat error alert). Tailwind v4 re-derived its
+ * default palette in oklch and the values drift — pink-400 renders
+ * #fb64b6 on TW4 vs the live's #f472b6 (a 14/channel delta on the
+ * always-visible Sign Out border), cyan-400 #00d2ef vs #22d3ee (34 in the
+ * red channel of the email gradient). The @theme pins below restore the
+ * live's v3 values, which makes the emitted utilities byte-identical to
+ * the live's compiled rules (`.border-pink-400\/60` → `#f472b699`,
+ * measured from studiobeta.artsupplytracker.com/assets/index-BNZKRdTa.css
+ * on 2026-09-19: `.text-pink-200{rgb(251 207 232)}`,
+ * `.text-pink-300{rgb(249 168 212)}`, `.border-pink-400\/60{#f472b699}`,
+ * `.hover\:bg-pink-500\/20:hover{#ec489933}`, `.from-cyan-400{#22d3ee}`,
+ * `.via-blue-500{#3b82f6}`, `.to-pink-500{#ec4899}`,
+ * `.border-blue-500\/40{#3b82f666}`,
+ * `.focus\:border-blue-400:focus{rgb(96 165 250)}`,
+ * `.ring-blue-500\/30:focus{#3b82f64d}`).
+ */
+describe("Tailwind default palette (live Tailwind-v3 values, r14)", () => {
+  it("pins pink-200 to the live's #fbcfe8 (Sign Out text)", () => {
+    expect(token("color-pink-200")).toBe("#fbcfe8");
+  });
+
+  it("pins pink-300 to the live's #f9a8d4 (memory button + chat alert)", () => {
+    expect(token("color-pink-300")).toBe("#f9a8d4");
+  });
+
+  it("pins pink-400 to the live's #f472b6 (Sign Out idle border)", () => {
+    expect(token("color-pink-400")).toBe("#f472b6");
+  });
+
+  it("pins pink-500 to the live's #ec4899 (Sign Out hover bg, gradient end)", () => {
+    expect(token("color-pink-500")).toBe("#ec4899");
+  });
+
+  it("pins cyan-400 to the live's #22d3ee (email gradient start)", () => {
+    expect(token("color-cyan-400")).toBe("#22d3ee");
+  });
+
+  it("pins blue-400 to the live's #60a5fa (barcode focus border)", () => {
+    expect(token("color-blue-400")).toBe("#60a5fa");
+  });
+
+  it("pins blue-500 to the live's #3b82f6 (gradient via, barcode ring)", () => {
+    expect(token("color-blue-500")).toBe("#3b82f6");
+  });
+
+  it("rejects the Tailwind v4 drift values for the pinned families", () => {
+    // TW4's re-derived palette (the pre-r14 rendered values) must not
+    // reappear as the declared theme values.
+    const drifted: Record<string, string> = {
+      pink200: "#fccee8",
+      pink300: "#fda5d5",
+      pink400: "#fb64b6",
+      pink500: "#f6339a",
+      cyan400: "#00d2ef",
+      blue400: "#54a2ff",
+      blue500: "#3080ff",
+    };
+    for (const [name, value] of Object.entries(drifted)) {
+      expect(token(`color-${kebab(name)}`)).not.toBe(value);
+    }
+  });
+});
+
+/**
+ * Default-palette usage sites (r14). The pins above make the DEFAULT
+ * families safe to use, so the app keeps the live's own class strings
+ * verbatim (class-string parity with the live DOM — the original cloning
+ * intent) instead of converting to literals. These pins guard against
+ * someone "fixing" a surface by swapping a class to a literal (or to the
+ * ast-* families, which are DIFFERENT colors) and breaking the
+ * class-string parity contract.
+ */
+describe("default-palette usage sites (class-string parity, r14)", () => {
+  const studioApp = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "../components/studio/studio-app.tsx"),
+    "utf8",
+  );
+  const studioChat = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "../components/studio/studio-chat.tsx"),
+    "utf8",
+  );
+  const supplyModal = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "../components/studio/supply-modal.tsx"),
+    "utf8",
+  );
+  const supplyEditPanel = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "../components/studio/supply-edit-panel.tsx"),
+    "utf8",
+  );
+
+  it("sign-out button uses the pinned pink families (live class string)", () => {
+    expect(studioApp).toContain(
+      "rounded-xl border border-pink-400/60 px-4 py-2 text-sm text-pink-200 hover:bg-pink-500/20",
+    );
+  });
+
+  it("memory button text uses the pinned pink-300", () => {
+    expect(studioApp).toContain("text-sm text-pink-300");
+  });
+
+  it("email gradient uses the pinned cyan/blue/pink stops", () => {
+    expect(studioApp).toContain(
+      "bg-gradient-to-r from-cyan-400 via-blue-500 to-pink-500",
+    );
+  });
+
+  it("chat error alert uses the pinned pink-300", () => {
+    expect(studioChat).toContain('className="mb-2 text-xs text-pink-300"');
+  });
+
+  it("barcode fields use the pinned blue families (modal + edit panel)", () => {
+    const barcodeClasses =
+      "border-blue-500/40 bg-black/30 px-3 py-2 text-white transition placeholder:text-white/40 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30";
+    expect(supplyModal).toContain(barcodeClasses);
+    expect(supplyEditPanel).toContain(barcodeClasses);
+  });
+});
+
+function kebab(camel: string): string {
+  return camel.replace(/([a-z])(\d)/g, "$1-$2").replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
+}
+
+/**
  * Radius scale — r8. The scaffold's @theme carried shadcn's larger radius
  * tokens (sm/md/lg/xl = 0.75/0.875/1/1.25rem), so every `rounded-lg`/`
  * rounded-xl` surface rendered 16px/20px while the live app (Tailwind v3

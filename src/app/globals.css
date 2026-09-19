@@ -86,6 +86,30 @@
   --radius-md: 0.375rem;
   --radius-lg: 0.5rem;
   --radius-xl: 0.75rem;
+
+  /* Tailwind DEFAULT palette pins — r14. The live app runs Tailwind v3 and
+   * its default palette supplies seven surfaces here: the Sign Out button
+   * (border-pink-400/60 + text-pink-200 + hover:bg-pink-500/20), the memory
+   * button's text (text-pink-300), the header email gradient (from-cyan-400
+   * via-blue-500 to-pink-500), the barcode fields' focus chrome
+   * (border-blue-500/40 / focus:border-blue-400 / focus:ring-blue-500/30),
+   * and the chat error alert (text-pink-300). Tailwind v4 re-derived its
+   * default palette in oklch and the values drift from v3's (pink-400
+   * #fb64b6 vs the live's #f472b6 — a 14/channel render delta on the
+   * always-visible Sign Out border; cyan-400 #00d2ef vs #22d3ee — 34 in the
+   * red channel of the email gradient). Pinning the v3 values below makes
+   * the emitted utilities byte-identical to the live's compiled rules
+   * (.border-pink-400\/60 → #f472b699 — measured from the live bundle's
+   * index-BNZKRdTa.css). Do NOT use other default-palette families without
+   * pinning them to the live's v3 values first (pinned by
+   * design-tokens.test.ts). */
+  --color-pink-200: #fbcfe8;
+  --color-pink-300: #f9a8d4;
+  --color-pink-400: #f472b6;
+  --color-pink-500: #ec4899;
+  --color-cyan-400: #22d3ee;
+  --color-blue-400: #60a5fa;
+  --color-blue-500: #3b82f6;
 }
 
 /*

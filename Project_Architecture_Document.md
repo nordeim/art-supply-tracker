@@ -1,9 +1,9 @@
-# AST Studio — Master Project Architecture Document (PAD) v1.12
+# AST Studio — Master Project Architecture Document (PAD) v1.13
 
 **Classification:** Internal Engineering Reference
 **Status:** DEFINITIVE, PRODUCTION-LOCKED BLUEPRINT
 **Companion Document:** `README.md` (onboarding), `AGENTS.md` (agent instructions), `CLAUDE.md` (engineering standards)
-**Last Updated:** 2026-09-19 (r12)
+**Last Updated:** 2026-09-19 (r14)
 **Audience:** Senior Engineers, Tech Leads, DevOps, and Onboarding Engineers
 **Rule:** Every architectural decision in this document traces to a specific rationale.
 Nothing is here "because it's popular."
@@ -281,6 +281,42 @@ Nothing is here "because it's popular."
   reference. 247 tests, all gates green, production build + production-
   server probe verified (literal classes, hover values, zero webfonts, no
   dev badge).
+
+- `[R14]` Session-22 default-palette pin pass (2026-09-19): a fresh
+  full-surface recon on the r13 tree (8 paired VLM comparisons + pixel
+  structural diffs at the identical r13 values — 0.23–1.14% hot, every
+  cluster in the documented accepted set; the export wire byte-identical
+  at 121 bytes; 23/23 smoke checks; the r12 stat-tile and r13 memory-
+  button/hover-variant fixes verified intact) plus a NEW probe dimension —
+  a systematic DOM-level hover-contract sweep across both sessions (the
+  probe class that found r13-F1, now extended to every interactive
+  element). The sweep surfaced one real divergence (r14-F1): the app uses
+  Tailwind DEFAULT palette classes on seven surfaces (the Sign Out
+  button's `border-pink-400/60` + `text-pink-200` + `hover:bg-pink-500/20`,
+  the memory button's `text-pink-300`, the header email gradient's
+  `from-cyan-400 via-blue-500 to-pink-500`, the barcode fields' blue focus
+  trio, the chat error alert's `text-pink-300`) — and Tailwind v4
+  re-derived its default palette in oklch, so those classes resolved
+  values that drift from the live's Tailwind v3 palette (pink-400
+  #fb64b6 vs the live's #f472b6 — a 14/channel delta on the always-visible
+  Sign Out border; cyan-400 #00d2ef vs #22d3ee — 34 in the red channel;
+  blue-500 #3080ff vs #3b82f6; pink-500 #f6339a vs #ec4899; the drift was
+  sub-threshold in screenshot diffs (Δ22 summed vs the 30 threshold) —
+  the same "invisible in captures" class as r13-F1's hovers). Fixed by
+  pinning the seven default-family tokens to the live's v3 values in the
+  `@theme` block (spike-verified first: a user @theme override REPLACES
+  TW4's default emission entirely — single declaration, no lab()
+  re-declaration — and the baked fallback rules become byte-identical to
+  the live's compiled rules: `.border-pink-400\/60` → `#f472b699`,
+  `.border-blue-500\/40` → `#3b82f666`). The usage sites KEEP the live's
+  class strings verbatim (class-string parity — the pins make the default
+  families safe; no literals needed). Verified at CSS (dev + production
+  builds carry the pinned rules), computed-style (text/gradient stops
+  byte-identical rgb forms), and rendered-pixel level (canvas readback
+  maxd=0 for every token pair, including the oklab hover forms). Pinned
+  by 13 new design-tokens tests (7 positive token pins + a TW4-drift
+  negative + 5 usage-site class-string pins). 260 tests, all gates green;
+  the 8 `docs/screenshots/` re-shot on the remediated tree.
 
 ---
 
@@ -870,6 +906,26 @@ literal values on that button, pinned by `header-button-fidelity.test.ts`).
 The login card's 1px border uses the literal `#5B3FD3` from the live app's
 custom CSS — distinct from the utility purple.
 
+**Tailwind default-palette pins (r14).** Seven surfaces use the DEFAULT
+families rather than the ast-* tokens — the Sign Out button
+(`border-pink-400/60`, `text-pink-200`, `hover:bg-pink-500/20`), the
+memory button's text (`text-pink-300`), the header email gradient
+(`from-cyan-400 via-blue-500 to-pink-500`), the barcode fields' focus
+trio (`border-blue-500/40` / `focus:border-blue-400` /
+`focus:ring-blue-500/30`), and the chat error alert (`text-pink-300`).
+Tailwind v4 re-derived its default palette in oklch and those values
+drift from the live's Tailwind v3 palette (up to 34/channel — cyan-400
+`#00d2ef` vs the live's `#22d3ee`), so the @theme block pins the seven
+default-family tokens to the live's v3 values: `--color-pink-200:
+#fbcfe8`, `--color-pink-300: #f9a8d4`, `--color-pink-400: #f472b6`,
+`--color-pink-500: #ec4899`, `--color-cyan-400: #22d3ee`,
+`--color-blue-400: #60a5fa`, `--color-blue-500: #3b82f6`. With the pins,
+the emitted utilities are byte-identical to the live's compiled rules
+(`.border-pink-400\/60` → `#f472b699`) and the usage sites keep the
+live's class strings verbatim. Do not use OTHER default-palette families
+without pinning them to the live's v3 values first (all pinned by
+`design-tokens.test.ts`).
+
 ### 5.3 Component Primitives
 
 - shadcn/ui (New York style) provides dialog, select, toast primitives in
@@ -948,7 +1004,7 @@ custom CSS — distinct from the utility purple.
 | Category | Count | Location | Framework |
 |---|---|---|---|
 | Static | — | `eslint .` / `tsc --noEmit` | ESLint 9 + TS 5.9 strict |
-| Automated unit | 219 tests | `src/lib/*.test.ts` — studio-domain (incl. bundle-pinned style maps + edit-panel budget/option mapping + the r11 two-state condition maps and quantity format gate), design-tokens (globals.css literal pinning incl. the Tailwind-v3 radius scale and the zero-webfont stack), validation (incl. the normalized import gate, the Cognito password-policy rules + permissive sign-in schema, the two-state condition + quantity format boundary), export-payload (incl. the three-slot quantity semantics and the empty-qty/explicit-ok round-trip), rate-limit, inspiration (incl. the rail section resolver with the live's inert "quote" / "spotlight-kevin-lewis" quirks), seed-fidelity (scripts/seed.ts pinned to the live chat byte-for-byte, typos included), login-fidelity + chat-fidelity (the live's measured Amplify login chrome incl. the alert-box error chrome, policy stack, reset-confirmation view, and content-width link buttons; logo aspect; chat-panel structure), drawer-fidelity (the mobile drawers' shared z-40 no-blur scrim with instant mount/unmount), supply-fidelity (the create modal's inert Stock Status select, the quantity format gate's exact copy, the edit panel's `?? "ok"` init, the chip's unconditional qty label, the detail panel's raw quantity), sidebar-tile-fidelity (the stat tiles' per-tile ACTIVE accent pairs — electric blue for Projects/Supplies, lavender for Inspo — with the card bg and hover classes dropped while active; the constant inner text classes; a negative pin on the old hardcoded electric-blue string), header-button-fidelity (the memory button's hyphen-family literal colors — idle border #5b3fd3, hover trio #f4f27a — with negative pins on the utility families, plus the `@custom-variant hover (&:hover);` override restoring the live's TW3 plain-:hover semantics) | Vitest (node env, `@/` alias) |
+| Automated unit | 232 tests | `src/lib/*.test.ts` — studio-domain (incl. bundle-pinned style maps + edit-panel budget/option mapping + the r11 two-state condition maps and quantity format gate), design-tokens (globals.css literal pinning incl. the Tailwind-v3 radius scale, the zero-webfont stack, and the r14 default-palette pins — pink-200/300/400/500, cyan-400, blue-400/500 pinned to the live's v3 values with a TW4-drift negative and usage-site class-string pins), validation (incl. the normalized import gate, the Cognito password-policy rules + permissive sign-in schema, the two-state condition + quantity format boundary), export-payload (incl. the three-slot quantity semantics and the empty-qty/explicit-ok round-trip), rate-limit, inspiration (incl. the rail section resolver with the live's inert "quote" / "spotlight-kevin-lewis" quirks), seed-fidelity (scripts/seed.ts pinned to the live chat byte-for-byte, typos included), login-fidelity + chat-fidelity (the live's measured Amplify login chrome incl. the alert-box error chrome, policy stack, reset-confirmation view, and content-width link buttons; logo aspect; chat-panel structure), drawer-fidelity (the mobile drawers' shared z-40 no-blur scrim with instant mount/unmount), supply-fidelity (the create modal's inert Stock Status select, the quantity format gate's exact copy, the edit panel's `?? "ok"` init, the chip's unconditional qty label, the detail panel's raw quantity), sidebar-tile-fidelity (the stat tiles' per-tile ACTIVE accent pairs — electric blue for Projects/Supplies, lavender for Inspo — with the card bg and hover classes dropped while active; the constant inner text classes; a negative pin on the old hardcoded electric-blue string), header-button-fidelity (the memory button's hyphen-family literal colors — idle border #5b3fd3, hover trio #f4f27a — with negative pins on the utility families, plus the `@custom-variant hover (&:hover);` override restoring the live's TW3 plain-:hover semantics) | Vitest (node env, `@/` alias) |
 | Automated action | 28 tests | `src/actions/studio.test.ts` (throwaway SQLite DB, mocked auth seam — incl. the mid-import rollback contract, the mid-delete no-strand contract, and the two-state condition round-trips) | Vitest |
 | Manual golden paths | 11 flows | README "Testing & Quality" | Browser-executed (pinned by `scripts/smoke_functional.py`, 23 checks) |
 | CI verify-gate | — | `.github/workflows/verify-gate.yml` (lint + typecheck + test + build) | GitHub Actions |
@@ -1109,6 +1165,7 @@ public exposure).
 | Medium | ~~Header memory button rendered the wrong colors (hyphen-family)~~ | The live's "✧ What was I working on?" button is the ONLY consumer of its HYPHENATED utility families, which resolve the `:root` values (idle border `#5b3fd3/30`, hover border `#f4f27a/70`, hover bg `#f4f27a/20`, hover text `#f4f27a`) — the clone's verbatim class copy resolved them to the UTILITY values (#5a3a8e / #ffd5a8): the wrong idle border (always visible) and all three hover colors on real pointer devices | **Resolved 2026-09-19 (r13)** — literal arbitrary values on the button (the second sanctioned literal exception alongside the login card's `border-[#5B3FD3]`); emitted fallback rules byte-identical to the live's; canvas-verified identical rendered pixels; pinned by `header-button-fidelity.test.ts` |
 | Medium | ~~Hover utilities media-guarded (TW4 vs the live's TW3)~~ | Tailwind v4 wraps `hover:` utilities in `@media (hover: hover)` — on touch devices the live's hover tints apply and stick on tap while the clone's never engaged, and in headless captures the clone's hovers never rendered (hover parity unverifiable) | **Resolved 2026-09-19 (r13)** — `@custom-variant hover (&:hover);` in globals.css restores the live's plain-:hover semantics; the paired popover capture (pointer resting on the button on both sides) verifies the hover colors render identically; pinned by `header-button-fidelity.test.ts` |
 | Low | ~~PAD/globals.css claimed the live's :root purple/yellow are "dead values"~~ | The r4 token doctrine's supporting comment ("no utility or custom rule ever resolves those") was disproven by r13 — the live's hyphenated families resolve exactly those values on the memory button | **Resolved 2026-09-19 (r13)** — comments corrected in globals.css and §5.2 (the coral variable remains genuinely vestigial) |
+| Medium | ~~Tailwind default-palette classes rendered TW4's re-derived values~~ | Seven surfaces use the DEFAULT families (Sign Out button, memory-button text, email gradient, barcode focus trio, chat alert) — and TW4's oklch palette drifts from the live's TW3 values (pink-400 #fb64b6 vs #f472b6, cyan-400 #00d2ef vs #22d3ee — up to 34/channel), rendering wrong colors on the always-visible Sign Out border and the email gradient; sub-threshold in screenshot diffs (Δ22 summed vs the 30 threshold), the same "invisible in captures" class as r13-F1's hovers | **Resolved 2026-09-19 (r14)** — the seven default-family tokens pinned to the live's v3 values in the @theme block (a user override replaces TW4's default emission entirely, spike-verified); emitted utilities byte-identical to the live's rules; canvas-verified identical rendered pixels; usage sites keep the live's class strings verbatim; pinned by design-tokens.test.ts |
 | Low | Mobile login card offset by 0.5px | The live's card is 357px centered in its 358px content column (x=16.5 — Amplify internal responsive fractional layout); the clone fills the column (358px at x=16). Desktop is byte-identical (480×429 at 494,464) | Accepted (sub-pixel, below the visibility threshold — reproducing it would require guessing Amplify's viewport-dependent internal CSS) |
 | Low | Sidebar drawer semantic landmark differs | The live's mobile sidebar drawer is an `<aside>` (no role/label); the clone renders `<nav aria-label="Studio tools">` — a deliberate WCAG improvement documented in CLAUDE.md. Visual parity unaffected (identical classes/geometry, measured r11) | Accepted (accessibility improvement, intentionally kept) |
 | Low | Dev-mode-only browser artifacts | In `next dev`, the Next.js dev-tools badge (the "N" button) and 4 `__nextjs-Geist` FontFaces appear in `document.fonts` — neither ships in the production build (verified r11: prod build has `document.fonts.size === 0` and no badge) | Accepted (dev-mode artifact — sessions comparing dev-mode DOM must not misclassify these as parity gaps; production is the ground truth) |
