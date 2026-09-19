@@ -3,6 +3,13 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* r13: the live app's Tailwind v3 compiles hover: variants as plain `:hover`
+ * selectors (no media guard). Tailwind v4's default hover variant is wrapped
+ * in `@media (hover: hover)`, which never engages on touch devices and in
+ * headless captures — a behavioral divergence from the live (its hover tints
+ * apply and stick on tap). Override the variant to the live's semantics. */
+@custom-variant hover (&:hover);
+
 /*
  * AST Studio theme — tokens extracted from the production app's generated
  * CSS bundle (assets/index-BNZKRdTa.css, captured 2026-09-17).
@@ -16,8 +23,13 @@
    * block. Verified 2026-09-17 against computed styles on
    * studiobeta.artsupplytracker.com: .text-ast_purple = rgb(90,58,142),
    * .text-ast_yellow = rgb(255,213,168), .text-ast_coral = rgb(255,122,122).
-   * (The live :root block carries #5b3fd3/#f4f27a/#ffe0cc, but no utility
-   * or custom rule ever resolves those — they are dead values.) */
+   * (The live :root block carries #5b3fd3/#f4f27a/#ffe0cc — and r13 found
+   * the live's HYPHENATED utility families resolve exactly those :root
+   * values: .border-ast-purple\/30 → #5b3fd34d and the .hover:*-ast-yellow
+   * trio → #f4f27a, all on the header memory button alone. Those four rules
+   * are reproduced as literal values on that button — see
+   * header-button-fidelity.test.ts; every other surface uses the utility
+   * values above.) */
   --color-ast-turquoise: #2ec4b6;
   --color-ast-cyan: #00e6ff;
   --color-ast-purple: #5a3a8e;

@@ -2,7 +2,7 @@
 IMPORTANT: File is read fresh for every conversation. Be brief and practical.
 project_type: nextjs-single-app
 version: 1.0.0
-last_updated: 2026-09-16
+last_updated: 2026-09-19
 ---
 
 # AST Studio — Art Supply Tracker
@@ -77,13 +77,21 @@ Prisma 6.19.2 + SQLite · Zod 4.3.5 · ESLint 9.
   values only (`var()` chains are dropped by the build; `--font-sans` is the
   sole sanctioned var() reference). No `tailwind.config.js` exists; don't add
   one.
+- The hover variant is overridden to the live's semantics:
+  `@custom-variant hover (&:hover);` (r13) — the live's Tailwind v3 has no
+  `@media (hover: hover)` guard, so its hover tints apply (and stick) on
+  touch devices. Do not remove the override; paired screenshot captures
+  must park the pointer neutrally now that clone hovers render.
 - The app is permanently dark — shadcn semantic tokens are pinned to the AST
   dark palette in the same `@theme` block. No `.dark` toggling.
 - Use the `ast-*` palette classes (`text-ast-lavender`, `border-ast-purple/35`,
   `bg-[#120724]` cards, `bg-[#050009]` canvas) — match the token table in
-  README rather than inventing new colors. The login card is the one
-  sanctioned literal-border exception (`border-[#5B3FD3]`, from the live
-  app's custom CSS, distinct from the utility purple).
+  README rather than inventing new colors. Two sanctioned literal-color
+  exceptions come from the live app's own non-utility CSS: the login card's
+  `border-[#5B3FD3]` (its custom CSS) and the header memory button's
+  hyphen-family values (idle border `border-[#5b3fd3]/30`, hover trio
+  `#f4f27a` — the live's `:root` variables, its only hyphenated-utility
+  consumer).
 
 ### Data layer (Prisma + SQLite)
 
@@ -132,7 +140,7 @@ not secret — rotate before any public deployment).
 ### Testing Strategy
 
 Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
-`src/**/*.test.ts`). The suite (238 tests) pins:
+`src/**/*.test.ts`). The suite (247 tests) pins:
 
 - **Studio-domain vocabulary** — the per-category `SUPPLY_TYPE_LISTS` in the
   live app's tokens (Paint/Brush/Pastel/Paper/Canvas/Medium/Other categories,
@@ -238,6 +246,17 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
   while active; the inner text classes (label / value / sub) stay
   constant across both states; a negative pin rejects the old
   single-accent hardcode.
+- **Header-button fidelity + hover semantics**
+  (`header-button-fidelity.test.ts`) — file-content pins on the live's
+  measured header button contract (r13): the memory button is the live's
+  ONLY hyphenated-family consumer — idle border `border-[#5b3fd3]/30`,
+  hover trio `hover:border-[#f4f27a]/70 hover:bg-[#f4f27a]/20
+  hover:text-[#f4f27a]` as literal values (negative-pinned against the
+  utility families — the r13-F1 bug), plus the
+  `@custom-variant hover (&:hover);` override that restores the live's
+  Tailwind-v3 plain-`:hover` semantics (r13-F2) and the corrected theme
+  comment (the `:root` purple/yellow are NOT dead — the hyphenated
+  families resolve them).
 - **Action layer** (`src/actions/studio.test.ts`) — the mutation surface
   against a throwaway SQLite database with the auth seam mocked: CRUD,
   ownership/IDOR checks, supply assignment, delete-side-effects (incl. the

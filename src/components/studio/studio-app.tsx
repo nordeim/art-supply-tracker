@@ -426,10 +426,14 @@ function StudioHeader({
         </div>
         <div className="flex min-w-fit items-center gap-3">
           {/* The live app's header button — presentational in production
-           * (the Studio Memory content lives in the chat panel's card). */}
+           * (the Studio Memory content lives in the chat panel's card).
+           * r13: the live's button is the ONE hyphenated-family consumer —
+           * its classes resolve the live's :root values (#5b3fd3 border,
+           * #f4f27a hover trio), NOT the utility tokens every other surface
+           * uses. Pinned by header-button-fidelity.test.ts. */}
           <button
             type="button"
-            className="flex items-center gap-2 rounded-xl border border-ast-purple/30 bg-white/5 px-3 py-1.5 text-sm text-pink-300 transition hover:border-ast-yellow/70 hover:bg-ast-yellow/20 hover:text-ast-yellow"
+            className="flex items-center gap-2 rounded-xl border border-[#5b3fd3]/30 bg-white/5 px-3 py-1.5 text-sm text-pink-300 transition hover:border-[#f4f27a]/70 hover:bg-[#f4f27a]/20 hover:text-[#f4f27a]"
           >
             <span>✧</span>What was I working on?
           </button>

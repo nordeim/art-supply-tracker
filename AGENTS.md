@@ -11,7 +11,7 @@ Run from the repo root. Bun is the package manager — use `bun`, never `npm`/`y
 | `bun run dev` | Dev server on :3000 |
 | `bun run lint` | ESLint (next/core-web-vitals + next/typescript) |
 | `bun run typecheck` | `tsc --noEmit`, strict |
-| `bun run test` | Vitest — 238 tests: domain vocabulary, bundle-pinned status/condition style maps (incl. the two-state absent-vs-explicit "?"/"OK" pill and "✓ ok" icon branches), design-token literals (incl. the Tailwind-v3 radius scale and the zero-webfont InterVariable stack), validation (incl. the normalized import gate, the Cognito password-policy rules, the permissive sign-in schema, and the live's quantity format gate), export/import wire format (incl. the empty-qty `qty:""` slot, the fraction `quantity:null` slot, the absent-vs-explicit status emission, and the empty-qty/explicit-ok import round-trip), rate limiting, the inspiration rail section resolver (incl. the live's inert "quote" / "spotlight-kevin-lewis" quirks), seeded chat-history fidelity (the live's five community messages byte-for-byte — the author's own typos, "KIm"/"brower", pinned so they cannot be silently "corrected"), login/header/chat-panel fidelity (the responsive logo's intrinsic 1068×269 aspect, the Amplify eye-toggle chrome, the invisible-typing input quirk, the tab strip's 2px top border, the sticky community header + scroll-container split, the absence of chat auto-scroll, the pale-pink dismissible Amplify alert box with its exact warning/X icon paths, the Cognito policy-rule stack, the Reset Password confirmation view, the content-width 35px link buttons, and the native-validation attribute set), drawer-scrim fidelity (the mobile drawers' shared `fixed inset-0 z-40 bg-black/60 md:hidden` scrim — no blur, below the z-50 drawers, instant mount/unmount), supply-surface fidelity (the create modal's INERT Stock Status select — it submits `condition: null` — the quantity format gate's exact copy, the edit panel's `?? "ok"` init, the chip's unconditional qty label, the detail panel's raw quantity), sidebar stat-tile fidelity (the ACTIVE view's tile carries its OWN accent pair — electric blue for Projects/Supplies, LAVENDER for Inspo — dropping the `#120724` card bg and hover classes while active, with constant inner text classes), action layer (each action file runs against a throwaway SQLite DB, incl. the mid-import rollback contract and the mid-delete no-strand contract) |
+| `bun run test` | Vitest — 247 tests: domain vocabulary, bundle-pinned status/condition style maps (incl. the two-state absent-vs-explicit "?"/"OK" pill and "✓ ok" icon branches), design-token literals (incl. the Tailwind-v3 radius scale and the zero-webfont InterVariable stack), validation (incl. the normalized import gate, the Cognito password-policy rules, the permissive sign-in schema, and the live's quantity format gate), export/import wire format (incl. the empty-qty `qty:""` slot, the fraction `quantity:null` slot, the absent-vs-explicit status emission, and the empty-qty/explicit-ok import round-trip), rate limiting, the inspiration rail section resolver (incl. the live's inert "quote" / "spotlight-kevin-lewis" quirks), seeded chat-history fidelity (the live's five community messages byte-for-byte — the author's own typos, "KIm"/"brower", pinned so they cannot be silently "corrected"), login/header/chat-panel fidelity (the responsive logo's intrinsic 1068×269 aspect, the Amplify eye-toggle chrome, the invisible-typing input quirk, the tab strip's 2px top border, the sticky community header + scroll-container split, the absence of chat auto-scroll, the pale-pink dismissible Amplify alert box with its exact warning/X icon paths, the Cognito policy-rule stack, the Reset Password confirmation view, the content-width 35px link buttons, and the native-validation attribute set), drawer-scrim fidelity (the mobile drawers' shared `fixed inset-0 z-40 bg-black/60 md:hidden` scrim — no blur, below the z-50 drawers, instant mount/unmount), supply-surface fidelity (the create modal's INERT Stock Status select — it submits `condition: null` — the quantity format gate's exact copy, the edit panel's `?? "ok"` init, the chip's unconditional qty label, the detail panel's raw quantity), sidebar stat-tile fidelity (the ACTIVE view's tile carries its OWN accent pair — electric blue for Projects/Supplies, LAVENDER for Inspo — dropping the `#120724` card bg and hover classes while active, with constant inner text classes), header-button fidelity (the memory button's hyphen-family literal colors — idle border `#5b3fd3/30`, hover trio `#f4f27a` at `/70`/`/20`/solid, negative-pinned against the utility families — plus the `@custom-variant hover (&:hover);` override restoring the live's Tailwind-v3 plain-`:hover` semantics), action layer (each action file runs against a throwaway SQLite DB, incl. the mid-import rollback contract and the mid-delete no-strand contract) |
 | `python3 scripts/smoke_functional.py` | Browser-driven smoke suite (needs `agent-browser` CLI + running server) — 23 golden-path checks incl. the post-create supplies navigation regression and the Recent Projects sticky-focus flow; leaves the studio pristine |
 | `bun run db:push` | Push `prisma/schema.prisma` to SQLite (`db/custom.db`) — required after schema edits |
 | `bun run db:generate` | Regenerate Prisma Client |
@@ -125,6 +125,26 @@ runs the same gate on every push.
 - **The studio is always dark** — shadcn semantic tokens (`--color-background`
   etc.) are pinned to the dark palette directly in `@theme`; there is no
   `.dark` class toggle.
+- **The hover variant is UN-GUARDED (r13)** — globals.css carries
+  `@custom-variant hover (&:hover);` because the live app's Tailwind v3
+  compiles `hover:` utilities as plain `:hover` selectors (no media guard).
+  Tailwind v4's default wraps them in `@media (hover: hover)`, which never
+  engages on touch devices (the live's hover tints apply and stick on tap)
+  and never renders in headless captures. Do NOT remove the override, and
+  note the capture-methodology consequence: with the pointer resting on an
+  element, the clone's hover styles now DO render in screenshots — paired
+  captures must park the pointer at a neutral spot (or deliberately match
+  pointer positions on both sides).
+- **The header memory button is the hyphen-family exception (r13)** — the
+  live's "✧ What was I working on?" button is the ONLY consumer of its
+  HYPHENATED utility families (`ast-purple`/`ast-yellow`), which resolve
+  the live's `:root` values, NOT the utility values our tokens pin: idle
+  border `border-[#5b3fd3]/30`, hover trio `hover:border-[#f4f27a]/70
+  hover:bg-[#f4f27a]/20 hover:text-[#f4f27a]` (literals — the second
+  sanctioned exception alongside the login card's `border-[#5B3FD3]`).
+  Every OTHER purple/yellow surface uses the utility families; do NOT
+  "fix" the button to the utility tokens (pinned by
+  `header-button-fidelity.test.ts`).
 - **The app ships ZERO webfonts** (r8): the live's `document.fonts` is empty
   and its `InterVariable, "Inter var", Inter, -apple-system, …` stack
   resolves to system fonts on every machine. Do NOT re-introduce

@@ -84,7 +84,8 @@ the original app's exact JSON shape.
     📂 studio/        Login, shell, sidebar, 4 views, chat, 2 modals, 2 detail panels
     📂 ui/            shadcn/ui component set
   📂 lib/             db, auth (scrypt + sessions), result (ActionResult), validation (Zod), dto, studio-domain, inspiration, export-payload, rate-limit
-📂 docs/              SSH push wrapper + operator runbook, reference prompts
+📂 docs/              SSH push wrapper + operator runbook, reference prompts,
+                      session logs, screenshots/ (dev-server visual reference)
 📂 .github/           verify-gate workflow (lint + typecheck + test + build on every push)
 ```
 
@@ -141,7 +142,7 @@ app's focusRequest semantics), the inspiration rail panels, and the
 import/export surface — leaving the studio pristine. It doubles as the
 regression suite for the post-create navigation contract.
 
-Automated tests (Vitest, 238 tests) pin the studio-domain vocabulary
+Automated tests (Vitest, 247 tests) pin the studio-domain vocabulary
 (per-category supply subcategory lists in the live app's tokens), the
 production bundle's status/condition style maps (project status pills,
 chip borders with per-status hover/selected treatments, supply condition
@@ -176,7 +177,14 @@ attribute set), the drawer-scrim fidelity, the supply-surface fidelity
 (the create modal's inert Stock Status select, the quantity format
 gate's exact copy, the edit panel's `?? "ok"` condition init, the
 chip's unconditional qty label, and the detail panel's raw quantity
-rendering), and the full action surface
+rendering), the sidebar stat-tile fidelity (the ACTIVE view's tile
+carries its own accent pair — electric blue for Projects/Supplies,
+lavender for Inspo), the header button fidelity (the memory button's
+hyphen-family literal colors — idle border `#5b3fd3`, hover trio
+`#f4f27a` — and the `@custom-variant hover (&:hover);` override that
+restores the live's Tailwind-v3 plain-`:hover` semantics, so the
+clone's hover tints engage on tap exactly like the live app's), and
+the full action surface
 against a throwaway SQLite database (CRUD, ownership/IDOR checks,
 assignment, import — including the mid-import failure that must roll back
 without emptying the studio and the mid-delete failure that must not
@@ -214,11 +222,11 @@ Manual verification checklist (the golden paths):
 | `ast-cyan` | `#00e6ff` | My Studio heading, links, selected chip names |
 | `ast-lavender` | `#b78bff` | Section eyebrows, muted headings, field labels, active Inspo tile |
 | `ast-pink` | `#ff4db8` | Supplies chrome, community accents, primary CTAs |
-| `ast-purple` | `#5a3a8e` | Card borders (25–40% opacity) — the live *utility* value (its `:root` `#5b3fd3` is vestigial) |
+| `ast-purple` | `#5a3a8e` | Card borders (25–40% opacity) — the live *utility* value (its `:root` `#5b3fd3` is resolved only by the hyphen-family utilities on the header memory button, reproduced there as a literal) |
 | `ast-blue` | `#4a69d6` | Utility buttons, quote text |
 | `ast-electric-blue` | `#2e64ff` | Planned status, active Projects/Supplies tiles, quote text |
 | `ast-coral` | `#ff7a7a` | Needs Sorting bucket, unknown-status fallback (the live *utility* value; `:root` `#ffe0cc` is vestigial) |
-| `ast-yellow` | `#ffd5a8` | On Hold status, low-condition icon, Close/Cancel/Delete buttons (the live *utility* value; `:root` `#f4f27a` is vestigial) |
+| `ast-yellow` | `#ffd5a8` | On Hold status, low-condition icon, Close/Cancel/Delete buttons (the live *utility* value; the memory button's hover trio uses the hyphen-family `#f4f27a`, reproduced as literals) |
 | `ast-orange` | `#ffb85c` | Warm accents |
 | `ast-body` | `#fff4d6` | Body text (at 60–90% opacity) |
 | `ast-faint` | `#9f7fd6` | Placeholders, timestamps |
@@ -259,7 +267,8 @@ Headline gradient: `linear-gradient(90deg, #00E6FF, #2E64FF, #8D5CFF,
 | Drawer-scrim pass (r10) | ✅ Complete | Fresh recon on the r9 tree (9 VLM comparisons + DOM spot-checks + a live export-payload capture — all steady-state surfaces at parity; desktop chat structure, memory popover, and login card byte-identical) surfaced one residual chrome gap: the mobile drawer scrim. The live renders ONE shared scrim (`fixed inset-0 z-40 bg-black/60 md:hidden` — plain dim, NO backdrop blur, below the z-50 drawers, instant mount/unmount measured at click-time while the drawer still animates); the clone blurred the page behind the scrim (backdrop-blur-sm), floated it at z-50, and faded the sidebar's scrim. Fixed in `studio-app.tsx` + `studio-sidebar.tsx` and pinned by the new `drawer-fidelity.test.ts` (7 pins). Also re-confirmed as accepted: the mobile login card's 0.5px fractional offset (live 357px centered in its 358px column — Amplify internal responsive layout) and the live chat's prior-agent residue message. 209 tests, 23 smoke checks, all gates green |
 | Supply-contract pass (r11) | ✅ Complete | A deep functional dive against the live (create/edit/export/import probes, every probe supply deleted, live left pristine) closed two HIGH-severity gaps in the supply contracts. QUANTITY: the live accepts an EMPTY quantity (stores "", chip renders the bare "qty" label, detail panel blank, export `qty:""` / `quantity:null` / `quantityValue:null`), validates the FORMAT (unparseable text is rejected with the exact copy "Enter a valid quantity, like 2, 1.5, or 1/2"), and its fraction exports carry `quantity:null` (plain-Number parse only) — the clone now mirrors all of it (`isValidQuantityInput`, wire-format fixes, import round-trips "" verbatim). CONDITION: the live's create-modal Stock Status select is INERT (created supplies carry no status, whatever the select showed — verified by creating one with "Low" selected), an ABSENT status renders the "?" pill + unlabeled "⚠️" detail glyph + status omitted in export, while an EXPLICIT "ok" saved through the edit panel renders the cyan "OK" pill + "✓ ok" icon + `status:"ok"` in export — the schema now models the two states (`condition String?`, null = absent; the modal submits null, the edit panel saves explicit values; import preserves the distinction). Also: `deleteProject` became atomic (detach + delete in one transaction), the README's stale `next/font` Typography paragraph was corrected to the zero-webfont contract, and the r10 accepted divergences were re-confirmed (nav-vs-aside drawer tag documented; the dev-mode Next.js badge + Geist font faces verified absent in the production build). Pinned by 20 new/adjusted tests incl. the new `supply-fidelity.test.ts` (6 source pins). 229 tests, 23 smoke checks, all gates green |
 | Stat-tile accent pass (r12) | ✅ Complete | A fresh recon (8 paired screenshot comparisons + a pixel-level structural diff + DOM computed-style probes on both viewports) found ONE real divergence: the sidebar's ACTIVE stat tile. The live highlights the active view's tile with that tile's OWN accent pair — electric blue (`border/bg` at `/60`–`/10`) for Projects and Supplies, but LAVENDER for Inspo — while the clone hardcoded electric blue for all three (the Inspiration view visibly highlighted its tile in the wrong color). The active tile also drops the `#120724` card background and hover classes, and its inner text classes stay constant across states; the contract is identical in the desktop sidebar and the mobile drawer (geometry byte-identical: 106×78 @ (257,173)). `StatCard` now takes a per-tile `activeClass` prop, pinned by the new `sidebar-tile-fidelity.test.ts` (9 source pins). All other recon flags were traced to stale-capture timing artifacts, session-state residue, or the documented accepted deltas; the export wire format re-confirmed byte-identical. Post-fix evidence: the stat-tile regions diff at 0.00% hot pixels on both the desktop inspiration view and the mobile drawer; remaining diffs classified as the documented accepted set (live's residue chat message, dev-mode-only badge, sub-perceptual oklab-vs-rgba compositing + fractional text-row rounding). 238 tests, all gates green |
-| Verification | ✅ Complete | Lint + typecheck + 238 tests + production build clean; VLM screenshot comparison of all four views (plus the mobile views, the sidebar drawer, and the login page at both viewports — including the error states and the reset-confirmation view) vs the live app (parity); 23-check functional smoke suite (CRUD, filters, panels, modals, navigation regression, focus flows) |
+| Hover & hyphen-family pass (r13) | ✅ Complete | A fresh full-surface recon (8 paired VLM comparisons + pixel diffs — all PARITY; export byte-identical; sign-out flow probed; 23/23 smoke) surfaced two real divergences via a memory-popover probe. r13-F1: the live carries TWO parallel Tailwind color families — the underscored utilities (which our tokens pin) used by every other surface, and HYPHENATED families (`ast-purple`/`ast-yellow`) that exist ONLY on the header memory button and resolve the live's `:root` values (idle border `#5b3fd3/30`; hover border/bg/text `#f4f27a` at `/70`/`/20`/solid) — the clone's verbatim class copy had resolved them to the utility values (#5a3a8e/#ffd5a8), rendering the wrong idle border and all three hover colors; now literal arbitrary values with the emitted fallback rules byte-identical to the live's (canvas-verified identical pixels). r13-F2: Tailwind v4 media-guards `hover:` utilities (`@media (hover: hover)`) while the live's TW3 compiles plain `:hover` — on touch the live's tints stick on tap while the clone's never engaged; `@custom-variant hover (&:hover);` restores the live's semantics (and makes hover parity verifiable in captures — the paired popover shot shows both buttons hovered in `#f4f27a/20`, popover region 0.00% hot). The disproven "dead :root values" comments corrected; 8 fresh dev-server screenshots added under `docs/screenshots/`. Both fixes pinned by the new `header-button-fidelity.test.ts` (9 pins). 247 tests, all gates green, production build + server probe verified |
+| Verification | ✅ Complete | Lint + typecheck + 247 tests + production build clean; VLM screenshot comparison of all four views (plus the mobile views, the sidebar drawer, and the login page at both viewports — including the error states and the reset-confirmation view) vs the live app (parity); 23-check functional smoke suite (CRUD, filters, panels, modals, navigation regression, focus flows) |
 | Documentation | ✅ Complete | README, AGENTS.md, CLAUDE.md, Project_Architecture_Document.md |
 
 Known intentional gaps (mirroring the original beta's placeholders): the

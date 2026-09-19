@@ -1,4 +1,4 @@
-# AST Studio — Master Project Architecture Document (PAD) v1.11
+# AST Studio — Master Project Architecture Document (PAD) v1.12
 
 **Classification:** Internal Engineering Reference
 **Status:** DEFINITIVE, PRODUCTION-LOCKED BLUEPRINT
@@ -245,6 +245,42 @@ Nothing is here "because it's popular."
   verified: the lavender classes present in the emitted CSS, the
   active Inspo tile rendering lavender on the production server, zero
   webfonts, no dev badge. 238 tests, all gates green.
+
+- `[R13]` Session-20 hover/hyphen-family pass (2026-09-19): a fresh
+  full-surface recon on the r12 tree (8 paired VLM comparisons + pixel
+  structural diffs — all PARITY after correcting two capture-state errors
+  of the operator's own making; the export wire re-confirmed byte-identical
+  at 121 bytes; the sign-out flow probed on both sides; 23/23 smoke checks)
+  found two real divergences, both surfaced by a memory-popover probe.
+  r13-F1: the live app carries TWO parallel Tailwind color families — the
+  UNDERSCORED utilities (`ast_purple` #5a3a8e / `ast_yellow` #ffd5a8, which
+  every other surface uses and our @theme tokens pin) and HYPHENATED
+  families (`ast-purple` / `ast-yellow`) that exist ONLY on the header's
+  memory button and resolve to the live's `:root` variable values
+  (#5b3fd3 / #f4f27a — the "vestigial" block is NOT dead after all).
+  The clone had copied the button's class string verbatim, resolving its
+  hyphenated classes to the UTILITY values — the wrong idle border color
+  (always visible) and all three hover colors. Fixed with literal
+  arbitrary values (`border-[#5b3fd3]/30`, `hover:border-[#f4f27a]/70`,
+  `hover:bg-[#f4f27a]/20`, `hover:text-[#f4f27a]`) — the emitted fallback
+  rules are byte-identical to the live's four rules; the lab() progressive
+  re-declarations render identical pixels (canvas-verified). r13-F2:
+  Tailwind v4's default hover variant is wrapped in `@media (hover: hover)`
+  while the live's TW3 compiles plain `:hover` selectors — on touch devices
+  the live's hover tints apply and stick on tap while the clone's never
+  engage, and in headless captures the clone's hovers never render
+  (unverifiable). globals.css now overrides the variant
+  (`@custom-variant hover (&:hover);`) restoring the live's semantics —
+  hover parity became directly verifiable, and the paired popover capture
+  (pointer resting on the button on both sides) now shows both buttons
+  hovered in the live's #f4f27a/20 with the popover region at 0.00% hot
+  pixels and the button interiors sample-identical. Both fixes pinned by
+  the new `header-button-fidelity.test.ts` (9 pins); the theme comment's
+  disproven "dead values" claim corrected in place. A fresh set of 8
+  dev-server screenshots landed in `docs/screenshots/` as the visual
+  reference. 247 tests, all gates green, production build + production-
+  server probe verified (literal classes, hover values, zero webfonts, no
+  dev badge).
 
 ---
 
@@ -804,13 +840,13 @@ erDiagram
 |---|---|---|
 | `ast-turquoise` | `#2ec4b6` | Studio Tools, projects chrome, Need help? |
 | `ast-cyan` | `#00e6ff` | My Studio heading, links, selected chip names |
-| `ast-purple` | `#5a3a8e` | Card borders (25–40% opacity) — live utility value |
+| `ast-purple` | `#5a3a8e` | Card borders (25–40% opacity) — live utility value; the header memory button's idle border is the hyphen-family exception `#5b3fd3` (literal) |
 | `ast-lavender` | `#b78bff` | Section eyebrows, field labels, sidebar widgets, active Inspo tile |
 | `ast-pink` | `#ff4db8` | Supplies chrome, community, primary CTAs |
 | `ast-blue` | `#4a69d6` | Utility buttons, gradient end |
 | `ast-electric-blue` | `#2e64ff` | Planned status, active Projects/Supplies tiles, quote text |
 | `ast-coral` | `#ff7a7a` | Needs Sorting bucket, unknown-status fallback — live utility value |
-| `ast-yellow` | `#ffd5a8` | On Hold status, low-condition icon, Close/Cancel/Delete buttons — live utility value |
+| `ast-yellow` | `#ffd5a8` | On Hold status, low-condition icon, Close/Cancel/Delete buttons — live utility value; the memory button's hover trio is the hyphen-family exception `#f4f27a` (literal) |
 | `ast-orange` | `#ffb85c` | Warm accents |
 | `ast-body` | `#fff4d6` | Body text (60–90% opacity) |
 | `ast-muted` | `#dcc7ff` | Login marketing copy, secondary text |
@@ -826,10 +862,13 @@ from the production CSS bundle. All values are pinned to the live app's
 *compiled utility classes* — the rendered ground truth — and guarded by
 `src/lib/design-tokens.test.ts`. The live bundle also ships a `:root`
 CSS-variable block whose purple/yellow/coral values (`#5b3fd3`/`#f4f27a`/
-`#ffe0cc`) differ from the utilities; those variables are vestigial (no
-rule resolves them) and must not be treated as the palette. The login
-card's 1px border uses the literal `#5B3FD3` from the live app's custom
-CSS — distinct from the utility purple.
+`#ffe0cc`) differ from the utilities; the coral variable is truly
+vestigial, but r13 proved the purple/yellow variables ARE resolved — by
+the live's HYPHENATED utility families, whose only consumer is the header
+memory button (idle border `#5b3fd3`, hover trio `#f4f27a` — reproduced as
+literal values on that button, pinned by `header-button-fidelity.test.ts`).
+The login card's 1px border uses the literal `#5B3FD3` from the live app's
+custom CSS — distinct from the utility purple.
 
 ### 5.3 Component Primitives
 
@@ -909,7 +948,7 @@ CSS — distinct from the utility purple.
 | Category | Count | Location | Framework |
 |---|---|---|---|
 | Static | — | `eslint .` / `tsc --noEmit` | ESLint 9 + TS 5.9 strict |
-| Automated unit | 210 tests | `src/lib/*.test.ts` — studio-domain (incl. bundle-pinned style maps + edit-panel budget/option mapping + the r11 two-state condition maps and quantity format gate), design-tokens (globals.css literal pinning incl. the Tailwind-v3 radius scale and the zero-webfont stack), validation (incl. the normalized import gate, the Cognito password-policy rules + permissive sign-in schema, the two-state condition + quantity format boundary), export-payload (incl. the three-slot quantity semantics and the empty-qty/explicit-ok round-trip), rate-limit, inspiration (incl. the rail section resolver with the live's inert "quote" / "spotlight-kevin-lewis" quirks), seed-fidelity (scripts/seed.ts pinned to the live chat byte-for-byte, typos included), login-fidelity + chat-fidelity (the live's measured Amplify login chrome incl. the alert-box error chrome, policy stack, reset-confirmation view, and content-width link buttons; logo aspect; chat-panel structure), drawer-fidelity (the mobile drawers' shared z-40 no-blur scrim with instant mount/unmount), supply-fidelity (the create modal's inert Stock Status select, the quantity format gate's exact copy, the edit panel's `?? "ok"` init, the chip's unconditional qty label, the detail panel's raw quantity), sidebar-tile-fidelity (the stat tiles' per-tile ACTIVE accent pairs — electric blue for Projects/Supplies, lavender for Inspo — with the card bg and hover classes dropped while active; the constant inner text classes; a negative pin on the old hardcoded electric-blue string) | Vitest (node env, `@/` alias) |
+| Automated unit | 219 tests | `src/lib/*.test.ts` — studio-domain (incl. bundle-pinned style maps + edit-panel budget/option mapping + the r11 two-state condition maps and quantity format gate), design-tokens (globals.css literal pinning incl. the Tailwind-v3 radius scale and the zero-webfont stack), validation (incl. the normalized import gate, the Cognito password-policy rules + permissive sign-in schema, the two-state condition + quantity format boundary), export-payload (incl. the three-slot quantity semantics and the empty-qty/explicit-ok round-trip), rate-limit, inspiration (incl. the rail section resolver with the live's inert "quote" / "spotlight-kevin-lewis" quirks), seed-fidelity (scripts/seed.ts pinned to the live chat byte-for-byte, typos included), login-fidelity + chat-fidelity (the live's measured Amplify login chrome incl. the alert-box error chrome, policy stack, reset-confirmation view, and content-width link buttons; logo aspect; chat-panel structure), drawer-fidelity (the mobile drawers' shared z-40 no-blur scrim with instant mount/unmount), supply-fidelity (the create modal's inert Stock Status select, the quantity format gate's exact copy, the edit panel's `?? "ok"` init, the chip's unconditional qty label, the detail panel's raw quantity), sidebar-tile-fidelity (the stat tiles' per-tile ACTIVE accent pairs — electric blue for Projects/Supplies, lavender for Inspo — with the card bg and hover classes dropped while active; the constant inner text classes; a negative pin on the old hardcoded electric-blue string), header-button-fidelity (the memory button's hyphen-family literal colors — idle border #5b3fd3, hover trio #f4f27a — with negative pins on the utility families, plus the `@custom-variant hover (&:hover);` override restoring the live's TW3 plain-:hover semantics) | Vitest (node env, `@/` alias) |
 | Automated action | 28 tests | `src/actions/studio.test.ts` (throwaway SQLite DB, mocked auth seam — incl. the mid-import rollback contract, the mid-delete no-strand contract, and the two-state condition round-trips) | Vitest |
 | Manual golden paths | 11 flows | README "Testing & Quality" | Browser-executed (pinned by `scripts/smoke_functional.py`, 23 checks) |
 | CI verify-gate | — | `.github/workflows/verify-gate.yml` (lint + typecheck + test + build) | GitHub Actions |
@@ -1067,6 +1106,9 @@ public exposure).
 | High | ~~Supply condition contract diverged (two-state)~~ | The clone collapsed the live's ABSENT status (create-modal's inert select) and EXPLICIT "ok" (edit-panel save) into one "ok" state — rendering "?"/"⚠️" for both, omitting `status` for "ok", and importing to "ok" — while the live renders "OK" (cyan pill + "✓ ok" icon) and exports `status:"ok"` for the explicit state | **Resolved 2026-09-19 (r11)** — `Supply.condition` is nullable (null = absent); the modal submits null (inert select), the edit panel initializes `?? "ok"` and saves explicitly; the import preserves the distinction; pinned by `supply-fidelity.test.ts` + domain/validation/action tests |
 | Medium | ~~deleteProject non-atomic~~ | The supply-detach (`updateMany`) and the project delete ran as two separate writes — a failure between them silently detached supplies from a still-existing project | **Resolved 2026-09-19 (r11)** — both writes run in ONE `db.$transaction`; a mid-delete failure rolls back (pinned by a failure-injection test) |
 | Medium | ~~README Typography section documented the removed next/font setup~~ | The r8 zero-webfont remediation updated AGENTS/CLAUDE/PAD but left README's Design System section describing the pre-r8 `next/font` Inter build — exactly the documentation trap that would lead a future agent to re-introduce it | **Resolved 2026-09-19 (r11)** — the paragraph now documents the zero-webfont InterVariable stack and the do-not-reintroduce warning |
+| Medium | ~~Header memory button rendered the wrong colors (hyphen-family)~~ | The live's "✧ What was I working on?" button is the ONLY consumer of its HYPHENATED utility families, which resolve the `:root` values (idle border `#5b3fd3/30`, hover border `#f4f27a/70`, hover bg `#f4f27a/20`, hover text `#f4f27a`) — the clone's verbatim class copy resolved them to the UTILITY values (#5a3a8e / #ffd5a8): the wrong idle border (always visible) and all three hover colors on real pointer devices | **Resolved 2026-09-19 (r13)** — literal arbitrary values on the button (the second sanctioned literal exception alongside the login card's `border-[#5B3FD3]`); emitted fallback rules byte-identical to the live's; canvas-verified identical rendered pixels; pinned by `header-button-fidelity.test.ts` |
+| Medium | ~~Hover utilities media-guarded (TW4 vs the live's TW3)~~ | Tailwind v4 wraps `hover:` utilities in `@media (hover: hover)` — on touch devices the live's hover tints apply and stick on tap while the clone's never engaged, and in headless captures the clone's hovers never rendered (hover parity unverifiable) | **Resolved 2026-09-19 (r13)** — `@custom-variant hover (&:hover);` in globals.css restores the live's plain-:hover semantics; the paired popover capture (pointer resting on the button on both sides) verifies the hover colors render identically; pinned by `header-button-fidelity.test.ts` |
+| Low | ~~PAD/globals.css claimed the live's :root purple/yellow are "dead values"~~ | The r4 token doctrine's supporting comment ("no utility or custom rule ever resolves those") was disproven by r13 — the live's hyphenated families resolve exactly those values on the memory button | **Resolved 2026-09-19 (r13)** — comments corrected in globals.css and §5.2 (the coral variable remains genuinely vestigial) |
 | Low | Mobile login card offset by 0.5px | The live's card is 357px centered in its 358px content column (x=16.5 — Amplify internal responsive fractional layout); the clone fills the column (358px at x=16). Desktop is byte-identical (480×429 at 494,464) | Accepted (sub-pixel, below the visibility threshold — reproducing it would require guessing Amplify's viewport-dependent internal CSS) |
 | Low | Sidebar drawer semantic landmark differs | The live's mobile sidebar drawer is an `<aside>` (no role/label); the clone renders `<nav aria-label="Studio tools">` — a deliberate WCAG improvement documented in CLAUDE.md. Visual parity unaffected (identical classes/geometry, measured r11) | Accepted (accessibility improvement, intentionally kept) |
 | Low | Dev-mode-only browser artifacts | In `next dev`, the Next.js dev-tools badge (the "N" button) and 4 `__nextjs-Geist` FontFaces appear in `document.fonts` — neither ships in the production build (verified r11: prod build has `document.fonts.size === 0` and no badge) | Accepted (dev-mode artifact — sessions comparing dev-mode DOM must not misclassify these as parity gaps; production is the ground truth) |
