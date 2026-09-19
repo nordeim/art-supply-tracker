@@ -147,7 +147,7 @@ not secret — rotate before any public deployment).
 ### Testing Strategy
 
 Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
-`src/**/*.test.ts`). The suite (260 tests) pins:
+`src/**/*.test.ts`). The suite (271 tests) pins:
 
 - **Studio-domain vocabulary** — the per-category `SUPPLY_TYPE_LISTS` in the
   live app's tokens (Paint/Brush/Pastel/Paper/Canvas/Medium/Other categories,
@@ -270,6 +270,14 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
   pin on TW4's drift values, plus usage-site class-string pins (the Sign
   Out button, the memory button's text, the email gradient, the barcode
   focus trio, the chat alert) guarding the class-string parity contract.
+- **Focus & keyboard-contract fidelity** (`focus-fidelity.test.ts`, r15) —
+  file-content pins on the live's measured keyboard contract: NO authored
+  outline color in the base layer (the UA-default focus ring renders,
+  matching the live's no-outline-rule CSS), and the create modals carry
+  no Escape keydown handler, no focus steal, and no window keydown
+  listener — while KEEPING `role="dialog"` + `aria-modal` (the invisible
+  semantics). Guards against a future "improvement" re-adding keyboard
+  affordances the live does not have.
 - **Action layer** (`src/actions/studio.test.ts`) — the mutation surface
   against a throwaway SQLite database with the auth seam mocked: CRUD,
   ownership/IDOR checks, supply assignment, delete-side-effects (incl. the
@@ -322,9 +330,15 @@ a browser after every change:
   pending; chat shows "No messages yet."; import failures surface
   actionable copy.
 - Accessibility: semantic landmarks (`nav[aria-label]`, `role="log"` chat,
-  `role="dialog"` modals with `aria-modal` + Escape close + initial focus),
-  visible focus rings via the `--color-ring` token, 44px touch targets on
-  primary actions.
+  `role="dialog"` modals with `aria-modal` — the kept invisible-semantics
+  class), 44px touch targets on primary actions. The INTERACTIVE keyboard
+  contract matches the live exactly (r15): NO authored focus-outline color
+  anywhere (the shadcn `outline-ring/50` base rule was removed — the
+  browser-default ring renders, byte-identical to the live), and the
+  create modals have NO Escape-close and NO focus steal (the live's modal
+  leaves focus on the trigger and ignores Escape — only ✕ / scrim click
+  dismiss). Do not re-add these affordances; pinned by
+  `focus-fidelity.test.ts`.
 
 ## Git & Version Control
 

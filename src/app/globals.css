@@ -131,8 +131,19 @@
 }
 
 @layer base {
+  /*
+   * r15 focus-ring parity: NO authored outline color. The live app's compiled
+   * CSS carries no universal outline-color rule (its only outline rules are
+   * the TW3 transparent focus:outline-none utility and Amplify's login
+   * chrome), so every button/tile/link renders the BROWSER DEFAULT focus
+   * ring — computed rgb(16,16,16) in Chromium, a near-black band. The
+   * shadcn scaffold's `outline-ring/50` authored a bright turquoise ring
+   * (#2ec4b6 at 50%) on every keyboard-focused element that the live never
+   * shows. Do NOT re-add an outline color here — the UA default IS the
+   * parity contract (pinned by focus-fidelity.test.ts).
+   */
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
   }
   body {
     @apply bg-background text-foreground;

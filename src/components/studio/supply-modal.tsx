@@ -12,7 +12,7 @@
  * sentinels (a custom text input appears when Other/Custom is picked),
  * and is hidden entirely for the "Other" category (no subcategories).
  */
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import Image from "next/image";
 
 import { createSupply } from "@/actions/studio";
@@ -48,22 +48,16 @@ export function SupplyModal({ projects, onClose, onSaved }: SupplyModalProps) {
   const [assignedProjectId, setAssignedProjectId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // r15-F2 keyboard parity: the live's create modal has NO keyboard
+  // affordances — focus stays on the trigger button (no focus management)
+  // and Escape does not dismiss (only ✕ and the scrim click do). No
+  // keydown listener, no focus steal (pinned by focus-fidelity.test.ts).
 
   const subcategoryOptions = subcategoryOptionsFor(category);
   // The live app hides the Subcategory picker for the Other category.
   const showSubcategory = subcategoryOptions.length > 0;
   const isCustomSubcategory = subcategory === SUBCATEGORY_OTHER;
-
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKeyDown);
-    // Focus the first field on open for keyboard users.
-    dialogRef.current?.querySelector<HTMLInputElement>("input")?.focus();
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
 
   function onCategoryChange(next: string) {
     setCategory(next);
@@ -144,7 +138,6 @@ export function SupplyModal({ projects, onClose, onSaved }: SupplyModalProps) {
       }}
     >
       <div
-        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="supply-modal-title"

@@ -7,7 +7,7 @@
  * are downscaled client-side to data URLs (≤ 1024px, JPEG q0.8) so uploads
  * work without object storage; the server re-validates bounds.
  */
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import Image from "next/image";
 
 import { createProject } from "@/actions/studio";
@@ -33,17 +33,11 @@ export function ProjectModal({ onClose, onSaved }: ProjectModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const photoInputRef = useRef<HTMLInputElement>(null);
-  const dialogRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKeyDown);
-    // Focus the first field on open for keyboard users.
-    dialogRef.current?.querySelector<HTMLInputElement>("input")?.focus();
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
+  // r15-F2 keyboard parity: the live's create modal has NO keyboard
+  // affordances — focus stays on the trigger button (no focus management)
+  // and Escape does not dismiss (only ✕ and the scrim click do). No
+  // keydown listener, no focus steal (pinned by focus-fidelity.test.ts).
 
   function onAddPhotos(files: FileList | null) {
     if (!files) return;
@@ -99,7 +93,6 @@ export function ProjectModal({ onClose, onSaved }: ProjectModalProps) {
       }}
     >
       <div
-        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="project-modal-title"
