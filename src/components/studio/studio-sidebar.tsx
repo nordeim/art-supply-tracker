@@ -9,7 +9,10 @@
  * studio grid); below md the same content renders inside a slide-in drawer
  * (classes lifted from the live app: rounded-r-3xl, blurred #0B0018 canvas,
  * turquoise right border). Stat tiles carry the live app's per-tile accent
- * borders, and the active view's tile renders highlighted (electric blue).
+ * borders, and the active view's tile renders highlighted with its OWN
+ * accent pair — electric blue for Projects/Supplies, LAVENDER for Inspo
+ * (live-measured r12: the Inspiration view highlights its tile in
+ * lavender, not the electric blue the other two views use).
  */
 import type { InspirationEntryDto, ProjectDto } from "@/lib/dto";
 import { pickToday } from "@/lib/inspiration";
@@ -142,6 +145,7 @@ function SidebarContent({
             subClass="text-ast-body/55"
             idleBorder="border-ast-turquoise/30"
             hoverBorder="hover:border-ast-electric-blue/40 hover:bg-ast-electric-blue/5"
+            activeClass="border-ast-electric-blue/60 bg-ast-electric-blue/10"
             onClick={() => navigate("projects")}
           />
           <StatCard
@@ -154,6 +158,7 @@ function SidebarContent({
             subClass="text-[#F6B94B]/80"
             idleBorder="border-ast-lavender/30"
             hoverBorder="hover:border-ast-electric-blue/40 hover:bg-ast-electric-blue/5"
+            activeClass="border-ast-electric-blue/60 bg-ast-electric-blue/10"
             onClick={() => navigate("supplies")}
           />
           <StatCard
@@ -166,6 +171,7 @@ function SidebarContent({
             subClass="text-ast-body/55"
             idleBorder="border-ast-purple/30"
             hoverBorder="hover:border-ast-lavender/40 hover:bg-ast-lavender/5"
+            activeClass="border-ast-lavender/60 bg-ast-lavender/10"
             onClick={() => navigate("inspiration")}
           />
         </div>
@@ -309,8 +315,12 @@ function RecentProjectTile({
 
 /**
  * Stat tile — mirrors the live app: the active view's tile is highlighted
- * (electric blue border/tint), idle tiles carry per-card accent borders
+ * with that tile's OWN accent pair (electric blue for Projects/Supplies,
+ * lavender for Inspo — live-measured r12), dropping the card background
+ * and hover classes while active; idle tiles carry per-card accent borders
  * (turquoise / lavender / purple) with the live app's hover treatments.
+ * The inner text classes (label / value / sub) are constant across both
+ * states, exactly as the live renders them.
  */
 function StatCard({
   label,
@@ -322,6 +332,7 @@ function StatCard({
   subClass,
   idleBorder,
   hoverBorder,
+  activeClass,
   onClick,
 }: {
   label: string;
@@ -333,6 +344,7 @@ function StatCard({
   subClass: string;
   idleBorder: string;
   hoverBorder: string;
+  activeClass: string;
   onClick: () => void;
 }) {
   return (
@@ -342,7 +354,7 @@ function StatCard({
       aria-current={active ? "true" : undefined}
       className={
         active
-          ? "rounded-xl border border-ast-electric-blue/60 bg-ast-electric-blue/10 p-2.5 text-left transition"
+          ? `rounded-xl border p-2.5 text-left transition ${activeClass}`
           : `rounded-xl border bg-[#120724] p-2.5 text-left transition ${idleBorder} ${hoverBorder}`
       }
     >

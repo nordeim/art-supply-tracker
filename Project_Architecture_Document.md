@@ -1,9 +1,9 @@
-# AST Studio — Master Project Architecture Document (PAD) v1.10
+# AST Studio — Master Project Architecture Document (PAD) v1.11
 
 **Classification:** Internal Engineering Reference
 **Status:** DEFINITIVE, PRODUCTION-LOCKED BLUEPRINT
 **Companion Document:** `README.md` (onboarding), `AGENTS.md` (agent instructions), `CLAUDE.md` (engineering standards)
-**Last Updated:** 2026-09-19 (r11)
+**Last Updated:** 2026-09-19 (r12)
 **Audience:** Senior Engineers, Tech Leads, DevOps, and Onboarding Engineers
 **Rule:** Every architectural decision in this document traces to a specific rationale.
 Nothing is here "because it's popular."
@@ -216,6 +216,35 @@ Nothing is here "because it's popular."
   landmark; the dev-mode-only badge/fonts). Pinned by 20 new/adjusted
   tests incl. the new `supply-fidelity.test.ts` (6 source pins);
   229 tests, 23 smoke checks, all gates green.
+- `[R12]` Session-18 stat-tile accent pass (2026-09-19): a fresh recon
+  on the r11 tree (8 paired screenshot comparisons — the initial stale
+  captures' VLM "GAP" flags were traced to timing artifacts and
+  session-state residue; re-verified with fresh captures — plus a
+  pixel-level structural diff and DOM computed-style probes at both
+  viewports; a pristine-state export capture re-confirmed byte-identical)
+  found ONE real divergence (r12-F1): the sidebar's ACTIVE stat tile.
+  The live highlights the active view's tile with that tile's OWN
+  accent pair — electric blue (`/60` border + `/10` tint) for Projects
+  and Supplies, LAVENDER for Inspo — and DROPS the `#120724` card
+  background and hover classes while active (inner text classes stay
+  constant across states; the contract is identical in the desktop
+  sidebar and the mobile drawer; geometry 106×78 @ (257,173) on both).
+  The clone had hardcoded electric blue for all three — visibly wrong
+  on the Inspiration view. Remediated via TDD: `StatCard` takes a
+  per-tile `activeClass` prop, pinned by the new
+  `sidebar-tile-fidelity.test.ts` (9 source pins — active pairs per
+  tile, the dropped card bg/hover, constant inner text, and a negative
+  pin on the old hardcoded string). Post-fix evidence: the stat-tile
+  regions diff at 0.00% hot pixels on both the desktop inspiration
+  view and the mobile drawer; every remaining diff classified into the
+  documented accepted set (the live's residue chat message — the 78px
+  chat-drawer delta re-measured at 928 vs 850 scrollHeight; the
+  dev-mode-only Next.js badge; sub-perceptual oklab-vs-rgba compositing
+  and fractional text-row rounding — the Partners card body lands
+  0.69px lower on the clone, a 1px glyph-row shift). Production build
+  verified: the lavender classes present in the emitted CSS, the
+  active Inspo tile rendering lavender on the production server, zero
+  webfonts, no dev badge. 238 tests, all gates green.
 
 ---
 
@@ -776,10 +805,10 @@ erDiagram
 | `ast-turquoise` | `#2ec4b6` | Studio Tools, projects chrome, Need help? |
 | `ast-cyan` | `#00e6ff` | My Studio heading, links, selected chip names |
 | `ast-purple` | `#5a3a8e` | Card borders (25–40% opacity) — live utility value |
-| `ast-lavender` | `#b78bff` | Section eyebrows, field labels, sidebar widgets |
+| `ast-lavender` | `#b78bff` | Section eyebrows, field labels, sidebar widgets, active Inspo tile |
 | `ast-pink` | `#ff4db8` | Supplies chrome, community, primary CTAs |
 | `ast-blue` | `#4a69d6` | Utility buttons, gradient end |
-| `ast-electric-blue` | `#2e64ff` | Planned status, active tiles, quote text |
+| `ast-electric-blue` | `#2e64ff` | Planned status, active Projects/Supplies tiles, quote text |
 | `ast-coral` | `#ff7a7a` | Needs Sorting bucket, unknown-status fallback — live utility value |
 | `ast-yellow` | `#ffd5a8` | On Hold status, low-condition icon, Close/Cancel/Delete buttons — live utility value |
 | `ast-orange` | `#ffb85c` | Warm accents |
@@ -880,7 +909,7 @@ CSS — distinct from the utility purple.
 | Category | Count | Location | Framework |
 |---|---|---|---|
 | Static | — | `eslint .` / `tsc --noEmit` | ESLint 9 + TS 5.9 strict |
-| Automated unit | 201 tests | `src/lib/*.test.ts` — studio-domain (incl. bundle-pinned style maps + edit-panel budget/option mapping + the r11 two-state condition maps and quantity format gate), design-tokens (globals.css literal pinning incl. the Tailwind-v3 radius scale and the zero-webfont stack), validation (incl. the normalized import gate, the Cognito password-policy rules + permissive sign-in schema, the two-state condition + quantity format boundary), export-payload (incl. the three-slot quantity semantics and the empty-qty/explicit-ok round-trip), rate-limit, inspiration (incl. the rail section resolver with the live's inert "quote" / "spotlight-kevin-lewis" quirks), seed-fidelity (scripts/seed.ts pinned to the live chat byte-for-byte, typos included), login-fidelity + chat-fidelity (the live's measured Amplify login chrome incl. the alert-box error chrome, policy stack, reset-confirmation view, and content-width link buttons; logo aspect; chat-panel structure), drawer-fidelity (the mobile drawers' shared z-40 no-blur scrim with instant mount/unmount), supply-fidelity (the create modal's inert Stock Status select, the quantity format gate's exact copy, the edit panel's `?? "ok"` init, the chip's unconditional qty label, the detail panel's raw quantity) | Vitest (node env, `@/` alias) |
+| Automated unit | 210 tests | `src/lib/*.test.ts` — studio-domain (incl. bundle-pinned style maps + edit-panel budget/option mapping + the r11 two-state condition maps and quantity format gate), design-tokens (globals.css literal pinning incl. the Tailwind-v3 radius scale and the zero-webfont stack), validation (incl. the normalized import gate, the Cognito password-policy rules + permissive sign-in schema, the two-state condition + quantity format boundary), export-payload (incl. the three-slot quantity semantics and the empty-qty/explicit-ok round-trip), rate-limit, inspiration (incl. the rail section resolver with the live's inert "quote" / "spotlight-kevin-lewis" quirks), seed-fidelity (scripts/seed.ts pinned to the live chat byte-for-byte, typos included), login-fidelity + chat-fidelity (the live's measured Amplify login chrome incl. the alert-box error chrome, policy stack, reset-confirmation view, and content-width link buttons; logo aspect; chat-panel structure), drawer-fidelity (the mobile drawers' shared z-40 no-blur scrim with instant mount/unmount), supply-fidelity (the create modal's inert Stock Status select, the quantity format gate's exact copy, the edit panel's `?? "ok"` init, the chip's unconditional qty label, the detail panel's raw quantity), sidebar-tile-fidelity (the stat tiles' per-tile ACTIVE accent pairs — electric blue for Projects/Supplies, lavender for Inspo — with the card bg and hover classes dropped while active; the constant inner text classes; a negative pin on the old hardcoded electric-blue string) | Vitest (node env, `@/` alias) |
 | Automated action | 28 tests | `src/actions/studio.test.ts` (throwaway SQLite DB, mocked auth seam — incl. the mid-import rollback contract, the mid-delete no-strand contract, and the two-state condition round-trips) | Vitest |
 | Manual golden paths | 11 flows | README "Testing & Quality" | Browser-executed (pinned by `scripts/smoke_functional.py`, 23 checks) |
 | CI verify-gate | — | `.github/workflows/verify-gate.yml` (lint + typecheck + test + build) | GitHub Actions |

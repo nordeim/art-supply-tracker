@@ -132,7 +132,7 @@ not secret — rotate before any public deployment).
 ### Testing Strategy
 
 Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
-`src/**/*.test.ts`). The suite (229 tests) pins:
+`src/**/*.test.ts`). The suite (238 tests) pins:
 
 - **Studio-domain vocabulary** — the per-category `SUPPLY_TYPE_LISTS` in the
   live app's tokens (Paint/Brush/Pastel/Paper/Canvas/Medium/Other categories,
@@ -230,6 +230,14 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
   backdrop blur (the page dims, never blurs), z-40 below the z-50
   drawers, and instant mount/unmount (the live's scrim unmounts at
   click-time while the drawer still animates out — no opacity fade).
+- **Sidebar stat-tile fidelity** (`sidebar-tile-fidelity.test.ts`) —
+  file-content pins on the live's measured tile contract (r12): the
+  ACTIVE view's tile highlights with its OWN accent pair — electric
+  blue (`border/bg` at `/60`–`/10`) for Projects and Supplies, LAVENDER
+  for Inspo — dropping the `#120724` card background and hover classes
+  while active; the inner text classes (label / value / sub) stay
+  constant across both states; a negative pin rejects the old
+  single-accent hardcode.
 - **Action layer** (`src/actions/studio.test.ts`) — the mutation surface
   against a throwaway SQLite database with the auth seam mocked: CRUD,
   ownership/IDOR checks, supply assignment, delete-side-effects (incl. the
