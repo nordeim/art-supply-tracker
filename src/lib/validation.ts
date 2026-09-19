@@ -12,6 +12,7 @@ import {
   SUBCATEGORY_OTHER,
   SUPPLY_CATEGORY_VALUES,
   SUPPLY_CONDITION_VALUES,
+  isValidQuantityInput,
 } from "@/lib/studio-domain";
 
 const emailSchema = z
@@ -129,6 +130,14 @@ export const projectInputSchema = z.object({
  * value`) and its backend has no vocabulary check — the category-scoped
  * pickers are the guard, exactly as in production. The schema keeps the
  * type/trim/length discipline.
+ *
+ * `condition` is the live's two-state status (r11, measured 2026-09-19):
+ * null = ABSENT (supplies created through the modal never store one — its
+ * Stock Status select is inert on the live), while "ok" | "low" |
+ * "critical" are the explicit values the EDIT panel saves. `quantity`
+ * follows the live's format gate: empty is valid (stored as ""), and
+ * only plain numbers / simple a/b fractions pass — the modal enforces the
+ * same rule client-side with the live's exact error copy.
  */
 export const supplyInputSchema = z.object({
   name: z.string().trim().min(1, "Supply name is required.").max(160, "Supply name is too long."),
@@ -142,8 +151,18 @@ export const supplyInputSchema = z.object({
         ? undefined
         : v,
     ),
-  quantity: z.string().trim().min(1).max(40).default("1"),
-  condition: z.enum(SUPPLY_CONDITION_VALUES as [string, ...string[]]).default("ok"),
+  quantity: z
+    .string()
+    .trim()
+    .max(40, "Quantity is too long.")
+    .default("")
+    .refine(isValidQuantityInput, {
+      message: "Enter a valid quantity, like 2, 1.5, or 1/2",
+    }),
+  condition: z
+    .enum(SUPPLY_CONDITION_VALUES as [string, ...string[]])
+    .nullable()
+    .default(null),
   location: optionalText(200),
   notes: optionalText(4000),
   barcode: optionalText(120),
@@ -183,7 +202,7 @@ export const importPayloadSchema = z.object({
         subcategory: z.string().max(60).nullable().optional(),
         quantityValue: z.number().nullable().optional(),
         quantity: z.union([z.number(), z.string().max(40)]).nullable().optional(),
-        qty: z.number().nullable().optional(),
+        qty: z.union([z.number(), z.literal("")]).nullable().optional(),
         status: z.enum(SUPPLY_CONDITION_VALUES as [string, ...string[]]).optional(),
         location: z.string().max(200).nullable().optional(),
         notes: z.string().max(4000).nullable().optional(),
@@ -220,8 +239,10 @@ export const normalizedImportPayloadSchema = z.object({
         name: z.string().min(1).max(160),
         category: z.enum(SUPPLY_CATEGORY_VALUES as [string, ...string[]]),
         subcategory: z.string().max(60).nullable(),
-        quantity: z.string().min(1).max(40),
-        condition: z.enum(SUPPLY_CONDITION_VALUES as [string, ...string[]]),
+        // Empty quantities are valid live data (stored as ""; the live's
+        // exports carry qty: "" — r11) — only the length is bounded here.
+        quantity: z.string().max(40),
+        condition: z.enum(SUPPLY_CONDITION_VALUES as [string, ...string[]]).nullable(),
         location: z.string().max(200).nullable(),
         notes: z.string().max(4000).nullable(),
         barcode: z.string().max(120).nullable(),

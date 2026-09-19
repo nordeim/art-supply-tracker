@@ -27,7 +27,8 @@ export interface SupplyDto {
   category: string;
   subcategory: string | null;
   quantity: string;
-  condition: string;
+  /** null = absent status (the live's create path); "ok" is explicit. */
+  condition: string | null;
   location: string | null;
   notes: string | null;
   barcode: string | null;
@@ -118,9 +119,10 @@ export interface ExportedSupply {
   createdAt: string;
   updatedAt: string;
   usedInProjectIds: string[];
-  qty: number | null;
+  /** "" when the quantity is empty; the parsed number otherwise; null only for unparseable stored text (r11). */
+  qty: number | "" | null;
   image: string | null;
-  /** Present only when not "ok" — mirrors the live export. */
+  /** Present when a status is stored (incl. explicit "ok") — absent status is omitted (r11). */
   status?: string;
   isNew: boolean;
 }

@@ -91,8 +91,9 @@ Prisma 6.19.2 + SQLite · Zod 4.3.5 · ESLint 9.
   there are no migration files; the schema is the migration.
 - SQLite has no enums: string fields validated by Zod against
   `studio-domain.ts` lists (category tokens are the live app's singular
-  values — Paint/Brush/…; conditions are ok/low/critical). Add new
-  vocabulary there first.
+  values — Paint/Brush/…; conditions are ok/low/critical — and
+  `Supply.condition` is NULLABLE: null is the live's ABSENT status, see
+  AGENTS.md's Zod-boundary invariant). Add new vocabulary there first.
 - Photos are JSON-encoded data-URL arrays on `Project.photos` / a single
   data URL on `Supply.photo` — client downscales to ≤ 1024px JPEG q0.8,
   ≤ 300 KB encoded; the server cap is `MAX_PHOTO_DATA_URL_LENGTH`
@@ -131,15 +132,17 @@ not secret — rotate before any public deployment).
 ### Testing Strategy
 
 Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
-`src/**/*.test.ts`). The suite (209 tests) pins:
+`src/**/*.test.ts`). The suite (229 tests) pins:
 
 - **Studio-domain vocabulary** — the per-category `SUPPLY_TYPE_LISTS` in the
   live app's tokens (Paint/Brush/Pastel/Paper/Canvas/Medium/Other categories,
   capitalized Paint subcategories, ok/low/critical conditions), the modal's
   picker option order, the NEW-badge window, quantity parsing (integers,
-  decimals, a/b fractions), the edit-panel budget mapping (unset → "0" in the
-  form, blank → null on submit), and the two live unassigned-option strings
-  (create vs edit surfaces).
+  decimals, a/b fractions) and the live's quantity FORMAT gate
+  (`isValidQuantityInput`: empty is valid; unparseable text is not), the
+  edit-panel budget mapping (unset → "0" in the form, blank → null on
+  submit), and the two live unassigned-option strings (create vs edit
+  surfaces).
 - **Design tokens** (`design-tokens.test.ts`) — the `@theme` literal hex
   values, pinned to the live app's *compiled utility classes* (the rendered
   ground truth): purple `#5a3a8e`, yellow `#ffd5a8`, coral `#ff7a7a` plus
@@ -151,28 +154,46 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
 - **Live style maps** (`studio-domain.test.ts`) — the production bundle's
   stock-filter switch ("Low Stock" matches low AND critical; "Out of Stock"
   critical only) and the `jz`/`Mz`/`Jz` status-pill/chip/condition maps,
-  extracted verbatim from the deployed JS, so chips and pills cannot drift
-  from the live rendering.
+  extracted verbatim from the deployed JS and re-measured on the live DOM
+  (r11: the condition maps carry the two-state contract — absent/null →
+  the "?" pill + unlabeled ⚠️ glyph; explicit "ok" → the cyan "OK" pill +
+  "✓ ok" icon), so chips and pills cannot drift from the live rendering.
+- **Supply-surface fidelity** (`supply-fidelity.test.ts`) — file-content
+  pins on the live's measured supply contracts (r11): the create modal's
+  INERT Stock Status select (submits `condition: null`), the quantity
+  format gate's exact "Enter a valid quantity, like 2, 1.5, or 1/2" copy,
+  the edit panel's `?? "ok"` condition init, the chip's unconditional
+  "qty" label, and the detail panel's raw (blank-when-empty) quantity
+  value — so the measured quirks cannot be silently "fixed".
 - **Boundary contracts** (`validation.test.ts`) — photo data-URL caps
   (client 300 KB ↔ server 400k chars), the Other/Custom free-form
   subcategory flow (live parity: the pickers are the vocabulary guard, the
   schema enforces type/trim/length), the import schema's acceptance of
   the live wire shape, the Cognito password-policy rules
   (`passwordPolicyViolations`: every violated rule reported independently,
-  in the live's exact copy), the server-side sign-up policy mirror, and
-  the permissive sign-in schema (a short password submits and fails with
-  "Incorrect username or password." — exactly the live behavior).
+  in the live's exact copy), the server-side sign-up policy mirror, the
+  permissive sign-in schema (a short password submits and fails with
+  "Incorrect username or password." — exactly the live behavior), and the
+  supply boundary's two-state condition (null = absent, defaulting) plus
+  the quantity format gate (empty valid; unparseable text rejected with
+  the live's exact copy).
 - **Wire format** (`export-payload.test.ts`) — the export payload's exact
-  field set (`title`, `subcategory`, `supplyIds`, numeric `qty`/`quantity`/
-  `quantityValue`, `isNew`, status omitted when ok, unset `budget`/`barcode`
-  as `""`, `imageUrl: null`) and the import normalizer's handling of both
-  live and legacy clone shapes, including relation remapping.
+  field set (`title`, `subcategory`, `supplyIds`, the three-slot quantity
+  semantics — `qty:""` when empty, `quantity:null` for fractions, the
+  fraction-aware `quantityValue` — `isNew`, status omitted when ABSENT
+  but emitted when explicit, unset `budget`/`barcode` as `""`,
+  `imageUrl: null`) and the import normalizer's handling of both live and
+  legacy clone shapes, including relation remapping and the empty-qty /
+  explicit-ok round-trip verified against the live's own import.
 - **Import gate** (`validation.test.ts` + `studio.test.ts`) —
   `normalizedImportPayloadSchema` rejects out-of-vocabulary categories and
   statuses, oversized arrays (500 projects / 1000 supplies), over-length
   strings, and oversized photo payloads; the action layer refuses to store
   them and rolls the studio back when a row fails mid-import (the whole
-  restore is one interactive transaction).
+  restore is one interactive transaction). The delete path follows the
+  same atomicity discipline — a mid-delete failure must not strand
+  supplies on a still-existing project (pinned by a failure-injection
+  test).
 - **Rate limiting** (`rate-limit.test.ts`) — fixed-window allow/block,
   rollover, per-key isolation, cooldown reporting, bounded memory.
 - **Inspiration detail** — schema acceptance, corrupt-JSON degradation to
@@ -211,8 +232,10 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
   click-time while the drawer still animates out — no opacity fade).
 - **Action layer** (`src/actions/studio.test.ts`) — the mutation surface
   against a throwaway SQLite database with the auth seam mocked: CRUD,
-  ownership/IDOR checks, supply assignment, delete-side-effects,
-  live/legacy import, chat validation.
+  ownership/IDOR checks, supply assignment, delete-side-effects (incl. the
+  mid-delete rollback), the two-state condition round-trips (create →
+  absent, edit → explicit), empty-quantity creation, live/legacy import
+  (incl. the empty-qty / explicit-ok verbatim restore), chat validation.
 
 Run `bun run test` — new domain logic in `src/lib` and new actions require
 tests first (red → green). Golden paths that live in the browser (view

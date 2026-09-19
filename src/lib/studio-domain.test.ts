@@ -12,6 +12,7 @@ import {
   budgetEditValue,
   budgetFromEditInput,
   isNewItem,
+  isValidQuantityInput,
   matchesStockFilter,
   parseQuantityValue,
   projectChipStatusClasses,
@@ -223,6 +224,31 @@ describe("parseQuantityValue", () => {
   });
 });
 
+describe("isValidQuantityInput (the live modal's format gate, r11)", () => {
+  // Measured on the live app 2026-09-19: the create modal accepts an EMPTY
+  // quantity (the supply stores "") and rejects unparseable text with the
+  // exact copy "Enter a valid quantity, like 2, 1.5, or 1/2".
+  it("accepts the empty string (the live stores empty quantities)", () => {
+    expect(isValidQuantityInput("")).toBe(true);
+    expect(isValidQuantityInput("   ")).toBe(true);
+  });
+
+  it("accepts plain numbers and simple fractions", () => {
+    expect(isValidQuantityInput("2")).toBe(true);
+    expect(isValidQuantityInput("1.5")).toBe(true);
+    expect(isValidQuantityInput(".5")).toBe(true);
+    expect(isValidQuantityInput("1/2")).toBe(true);
+    expect(isValidQuantityInput(" 3 ")).toBe(true);
+  });
+
+  it("rejects unparseable text the way the live modal does", () => {
+    expect(isValidQuantityInput("abc")).toBe(false);
+    expect(isValidQuantityInput("2a")).toBe(false);
+    expect(isValidQuantityInput("1/2/3")).toBe(false);
+    expect(isValidQuantityInput("2,5")).toBe(false);
+  });
+});
+
 /**
  * Stock filter + status style maps — pinned to the live app's bundle
  * (studiobeta.artsupplytracker.com/assets/index-DMkKcyoM.js, extracted
@@ -308,10 +334,21 @@ describe("project chip status styles (live Mz map)", () => {
 });
 
 describe("supply condition pill styles (live Jz map)", () => {
-  it("renders ok as the fallback ? pill", () => {
-    // The live app stores no status for OK supplies, so the pill renders the
-    // Jz fallback (label '?', white/10 bg). Our ok maps onto that rendering.
+  it("renders an explicit ok as the live's OK pill (r11)", () => {
+    // Measured on the live DOM 2026-09-19: a supply whose status was set
+    // explicitly (the edit panel's Stock Status save) renders the cyan OK
+    // pill — bg-ast_cyan/15 text-ast_cyan, label "OK".
     expect(supplyConditionPill("ok")).toEqual({
+      label: "OK",
+      classes: "bg-ast-cyan/15 text-ast-cyan",
+    });
+  });
+
+  it("renders an absent status as the fallback ? pill (r11)", () => {
+    // Measured on the live DOM: supplies created through the create modal
+    // carry NO status (the modal's Stock Status select is inert) and render
+    // the Jz fallback — label '?', white/10 bg. null is our absent token.
+    expect(supplyConditionPill(null)).toEqual({
       label: "?",
       classes: "bg-white/10 text-ast-faint",
     });
@@ -330,10 +367,21 @@ describe("supply condition pill styles (live Jz map)", () => {
 });
 
 describe("supply detail condition icon (live detail header)", () => {
-  it("matches the live undefined-status rendering for ok", () => {
-    // Live data has no status string for OK, which lands in the pink else
-    // branch with an empty label — users see a pink warning glyph only.
+  it("renders an explicit ok as the live's checkmark icon (r11)", () => {
+    // Measured on the live DOM 2026-09-19: an explicit ok status renders
+    // "✓ ok" in turquoise — bg-ast_turquoise/20 text-ast_turquoise.
     expect(supplyDetailConditionIcon("ok")).toEqual({
+      icon: "✓",
+      label: "ok",
+      classes: "bg-ast-turquoise/20 text-ast-turquoise",
+    });
+  });
+
+  it("renders an absent status as the pink unlabeled glyph (r11)", () => {
+    // Measured on the live DOM: absent status lands in the pink else branch
+    // with an empty label — a pink warning glyph only. null is our absent
+    // token (created supplies carry no status).
+    expect(supplyDetailConditionIcon(null)).toEqual({
       icon: "⚠️",
       label: "",
       classes: "bg-ast-pink/20 text-ast-pink",

@@ -1,9 +1,9 @@
-# AST Studio — Master Project Architecture Document (PAD) v1.9
+# AST Studio — Master Project Architecture Document (PAD) v1.10
 
 **Classification:** Internal Engineering Reference
 **Status:** DEFINITIVE, PRODUCTION-LOCKED BLUEPRINT
 **Companion Document:** `README.md` (onboarding), `AGENTS.md` (agent instructions), `CLAUDE.md` (engineering standards)
-**Last Updated:** 2026-09-18 (r10)
+**Last Updated:** 2026-09-19 (r11)
 **Audience:** Senior Engineers, Tech Leads, DevOps, and Onboarding Engineers
 **Rule:** Every architectural decision in this document traces to a specific rationale.
 Nothing is here "because it's popular."
@@ -178,6 +178,44 @@ Nothing is here "because it's popular."
   78px lower on the live purely from that extra row). 209 tests total,
   23 smoke checks, all gates green, VLM PARITY on the fixed drawer
   pairs.
+- `[R11]` Session-17 supply-contract pass (2026-09-19): a fresh recon
+  re-confirmed every steady-state surface at parity (8 VLM comparisons —
+  desktop views + the production build's dashboard + mobile + both
+  drawer pairs; DOM spot-checks — header 1920×88, logo 222×56, chat rows
+  byte-identical, login card 480×429 @ (494,464), drawer scrims and
+  geometry identical; a pristine-state export capture byte-identical;
+  production build verified zero-webfont with no dev-tools badge — the
+  dev-mode Geist faces and "N" indicator never ship). A functional
+  deep-dive against the live (create/edit/export/import probes, every
+  probe supply deleted, the live account left pristine) then closed two
+  HIGH-severity gaps in the supply contracts. QUANTITY (r11-F1): the
+  live accepts an EMPTY quantity — stores "", renders the bare "qty"
+  chip label and a blank detail value, exports `qty:""` /
+  `quantity:null` / `quantityValue:null`; it validates the FORMAT
+  (unparseable text rejected with the exact copy "Enter a valid
+  quantity, like 2, 1.5, or 1/2"); its fraction exports carry
+  `quantity:null` (the plain `Number()` parse — no fraction support);
+  and its import round-trips `qty:""` verbatim. CONDITION (r11-F2):
+  the live's create-modal Stock Status select is INERT (a supply created
+  with "Low" selected still stores no status); an ABSENT status renders
+  the "?" pill + unlabeled "⚠️" detail glyph and is omitted in export,
+  while an EXPLICIT "ok" (saved through the edit panel) renders the
+  cyan "OK" pill (`bg-ast_cyan/15 text-ast_cyan`) + "✓ ok" icon
+  (`bg-ast_turquoise/20 text-ast_turquoise`) and exports `status:"ok"`;
+  the import preserves the distinction. Remediated via TDD:
+  `Supply.condition` became nullable (null = absent; the modal submits
+  null, the edit panel initializes `?? "ok"` and saves explicitly), the
+  quantity format gate landed in `isValidQuantityInput` + the Zod
+  boundary, the export/import wire format was re-pinned to the measured
+  three-slot semantics, and the chip/detail rendering matches the live
+  byte-for-byte (browser-verified). Also: `deleteProject` became atomic
+  (detach + delete in one transaction — a mid-delete failure can no
+  longer strand supplies), the README's stale `next/font` Typography
+  paragraph was corrected to the zero-webfont contract, and two r10-era
+  observations were documented as accepted (the nav-vs-aside drawer
+  landmark; the dev-mode-only badge/fonts). Pinned by 20 new/adjusted
+  tests incl. the new `supply-fidelity.test.ts` (6 source pins);
+  229 tests, 23 smoke checks, all gates green.
 
 ---
 
@@ -648,8 +686,8 @@ erDiagram
         string name
         string category "Paint|Brush|Pastel|Paper|Canvas|Medium|Other (live tokens)"
         string type "per-category subcategory (e.g. Watercolor, Palette knives)"
-        string quantity "free-form: '2', '1.5', '1/2'"
-        string condition "ok|low|critical"
+        string quantity "free-form: '2', '1.5', '1/2', or '' (empty is live-valid)"
+        string condition "nullable: null=absent (create) | ok|low|critical (explicit, via edit)"
         string location "nullable"
         string barcode "nullable"
         string photo "data URL, nullable"
@@ -842,8 +880,8 @@ CSS — distinct from the utility purple.
 | Category | Count | Location | Framework |
 |---|---|---|---|
 | Static | — | `eslint .` / `tsc --noEmit` | ESLint 9 + TS 5.9 strict |
-| Automated unit | 186 tests | `src/lib/*.test.ts` — studio-domain (incl. bundle-pinned style maps + edit-panel budget/option mapping), design-tokens (globals.css literal pinning incl. the Tailwind-v3 radius scale and the zero-webfont stack), validation (incl. the normalized import gate, the Cognito password-policy rules + permissive sign-in schema), export-payload, rate-limit, inspiration (incl. the rail section resolver with the live's inert "quote" / "spotlight-kevin-lewis" quirks), seed-fidelity (scripts/seed.ts pinned to the live chat byte-for-byte, typos included), login-fidelity + chat-fidelity (the live's measured Amplify login chrome incl. the alert-box error chrome, policy stack, reset-confirmation view, and content-width link buttons; logo aspect; chat-panel structure), drawer-fidelity (the mobile drawers' shared z-40 no-blur scrim with instant mount/unmount) | Vitest (node env, `@/` alias) |
-| Automated action | 23 tests | `src/actions/studio.test.ts` (throwaway SQLite DB, mocked auth seam — incl. the mid-import rollback contract) | Vitest |
+| Automated unit | 201 tests | `src/lib/*.test.ts` — studio-domain (incl. bundle-pinned style maps + edit-panel budget/option mapping + the r11 two-state condition maps and quantity format gate), design-tokens (globals.css literal pinning incl. the Tailwind-v3 radius scale and the zero-webfont stack), validation (incl. the normalized import gate, the Cognito password-policy rules + permissive sign-in schema, the two-state condition + quantity format boundary), export-payload (incl. the three-slot quantity semantics and the empty-qty/explicit-ok round-trip), rate-limit, inspiration (incl. the rail section resolver with the live's inert "quote" / "spotlight-kevin-lewis" quirks), seed-fidelity (scripts/seed.ts pinned to the live chat byte-for-byte, typos included), login-fidelity + chat-fidelity (the live's measured Amplify login chrome incl. the alert-box error chrome, policy stack, reset-confirmation view, and content-width link buttons; logo aspect; chat-panel structure), drawer-fidelity (the mobile drawers' shared z-40 no-blur scrim with instant mount/unmount), supply-fidelity (the create modal's inert Stock Status select, the quantity format gate's exact copy, the edit panel's `?? "ok"` init, the chip's unconditional qty label, the detail panel's raw quantity) | Vitest (node env, `@/` alias) |
+| Automated action | 28 tests | `src/actions/studio.test.ts` (throwaway SQLite DB, mocked auth seam — incl. the mid-import rollback contract, the mid-delete no-strand contract, and the two-state condition round-trips) | Vitest |
 | Manual golden paths | 11 flows | README "Testing & Quality" | Browser-executed (pinned by `scripts/smoke_functional.py`, 23 checks) |
 | CI verify-gate | — | `.github/workflows/verify-gate.yml` (lint + typecheck + test + build) | GitHub Actions |
 
@@ -996,7 +1034,13 @@ public exposure).
 | Medium | ~~Login Amplify chrome incomplete~~ | Missing eye-segment borders, wrong grays (#89949b vs #89949f), visible typed text (live renders invisible #0d1a26), no tab-strip top border, mobile h1 leading 1.25 | **Resolved 2026-09-17 (r8)** — all pinned by `login-fidelity.test.ts`; pixel-verified against the live |
 | High | ~~Auth error chrome and reset flow diverged~~ | Server errors rendered as bare paragraphs (the live uses the Amplify alert box with icon + dismiss); the reset flow dead-ended on a static support notice instead of the live's Code/New Password confirmation view; signup lacked the Cognito password-policy rule stack; duplicate-email copy diverged; link buttons were full-width | **Resolved 2026-09-17 (r9)** — Amplify alert box (bg #FCE9E9, warning/X SVG paths, working dismiss), the full confirmation view (Submit answers with the live's invalid-code rejection — no mailer, the honest simulation), the policy-rule stack + mismatch line, "User already exists" copy, native validation, content-width 35px link buttons; all DOM-verified byte-identical against the live and pinned by tests |
 | Medium | ~~Mobile drawer scrim chrome diverged~~ | The clone's drawer scrim carried `backdrop-blur-sm` (visibly blurring the page behind the drawer — the live only dims), floated at z-50 (the live's scrim is z-40, below the z-50 drawers), and the sidebar's scrim faded via transition-opacity (the live mounts/unmounts instantly) | **Resolved 2026-09-18 (r10)** — both scrims render the live's shared `fixed inset-0 z-40 bg-black/60 md:hidden` shape; the sidebar scrim became conditionally mounted (instant, unmounts when closed); pinned by `drawer-fidelity.test.ts`; VLM-verified PARITY on both drawer pairs |
+| High | ~~Supply quantity contract diverged~~ | The clone's modal BLOCKED an empty quantity ("Quantity is required."), accepted unparseable text ("abc"), hid the chip's "qty" span when empty, rendered "—" in the detail panel, exported `qty:null` for empty and `quantity:0.5` for fractions, and coerced imported `qty:""` to "1" — the live accepts empty (stores "", bare "qty" chip label, blank detail, export `qty:""`/`quantity:null`/`quantityValue:null`), validates the format ("Enter a valid quantity, like 2, 1.5, or 1/2"), exports fractions with `quantity:null` (plain-Number parse), and round-trips `qty:""` through its import | **Resolved 2026-09-19 (r11)** — `isValidQuantityInput` + the Zod format gate, the three-slot export semantics, the always-rendered qty label, the raw detail value, and the verbatim import round-trip; all measured on the live and pinned by tests |
+| High | ~~Supply condition contract diverged (two-state)~~ | The clone collapsed the live's ABSENT status (create-modal's inert select) and EXPLICIT "ok" (edit-panel save) into one "ok" state — rendering "?"/"⚠️" for both, omitting `status` for "ok", and importing to "ok" — while the live renders "OK" (cyan pill + "✓ ok" icon) and exports `status:"ok"` for the explicit state | **Resolved 2026-09-19 (r11)** — `Supply.condition` is nullable (null = absent); the modal submits null (inert select), the edit panel initializes `?? "ok"` and saves explicitly; the import preserves the distinction; pinned by `supply-fidelity.test.ts` + domain/validation/action tests |
+| Medium | ~~deleteProject non-atomic~~ | The supply-detach (`updateMany`) and the project delete ran as two separate writes — a failure between them silently detached supplies from a still-existing project | **Resolved 2026-09-19 (r11)** — both writes run in ONE `db.$transaction`; a mid-delete failure rolls back (pinned by a failure-injection test) |
+| Medium | ~~README Typography section documented the removed next/font setup~~ | The r8 zero-webfont remediation updated AGENTS/CLAUDE/PAD but left README's Design System section describing the pre-r8 `next/font` Inter build — exactly the documentation trap that would lead a future agent to re-introduce it | **Resolved 2026-09-19 (r11)** — the paragraph now documents the zero-webfont InterVariable stack and the do-not-reintroduce warning |
 | Low | Mobile login card offset by 0.5px | The live's card is 357px centered in its 358px content column (x=16.5 — Amplify internal responsive fractional layout); the clone fills the column (358px at x=16). Desktop is byte-identical (480×429 at 494,464) | Accepted (sub-pixel, below the visibility threshold — reproducing it would require guessing Amplify's viewport-dependent internal CSS) |
+| Low | Sidebar drawer semantic landmark differs | The live's mobile sidebar drawer is an `<aside>` (no role/label); the clone renders `<nav aria-label="Studio tools">` — a deliberate WCAG improvement documented in CLAUDE.md. Visual parity unaffected (identical classes/geometry, measured r11) | Accepted (accessibility improvement, intentionally kept) |
+| Low | Dev-mode-only browser artifacts | In `next dev`, the Next.js dev-tools badge (the "N" button) and 4 `__nextjs-Geist` FontFaces appear in `document.fonts` — neither ships in the production build (verified r11: prod build has `document.fonts.size === 0` and no badge) | Accepted (dev-mode artifact — sessions comparing dev-mode DOM must not misclassify these as parity gaps; production is the ground truth) |
 | Low | View state not URL-addressable | Browser back doesn't switch studio views | Accepted (ADR-001 consequence) |
 | Low | Chat avatar colors keyed to seeded usernames | New users get the default purple avatar | Accepted (matches original's initials behavior) |
 | Low | SQLite single-writer | No multi-process horizontal scale | Accepted (ADR-002); swap to Postgres by changing `provider` + URL if ever needed |

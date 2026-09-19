@@ -82,7 +82,9 @@ export function SupplyDetailPanel({
         {supply.subcategory && (
           <DetailField label="Subcategory" value={supply.subcategory} />
         )}
-        <DetailField label="Quantity" value={supply.quantity || "—"} />
+        {/* The live renders an empty quantity as a BLANK value (r11,
+         * measured) — the "—" fallback belongs to Location only. */}
+        <DetailField label="Quantity" value={supply.quantity} />
         <DetailField label="Location" value={supply.location ?? "—"} />
         {supply.notes && (
           <div className="col-span-3">

@@ -22,6 +22,7 @@ import {
   SUPPLY_CATEGORIES,
   SUPPLY_CONDITIONS,
   UNASSIGNED_OPTION_EDIT,
+  isValidQuantityInput,
   subcategoryOptionsFor,
 } from "@/lib/studio-domain";
 import { fileToDataUrl } from "@/components/studio/photo-data-url";
@@ -39,7 +40,10 @@ export function SupplyEditPanel({ supply, projects, onCancel, onSaved }: SupplyE
   const [subcategory, setSubcategory] = useState(supply.subcategory ?? SUBCATEGORY_NONE);
   const [customSubcategory, setCustomSubcategory] = useState("");
   const [quantity, setQuantity] = useState(supply.quantity);
-  const [condition, setCondition] = useState(supply.condition);
+  // An absent status (null — the create modal's inert-select result) opens
+  // the edit form on "OK": the live's edit select shows OK for such
+  // supplies, and saving stores the explicit "ok" (r11, measured).
+  const [condition, setCondition] = useState(supply.condition ?? "ok");
   const [location, setLocation] = useState(supply.location ?? "");
   const [notes, setNotes] = useState(supply.notes ?? "");
   const [barcode, setBarcode] = useState(supply.barcode ?? "");
@@ -80,8 +84,10 @@ export function SupplyEditPanel({ supply, projects, onCancel, onSaved }: SupplyE
       setError("Supply name is required.");
       return;
     }
-    if (!quantity.trim()) {
-      setError("Quantity is required.");
+    // The live's quantity gate (r11): empty is accepted (stored as ""),
+    // unparseable text is rejected with the create form's exact copy.
+    if (!isValidQuantityInput(quantity)) {
+      setError("Enter a valid quantity, like 2, 1.5, or 1/2");
       return;
     }
     const resolvedSubcategory = isOtherCategory

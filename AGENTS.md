@@ -11,7 +11,7 @@ Run from the repo root. Bun is the package manager — use `bun`, never `npm`/`y
 | `bun run dev` | Dev server on :3000 |
 | `bun run lint` | ESLint (next/core-web-vitals + next/typescript) |
 | `bun run typecheck` | `tsc --noEmit`, strict |
-| `bun run test` | Vitest — 209 tests: domain vocabulary, bundle-pinned status/condition style maps, design-token literals (incl. the Tailwind-v3 radius scale and the zero-webfont InterVariable stack), validation (incl. the normalized import gate, the Cognito password-policy rules, and the permissive sign-in schema), export/import wire format, rate limiting, the inspiration rail section resolver (incl. the live's inert "quote" / "spotlight-kevin-lewis" quirks), seeded chat-history fidelity (the live's five community messages byte-for-byte — the author's own typos, "KIm"/"brower", pinned so they cannot be silently "corrected"), login/header/chat-panel fidelity (the responsive logo's intrinsic 1068×269 aspect, the Amplify eye-toggle chrome, the invisible-typing input quirk, the tab strip's 2px top border, the sticky community header + scroll-container split, the absence of chat auto-scroll, the pale-pink dismissible Amplify alert box with its exact warning/X icon paths, the Cognito policy-rule stack, the Reset Password confirmation view, the content-width 35px link buttons, and the native-validation attribute set), drawer-scrim fidelity (the mobile drawers' shared `fixed inset-0 z-40 bg-black/60 md:hidden` scrim — no blur, below the z-50 drawers, instant mount/unmount), action layer (each action file runs against a throwaway SQLite DB, incl. the mid-import rollback contract) |
+| `bun run test` | Vitest — 229 tests: domain vocabulary, bundle-pinned status/condition style maps (incl. the two-state absent-vs-explicit "?"/"OK" pill and "✓ ok" icon branches), design-token literals (incl. the Tailwind-v3 radius scale and the zero-webfont InterVariable stack), validation (incl. the normalized import gate, the Cognito password-policy rules, the permissive sign-in schema, and the live's quantity format gate), export/import wire format (incl. the empty-qty `qty:""` slot, the fraction `quantity:null` slot, the absent-vs-explicit status emission, and the empty-qty/explicit-ok import round-trip), rate limiting, the inspiration rail section resolver (incl. the live's inert "quote" / "spotlight-kevin-lewis" quirks), seeded chat-history fidelity (the live's five community messages byte-for-byte — the author's own typos, "KIm"/"brower", pinned so they cannot be silently "corrected"), login/header/chat-panel fidelity (the responsive logo's intrinsic 1068×269 aspect, the Amplify eye-toggle chrome, the invisible-typing input quirk, the tab strip's 2px top border, the sticky community header + scroll-container split, the absence of chat auto-scroll, the pale-pink dismissible Amplify alert box with its exact warning/X icon paths, the Cognito policy-rule stack, the Reset Password confirmation view, the content-width 35px link buttons, and the native-validation attribute set), drawer-scrim fidelity (the mobile drawers' shared `fixed inset-0 z-40 bg-black/60 md:hidden` scrim — no blur, below the z-50 drawers, instant mount/unmount), supply-surface fidelity (the create modal's INERT Stock Status select — it submits `condition: null` — the quantity format gate's exact copy, the edit panel's `?? "ok"` init, the chip's unconditional qty label, the detail panel's raw quantity), action layer (each action file runs against a throwaway SQLite DB, incl. the mid-import rollback contract and the mid-delete no-strand contract) |
 | `python3 scripts/smoke_functional.py` | Browser-driven smoke suite (needs `agent-browser` CLI + running server) — 23 golden-path checks incl. the post-create supplies navigation regression and the Recent Projects sticky-focus flow; leaves the studio pristine |
 | `bun run db:push` | Push `prisma/schema.prisma` to SQLite (`db/custom.db`) — required after schema edits |
 | `bun run db:generate` | Regenerate Prisma Client |
@@ -41,12 +41,26 @@ runs the same gate on every push.
   status/category/condition are strings validated against the single-source
   lists in `src/lib/studio-domain.ts`: category tokens are the live app's
   singular values (`Paint`, `Brush`, `Pastel`, `Paper`, `Canvas`, `Medium`,
-  `Other`), conditions are `ok | low | critical`. Supply subcategories come
+  `Other`), conditions are `ok | low | critical` — but the column is NULLABLE:
+  null is the live's ABSENT status (the create modal's Stock Status select
+  is INERT — it submits `condition: null` and the select is pure visual
+  chrome; conditions only become explicit through the edit panel, whose
+  form initializes an absent status onto "ok" before the first save). The
+  two states render differently: absent → "?" pill + unlabeled "⚠️"
+  detail glyph + `status` omitted in export; explicit "ok" → cyan "OK"
+  pill + "✓ ok" icon + `status:"ok"` exported. Supply subcategories come
   from the per-category `SUPPLY_TYPE_LISTS` (the picker is category-scoped;
   "Other" hides it) — but the "Other / Custom…" flow stores free-form text
   (≤ 60 chars), so the schema enforces type/trim/length only, exactly like
   the live app whose pickers are the vocabulary guard. Never accept
-  free-form values for category or condition.
+  free-form values for category. Supply QUANTITY is the live's format
+  contract: empty is valid (stored as `""` — the chip renders the bare
+  "qty" label, the detail panel renders a blank, the export emits
+  `qty:""` / `quantity:null` / `quantityValue:null`), and only plain
+  numbers / simple `a/b` fractions pass the format gate (`isValidQuantityInput`,
+  rejected with the live's exact "Enter a valid quantity, like 2, 1.5,
+  or 1/2" copy). Do not "fix" the empty quantity or the inert select —
+  both are measured live behavior, pinned by `supply-fidelity.test.ts`.
 - **Auth seam:** `src/lib/auth.ts` — scrypt password hashes (`scrypt:salt:hash`
   format), opaque session tokens in the httpOnly `ast_session` cookie,
   `getCurrentUser()` resolves session → user. Actions derive `userId` from
@@ -56,16 +70,25 @@ runs the same gate on every push.
 - **Wire format:** export/import payloads are built and normalized in
   `src/lib/export-payload.ts` to match the ORIGINAL app's JSON shape
   (`title`/`subcategory`/`status`/numeric `qty`/`supplyIds`/`isNew`; unset
-  `budget`/`barcode` export as `""` — the live app's in-memory defaults); the
-  legacy clone shape imports through the same normalizer. The live app's
-  project→`supplyIds` relation maps onto our internal
+  `budget`/`barcode` export as `""` — the live app's in-memory defaults).
+  The quantity trio has THREE distinct slots, all measured on live exports:
+  `qty` is the in-memory value (`""` when the quantity is empty, the parsed
+  number otherwise), `quantity` is the PLAIN `Number()` parse (null for
+  fractions AND empty), and `quantityValue` is the fraction-aware parse
+  (`"1/2"` → 0.5). `status` is emitted whenever one is stored — including
+  an explicit `"ok"` — and omitted for the ABSENT (null) state. The legacy
+  clone shape imports through the same normalizer, and `qty:""` round-trips
+  verbatim (the live's own import restores the empty quantity). The live
+  app's project→`supplyIds` relation maps onto our internal
   `Supply.assignedProjectId`. The normalizer is deliberately lenient —
   `normalizedImportPayloadSchema` (`src/lib/validation.ts`) is the gate
   that enforces the documented bounds (≤500 projects / ≤1000 supplies,
   string lengths, photo caps, status/category/condition enums) before
   anything is stored, and the whole import (delete + re-create) runs in
   ONE interactive `db.$transaction` so a failed restore rolls back
-  instead of emptying the studio.
+  instead of emptying the studio. `deleteProject` follows the same
+  atomicity discipline (detach + delete in one transaction — a mid-delete
+  failure must not strand supplies on a live project).
 - **DTO discipline:** Prisma rows never reach the client; the mappers in
   `page.tsx` / `studio.ts` convert to the types in `src/lib/dto.ts`.
 - **First-paint data** is fetched in `page.tsx` and handed to `StudioApp` as

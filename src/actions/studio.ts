@@ -69,7 +69,7 @@ function toSupplyDto(row: {
   category: string;
   type: string | null;
   quantity: string;
-  condition: string;
+  condition: string | null;
   location: string | null;
   notes: string | null;
   barcode: string | null;
@@ -207,12 +207,17 @@ export async function deleteProject(id: string): Promise<ActionResult<true>> {
   try {
     const existing = await db.project.findFirst({ where: { id, userId: user.id } });
     if (!existing) return notFound("Project not found.");
-    // Supplies assigned to this project revert to studio inventory.
-    await db.supply.updateMany({
-      where: { assignedProjectId: id, userId: user.id },
-      data: { assignedProjectId: null },
+    // Detach the project's supplies and delete the project atomically —
+    // a failure between the two writes must not leave supplies silently
+    // detached from a still-existing project (the same discipline the
+    // import restore follows; r11).
+    await db.$transaction(async (tx) => {
+      await tx.supply.updateMany({
+        where: { assignedProjectId: id, userId: user.id },
+        data: { assignedProjectId: null },
+      });
+      await tx.project.delete({ where: { id } });
     });
-    await db.project.delete({ where: { id } });
     return { ok: true, data: true };
   } catch (error) {
     console.error("[projects:delete] failed", { userId: user.id, id, error });

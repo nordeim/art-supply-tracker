@@ -23,6 +23,7 @@ import {
   SUBCATEGORY_NONE,
   SUBCATEGORY_OTHER,
   UNASSIGNED_OPTION_CREATE,
+  isValidQuantityInput,
   subcategoryOptionsFor,
 } from "@/lib/studio-domain";
 import { fileToDataUrl } from "@/components/studio/photo-data-url";
@@ -90,8 +91,11 @@ export function SupplyModal({ projects, onClose, onSaved }: SupplyModalProps) {
       setError("Supply name is required.");
       return;
     }
-    if (!quantity.trim()) {
-      setError("Quantity is required.");
+    // The live's quantity gate (r11, measured 2026-09-19): empty is
+    // ACCEPTED (the supply stores ""), unparseable text is rejected with
+    // this exact copy.
+    if (!isValidQuantityInput(quantity)) {
+      setError("Enter a valid quantity, like 2, 1.5, or 1/2");
       return;
     }
     // The live save path resolves the __other__ sentinel to the custom text
@@ -105,7 +109,12 @@ export function SupplyModal({ projects, onClose, onSaved }: SupplyModalProps) {
       category,
       subcategory: showSubcategory ? resolvedSubcategory : SUBCATEGORY_NONE,
       quantity: quantity.trim(),
-      condition,
+      // The live's create path never stores a status — its Stock Status
+      // select is inert (verified on the deployed app: a supply created
+      // with "Low" selected still carries no status in the export). The
+      // select stays rendered for visual parity; its value is dropped
+      // here. Conditions only become explicit through the edit panel.
+      condition: null,
       location: location.trim() || undefined,
       notes: notes.trim() || undefined,
       barcode: barcode.trim() || undefined,

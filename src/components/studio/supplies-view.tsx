@@ -492,9 +492,9 @@ function SupplyChip({
           {pill.label}
         </span>
         <div className="flex items-center gap-2">
-          {supply.quantity !== "" && supply.quantity !== null && (
-            <span className="text-xs text-ast-body/50">qty {supply.quantity}</span>
-          )}
+          {/* The live renders the qty label unconditionally — an empty
+           * quantity shows the bare "qty" span (r11, measured). */}
+          <span className="text-xs text-ast-body/50">qty {supply.quantity}</span>
           {projectCount > 0 && (
             <span className="rounded bg-ast-lavender/20 px-1.5 py-0.5 text-xs text-ast-lavender">
               {projectCount} {projectCount === 1 ? "project" : "projects"}

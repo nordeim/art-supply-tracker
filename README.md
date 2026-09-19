@@ -141,19 +141,24 @@ app's focusRequest semantics), the inspiration rail panels, and the
 import/export surface — leaving the studio pristine. It doubles as the
 regression suite for the post-create navigation contract.
 
-Automated tests (Vitest, 209 tests) pin the studio-domain vocabulary
+Automated tests (Vitest, 229 tests) pin the studio-domain vocabulary
 (per-category supply subcategory lists in the live app's tokens), the
 production bundle's status/condition style maps (project status pills,
 chip borders with per-status hover/selected treatments, supply condition
-pills, the detail-panel condition icon ternary, and the stock-filter switch
-where Low Stock matches low AND critical), the design-token literals
-(the live bundle's compiled utility ground truth), the Zod boundary
-contracts (photo data-URL caps, the Other/Custom free-form subcategory
-flow, the normalized import gate, the Cognito password-policy rules
-and the permissive sign-in schema), the export/import wire format (live-app
-shape with `title`/`subcategory`/`supplyIds`/numeric quantities, plus the
-legacy clone shape), the sign-in rate limiter, the inspiration rail section
-resolver ("art-history-today" / "partner" expand their panels; "quote"
+pills incl. the two-state absent-vs-explicit "?"/"OK" rendering, the
+detail-panel condition icon ternary incl. the "✓ ok" branch, and the
+stock-filter switch where Low Stock matches low AND critical), the
+design-token literals (the live bundle's compiled utility ground truth),
+the Zod boundary contracts (photo data-URL caps, the Other/Custom
+free-form subcategory flow, the normalized import gate, the Cognito
+password-policy rules, the permissive sign-in schema, and the live's
+quantity format gate with its exact error copy), the export/import wire
+format (live-app shape with `title`/`subcategory`/`supplyIds`/numeric
+quantities — incl. the empty-qty `qty:""` slot, the fraction
+`quantity:null` slot, and the absent-vs-explicit status emission — plus
+the legacy clone shape and the empty-qty/explicit-ok import round-trip),
+the sign-in rate limiter, the inspiration rail section resolver
+("art-history-today" / "partner" expand their panels; "quote"
 and the hardcoded "spotlight-kevin-lewis" are the live's inert
 sections), the seeded community-chat fidelity (the live history's five
 messages pinned byte-for-byte — the live author's own typos, "KIm" and
@@ -167,10 +172,15 @@ input quirk, the tab strip's 2px gray/turquoise top border, the
 pale-pink dismissible Amplify alert box with its exact warning/X icon
 paths, the Cognito policy-rule stack, the Reset Password confirmation
 view, the content-width 35px link buttons, and the native-validation
-attribute set), and the full action surface
+attribute set), the drawer-scrim fidelity, the supply-surface fidelity
+(the create modal's inert Stock Status select, the quantity format
+gate's exact copy, the edit panel's `?? "ok"` condition init, the
+chip's unconditional qty label, and the detail panel's raw quantity
+rendering), and the full action surface
 against a throwaway SQLite database (CRUD, ownership/IDOR checks,
 assignment, import — including the mid-import failure that must roll back
-without emptying the studio).
+without emptying the studio and the mid-delete failure that must not
+strand supplies).
 
 Manual verification checklist (the golden paths):
 1. Sign in / create an account / sign out (6 rapid bad logins → throttled).
@@ -222,10 +232,13 @@ Panel glow shadows (`shadow-ast-pink` / `-turquoise` / `-blue` / `-cyan` /
 blobs; two themed scrollbar rails (turquoise→blue for left panels,
 pink→purple for right) ship as `.scrollbar-left` / `.scrollbar-right`.
 
-**Typography:** Inter (latin, 100–900 variable) via `next/font`, exposed as
-`--font-inter` on `<body>` and wired through `@theme inline` so the
-`font-sans` utility resolves the next/font variable at the element level
-(a plain `@theme` var() chain silently falls back to the system stack).
+**Typography:** ZERO webfonts ship (r8) — the live app's
+`document.fonts` is empty and its `InterVariable, "Inter var", Inter,
+-apple-system, …` stack resolves to system fonts on every machine, so the
+clone's `--font-sans` mirrors that exact stack verbatim in an
+`@theme inline` block. Do NOT re-introduce `next/font`: its self-hosted
+Inter build has wider advance widths than the live's resolution and
+visibly re-wraps text (pinned by `design-tokens.test.ts`).
 Headline gradient: `linear-gradient(90deg, #00E6FF, #2E64FF, #8D5CFF,
 #FF2FB3)`.
 
@@ -244,7 +257,8 @@ Headline gradient: `linear-gradient(90deg, #00E6FF, #2E64FF, #8D5CFF,
 | Pixel-parity pass (r8) | ✅ Complete | Post-hydration DOM recon (the live renders different pre-hydration markup — steady-state measurements are the only ground truth) closed the last visual gaps: responsive header logo (intrinsic 1068×269 aspect, h-10/12/14 classes — header 88px desktop / 126px mobile, logo 222×56 / 159×40), Tailwind-v3 radius scale (rounded-lg/xl = 8/12px, not the scaffold's 16/20px — card histograms identical), zero-webfont font parity (the live ships no webfont; its InterVariable stack resolves to system fonts — the clone's self-hosted Inter had wider metrics that re-wrapped the Studio Memory text), the chat panel's sticky-header + scroll-container split (community rows at the live's exact coordinates), login Amplify chrome fidelity (equal-width tabs with the 2px gray/turquoise top strip, the eye toggle as the input's right segment with near-invisible #0d1a26 icons, #89949f borders, #9ca3af placeholders, the invisible-typing #0d1a26 input quirk, mobile h1 leading 1.25, Confirm-Password signup, Reset Password view, Amplify error copy), mobile chat drawer scrollbar parity, chat auto-scroll removal (the live has none) — 180 tests, 23 smoke checks, VLM parity on all views + login at both viewports |
 | Error-state pass (r9) | ✅ Complete | Fresh full-surface recon (17 VLM comparisons + DOM spot-checks all PARITY — desktop/mobile views, sidebar drawer, login at both viewports) then an error-state deep-dive closed the auth-error chrome: server errors render in the live's Amplify alert box (bg #FCE9E9, 24px warning icon, 50×34 "Dismiss alert" button — byte-identical at (527,702) 414×58, wrapping to 72px, mobile (49,778) 292×72); the signup Cognito password-policy stack (every violated rule as its own contiguous 24px line — "Password must have at least 8 characters" / upper / lower / numbers / special — coexisting with the "Your passwords must match" line, both stacks DOM-identical incl. the card re-centering shift); the duplicate-email copy ("User already exists"); the complete Reset Password confirmation flow (Send code → Code * / New Password / Confirm / Submit / Resend Code view — card 480×485 with every element at the live's coordinates; Submit answers with the live's "Invalid verification code provided, please try again." — no mailer exists so no code can ever be valid, the honest simulation; Resend is a silent no-op); native form validation (no suppressed validation; password inputs required-only like the live); content-width 35px link buttons (Forgot 182px, Back to Sign In 127px, Resend Code 115px — the r8 51px forgot pin was a pre-hydration artifact). 202 tests, 23 smoke checks, all gates green |
 | Drawer-scrim pass (r10) | ✅ Complete | Fresh recon on the r9 tree (9 VLM comparisons + DOM spot-checks + a live export-payload capture — all steady-state surfaces at parity; desktop chat structure, memory popover, and login card byte-identical) surfaced one residual chrome gap: the mobile drawer scrim. The live renders ONE shared scrim (`fixed inset-0 z-40 bg-black/60 md:hidden` — plain dim, NO backdrop blur, below the z-50 drawers, instant mount/unmount measured at click-time while the drawer still animates); the clone blurred the page behind the scrim (backdrop-blur-sm), floated it at z-50, and faded the sidebar's scrim. Fixed in `studio-app.tsx` + `studio-sidebar.tsx` and pinned by the new `drawer-fidelity.test.ts` (7 pins). Also re-confirmed as accepted: the mobile login card's 0.5px fractional offset (live 357px centered in its 358px column — Amplify internal responsive layout) and the live chat's prior-agent residue message. 209 tests, 23 smoke checks, all gates green |
-| Verification | ✅ Complete | Lint + typecheck + 209 tests + production build clean; VLM screenshot comparison of all four views (plus the mobile views, the sidebar drawer, and the login page at both viewports — including the error states and the reset-confirmation view) vs the live app (parity); 23-check functional smoke suite (CRUD, filters, panels, modals, navigation regression, focus flows) |
+| Supply-contract pass (r11) | ✅ Complete | A deep functional dive against the live (create/edit/export/import probes, every probe supply deleted, live left pristine) closed two HIGH-severity gaps in the supply contracts. QUANTITY: the live accepts an EMPTY quantity (stores "", chip renders the bare "qty" label, detail panel blank, export `qty:""` / `quantity:null` / `quantityValue:null`), validates the FORMAT (unparseable text is rejected with the exact copy "Enter a valid quantity, like 2, 1.5, or 1/2"), and its fraction exports carry `quantity:null` (plain-Number parse only) — the clone now mirrors all of it (`isValidQuantityInput`, wire-format fixes, import round-trips "" verbatim). CONDITION: the live's create-modal Stock Status select is INERT (created supplies carry no status, whatever the select showed — verified by creating one with "Low" selected), an ABSENT status renders the "?" pill + unlabeled "⚠️" detail glyph + status omitted in export, while an EXPLICIT "ok" saved through the edit panel renders the cyan "OK" pill + "✓ ok" icon + `status:"ok"` in export — the schema now models the two states (`condition String?`, null = absent; the modal submits null, the edit panel saves explicit values; import preserves the distinction). Also: `deleteProject` became atomic (detach + delete in one transaction), the README's stale `next/font` Typography paragraph was corrected to the zero-webfont contract, and the r10 accepted divergences were re-confirmed (nav-vs-aside drawer tag documented; the dev-mode Next.js badge + Geist font faces verified absent in the production build). Pinned by 20 new/adjusted tests incl. the new `supply-fidelity.test.ts` (6 source pins). 229 tests, 23 smoke checks, all gates green |
+| Verification | ✅ Complete | Lint + typecheck + 229 tests + production build clean; VLM screenshot comparison of all four views (plus the mobile views, the sidebar drawer, and the login page at both viewports — including the error states and the reset-confirmation view) vs the live app (parity); 23-check functional smoke suite (CRUD, filters, panels, modals, navigation regression, focus flows) |
 | Documentation | ✅ Complete | README, AGENTS.md, CLAUDE.md, Project_Architecture_Document.md |
 
 Known intentional gaps (mirroring the original beta's placeholders): the

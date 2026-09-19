@@ -148,6 +148,58 @@ describe("project actions", () => {
     const after = await db.supply.findUnique({ where: { id: supply.data.id } });
     expect(after?.assignedProjectId).toBeNull();
   });
+
+  it("keeps assignments when the project delete fails mid-way (r11 atomicity)", async () => {
+    // The detach + delete must run in ONE transaction: a failure after the
+    // detach would otherwise silently strand supplies on a project that
+    // still exists.
+    const project = await studio.createProject({ name: "Atomic target" });
+    const supply = await studio.createSupply({
+      name: "Atomic supply",
+      category: "Paint",
+      quantity: "1",
+    });
+    if (!project.ok || !supply.ok) throw new Error("setup failed");
+    const assigned = await studio.setSupplyAssignment(supply.data.id, project.data.id);
+    expect(assigned.ok).toBe(true);
+
+    const original = db.$transaction.bind(db);
+    const spy = vi.spyOn(db, "$transaction").mockImplementation(
+      (async (arg: unknown) => {
+        if (typeof arg === "function") {
+          // Interactive-transaction form: the tx detaches the supplies but
+          // FAILS on the project delete — the whole restore must roll back.
+          const tx = {
+            supply: {
+              updateMany: async () => ({}),
+            },
+            project: {
+              delete: async () => {
+                throw new Error("boom");
+              },
+            },
+          };
+          type TxLike = typeof tx;
+          return await (arg as (client: TxLike) => unknown)(tx);
+        }
+        return await original(arg as never);
+      }) as unknown as typeof db.$transaction,
+    );
+
+    let result: Awaited<ReturnType<typeof studio.deleteProject>>;
+    try {
+      result = await studio.deleteProject(project.data.id);
+    } finally {
+      spy.mockRestore();
+    }
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("INTERNAL");
+
+    // The assignment survived the failed delete — nothing was stranded.
+    const after = await db.supply.findUnique({ where: { id: supply.data.id } });
+    expect(after?.assignedProjectId).toBe(project.data.id);
+  });
 });
 
 describe("supply actions", () => {
@@ -166,6 +218,62 @@ describe("supply actions", () => {
       expect(result.data.subcategory).toBe("Palette knives");
       expect(result.data.condition).toBe("low");
     }
+  });
+
+  it("creates a supply with an empty quantity and absent status (r11)", async () => {
+    // The live's create modal accepts an empty quantity (stores "") and
+    // never stores a status (its Stock Status select is inert).
+    const result = await studio.createSupply({
+      name: "No quantity",
+      category: "Paint",
+      quantity: "",
+      condition: null,
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.quantity).toBe("");
+      expect(result.data.condition).toBeNull();
+    }
+    // Omitting every optional field lands on the same absent defaults.
+    const bare = await studio.createSupply({ name: "Bare", category: "Paint" });
+    expect(bare.ok).toBe(true);
+    if (bare.ok) {
+      expect(bare.data.quantity).toBe("");
+      expect(bare.data.condition).toBeNull();
+    }
+  });
+
+  it("rejects an unparseable quantity with the live's copy (r11)", async () => {
+    const result = await studio.createSupply({
+      name: "Bad qty",
+      category: "Paint",
+      quantity: "abc",
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe("VALIDATION");
+      expect(result.error.message).toBe("Enter a valid quantity, like 2, 1.5, or 1/2");
+    }
+  });
+
+  it("updates a supply to an explicit ok condition (the edit panel's save, r11)", async () => {
+    const created = await studio.createSupply({
+      name: "To make explicit",
+      category: "Paint",
+      quantity: "2",
+      condition: null,
+    });
+    if (!created.ok) throw new Error("create failed");
+    expect(created.data.condition).toBeNull();
+
+    const edited = await studio.updateSupply(created.data.id, {
+      name: "To make explicit",
+      category: "Paint",
+      quantity: "2",
+      condition: "ok",
+    });
+    expect(edited.ok).toBe(true);
+    if (edited.ok) expect(edited.data.condition).toBe("ok");
   });
 
   it("normalizes the None and Other/Custom picker sentinels", async () => {
@@ -317,6 +425,37 @@ describe("import action", () => {
     expect(legacy?.type).toBe("Watercolor");
     expect(legacy?.condition).toBe("critical");
     expect(legacy?.quantity).toBe("1/2");
+  });
+
+  it("imports the live's empty-qty and explicit-ok exports verbatim (r11)", async () => {
+    // Captured from the live 2026-09-19 (and verified against the live's
+    // own import): qty:"" restores an empty quantity; status:"ok" restores
+    // the explicit condition; a supply with no status restores null.
+    const payload = {
+      app: "AST Studio",
+      version: 1,
+      projects: [],
+      supplies: [
+        { id: "e1", name: "EmptyQty", category: "Paint", qty: "", quantity: null, quantityValue: null },
+        { id: "e2", name: "ExplicitOk", category: "Paint", qty: 2, quantity: 2, quantityValue: 2, status: "ok" },
+        { id: "e3", name: "FracQty", category: "Paint", qty: 0.5, quantity: null, quantityValue: 0.5 },
+      ],
+    };
+
+    const result = await studio.importStudioData(payload);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const supplies = await db.supply.findMany({ where: { userId: TEST_USER.id } });
+    const empty = supplies.find((s) => s.name === "EmptyQty");
+    expect(empty?.quantity).toBe("");
+    expect(empty?.condition).toBeNull();
+    const explicit = supplies.find((s) => s.name === "ExplicitOk");
+    expect(explicit?.quantity).toBe("2");
+    expect(explicit?.condition).toBe("ok");
+    const frac = supplies.find((s) => s.name === "FracQty");
+    expect(frac?.quantity).toBe("0.5");
+    expect(frac?.condition).toBeNull();
   });
 
   it("rejects payloads from other apps", async () => {

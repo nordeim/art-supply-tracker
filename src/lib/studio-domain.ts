@@ -174,6 +174,20 @@ export function parseQuantityValue(raw: string | number | null | undefined): num
   return null;
 }
 
+/**
+ * The live modal's quantity format gate (measured 2026-09-19): empty is
+ * ACCEPTED (the supply stores "" — the chip renders the bare "qty" label
+ * and the export emits qty:""), plain numbers and simple a/b fractions are
+ * accepted, and anything else is rejected client-side with the copy
+ * "Enter a valid quantity, like 2, 1.5, or 1/2".
+ */
+export function isValidQuantityInput(raw: string): boolean {
+  const trimmed = raw.trim();
+  if (trimmed === "") return true;
+  if (Number.isFinite(Number(trimmed))) return true;
+  return /^(\d+)\/(\d+)$/.test(trimmed);
+}
+
 export function supplyTypeListFor(category: string): readonly { value: string; label: string }[] {
   return SUPPLY_TYPE_LISTS[category] ?? [];
 }
@@ -222,7 +236,7 @@ export function supplyConditionLabel(value: string): string {
  * component's filter switch): "Low Stock" includes low AND critical;
  * "Out of Stock" is critical only; "All" matches everything.
  */
-export function matchesStockFilter(condition: string, filter: "all" | "low" | "out"): boolean {
+export function matchesStockFilter(condition: string | null, filter: "all" | "low" | "out"): boolean {
   if (filter === "low") return condition === "low" || condition === "critical";
   if (filter === "out") return condition === "critical";
   return true;
@@ -284,12 +298,17 @@ export interface ConditionPill {
 }
 
 /**
- * Supply chip condition pill — the live app's `Jz` map. The live app stores
- * no status string for OK supplies, so production renders the fallback pill
- * ("?" on white/10); our "ok" maps onto that same rendering.
+ * Supply chip condition pill — the live app's `Jz` map, re-measured
+ * 2026-09-19. The live distinguishes an ABSENT status (supplies created
+ * through the modal never store one — its Stock Status select is inert)
+ * from an EXPLICIT "ok" (set through the edit panel's save): absent renders
+ * the fallback "?" pill, explicit ok renders the cyan "OK" pill. Low and
+ * critical render the pink label pills.
  */
-export function supplyConditionPill(condition: string): ConditionPill {
+export function supplyConditionPill(condition: string | null): ConditionPill {
   switch (condition) {
+    case "ok":
+      return { label: "OK", classes: "bg-ast-cyan/15 text-ast-cyan" };
     case "low":
       return { label: "Low", classes: "bg-ast-pink/20 text-ast-pink" };
     case "critical":
@@ -306,13 +325,15 @@ export interface ConditionIcon {
 }
 
 /**
- * Supply detail header condition icon — the live detail panel's ternary.
- * Live data never carries the string "ok" (it is omitted when OK), so OK
- * supplies land in the pink else-branch with an empty label; that exact
- * rendering (pink glyph, no text) is what users see in production.
+ * Supply detail header condition icon — the live detail panel's ternary,
+ * re-measured 2026-09-19. An ABSENT status lands in the pink else branch
+ * with an empty label (a bare pink warning glyph); an EXPLICIT "ok" renders
+ * the turquoise "✓ ok" chip; low/critical render the labeled warnings.
  */
-export function supplyDetailConditionIcon(condition: string): ConditionIcon {
+export function supplyDetailConditionIcon(condition: string | null): ConditionIcon {
   switch (condition) {
+    case "ok":
+      return { icon: "✓", label: "ok", classes: "bg-ast-turquoise/20 text-ast-turquoise" };
     case "low":
       return { icon: "⚠️", label: "low", classes: "bg-ast-yellow/20 text-ast-yellow" };
     case "critical":

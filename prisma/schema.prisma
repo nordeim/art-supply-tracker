@@ -65,10 +65,14 @@ model Supply {
   // Per-category subcategory value (e.g. Watercolor, Palette knives) —
   // exported as `subcategory`; see src/lib/studio-domain.ts SUPPLY_TYPE_LISTS
   type              String?
-  // Free-form like the original ("2", "1.5", "1/2") — parsed for export
-  quantity          String   @default("1")
-  // ok | low | critical (live-app tokens; exported as `status`)
-  condition         String   @default("ok")
+  // Free-form like the original ("2", "1.5", "1/2", or "" — the live
+  // accepts an empty quantity) — parsed for export
+  quantity          String   @default("")
+  // null | ok | low | critical (live-app tokens; exported as `status`).
+  // NULL = absent (the live's create modal never stores a status — its
+  // Stock Status select is inert; measured 2026-09-19); "ok" is the
+  // explicit value the edit panel saves. See src/lib/studio-domain.ts.
+  condition         String?
   location          String?
   notes             String?
   barcode           String?

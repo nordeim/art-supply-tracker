@@ -113,6 +113,55 @@ describe("supplyInputSchema", () => {
     expect(parsed.success).toBe(true);
   });
 
+  it("accepts a null (absent) condition and defaults to it (r11)", () => {
+    // The live's create modal never stores a status — its Stock Status
+    // select is inert — so the modal submits condition: null, and the
+    // boundary's default for omitted conditions is the same absent state.
+    const explicitNull = supplyInputSchema.safeParse({
+      name: "S",
+      category: "Paint",
+      quantity: "1",
+      condition: null,
+    });
+    expect(explicitNull.success).toBe(true);
+    if (explicitNull.success) expect(explicitNull.data.condition).toBeNull();
+
+    const omitted = supplyInputSchema.safeParse({
+      name: "S",
+      category: "Paint",
+      quantity: "1",
+    });
+    expect(omitted.success).toBe(true);
+    if (omitted.success) expect(omitted.data.condition).toBeNull();
+  });
+
+  it("accepts an empty quantity (the live stores \"\") and rejects bad formats (r11)", () => {
+    // Measured on the live 2026-09-19: submitting without a quantity
+    // creates the supply with qty "" — only unparseable text is blocked
+    // ("Enter a valid quantity, like 2, 1.5, or 1/2").
+    const empty = supplyInputSchema.safeParse({
+      name: "S",
+      category: "Paint",
+      quantity: "",
+    });
+    expect(empty.success).toBe(true);
+    if (empty.success) expect(empty.data.quantity).toBe("");
+
+    for (const bad of ["abc", "2a", "1/2/3", "2,5"]) {
+      const parsed = supplyInputSchema.safeParse({
+        name: "S",
+        category: "Paint",
+        quantity: bad,
+      });
+      expect(parsed.success, `quantity "${bad}"`).toBe(false);
+      if (!parsed.success) {
+        expect(parsed.error.issues[0]?.message).toBe(
+          "Enter a valid quantity, like 2, 1.5, or 1/2",
+        );
+      }
+    }
+  });
+
   it("accepts a custom subcategory from the Other/Custom flow (live parity)", () => {
     // The live app's __other__ flow stores free-form custom text (its save
     // path does `subcategory === '__other__' ? custom.trim() || '' : value`),

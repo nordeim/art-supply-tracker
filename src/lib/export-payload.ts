@@ -38,7 +38,7 @@ export interface NormalizedImportSupply {
   category: string;
   subcategory: string | null;
   quantity: string;
-  condition: string;
+  condition: string | null;
   location: string | null;
   notes: string | null;
   barcode: string | null;
@@ -79,6 +79,15 @@ function toExportedProject(project: ProjectDto, supplyIds: string[], now: number
 
 function toExportedSupply(supply: SupplyDto, now: number) {
   const quantityValue = parseQuantityValue(supply.quantity);
+  // The live's `quantity` slot is the PLAIN Number() parse (no fraction
+  // support): "2" -> 2, "1/2" -> null, "" -> null (measured on live
+  // exports 2026-09-19). `quantityValue` (and `qty` below) use the
+  // fraction-aware parse instead.
+  const plain = supply.quantity.trim() === "" ? null : Number(supply.quantity);
+  const quantity = Number.isFinite(plain) ? plain : null;
+  // `qty` mirrors the live's in-memory value: the raw "" when the quantity
+  // is empty, the parsed number otherwise.
+  const qty = supply.quantity === "" ? ("" as const) : quantityValue;
   return {
     id: supply.id,
     name: supply.name,
@@ -89,7 +98,7 @@ function toExportedSupply(supply: SupplyDto, now: number) {
     barcode: supply.barcode ?? "",
     tags: [] as string[],
     quantityValue,
-    quantity: quantityValue,
+    quantity,
     location: supply.location,
     notes: supply.notes,
     imageKey: null,
@@ -99,11 +108,13 @@ function toExportedSupply(supply: SupplyDto, now: number) {
     createdAt: supply.createdAt,
     updatedAt: supply.updatedAt,
     usedInProjectIds: [] as string[],
-    qty: quantityValue,
+    qty,
     image: supply.photo,
-    // The live app omits `status` when it is "ok" (verified against live
-    // exports: the field only appears for low/critical).
-    ...(supply.condition !== "ok" ? { status: supply.condition } : {}),
+    // The live emits `status` whenever one is stored — including an
+    // explicit "ok" saved through the edit panel; an ABSENT status
+    // (null, the create modal's inert-select result) is omitted
+    // (measured on live exports 2026-09-19).
+    ...(supply.condition !== null ? { status: supply.condition } : {}),
     isNew: isNewItem(supply.createdAt, now),
   };
 }
@@ -166,9 +177,12 @@ function normalizeCategory(raw: unknown): string {
   return LEGACY_CATEGORY_MAP[raw] ?? raw;
 }
 
-function normalizeCondition(raw: unknown): string {
-  if (typeof raw !== "string" || raw === "") return "ok";
-  return LEGACY_CONDITION_MAP[raw] ?? "ok";
+function normalizeCondition(raw: unknown): string | null {
+  if (typeof raw !== "string" || raw === "") return null;
+  // Known tokens (incl. the legacy clone's "critical-out") map through;
+  // unknown tokens pass through raw so the normalized-import schema gate
+  // rejects them (the documented refusal contract).
+  return LEGACY_CONDITION_MAP[raw] ?? raw;
 }
 
 function normalizeSubcategory(raw: unknown): string | null {
@@ -180,7 +194,11 @@ function normalizeSubcategory(raw: unknown): string | null {
 
 function normalizeQuantity(raw: unknown): string {
   if (typeof raw === "number" && Number.isFinite(raw)) return String(raw);
+  // "" round-trips: the live stores empty quantities and its exports carry
+  // qty:"" — importing one must restore the empty string, not "1"
+  // (measured 2026-09-19 via a live import round-trip).
   if (typeof raw === "string" && raw.trim() !== "") return raw.trim();
+  if (raw === "") return "";
   return "1";
 }
 

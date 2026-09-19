@@ -85,13 +85,51 @@ describe("buildExportPayload", () => {
     expect(Array.isArray(s.usedInProjectIds)).toBe(true);
   });
 
-  it("omits supply status when ok (mirrors the live export)", () => {
-    const payload = buildExportPayload(
+  it("emits the live's three quantity slots for the edge quantities (r11)", () => {
+    // Measured on live exports 2026-09-19: empty -> qty:"" / quantity:null /
+    // quantityValue:null; a fraction -> qty:0.5 / quantity:null (the plain
+    // Number() parse rejects fractions) / quantityValue:0.5.
+    const empty = buildExportPayload(
       [],
-      [supply({ condition: "ok", id: "s-ok" })],
+      [supply({ id: "s-empty", quantity: "", condition: null })],
       NOW,
     );
-    expect(payload.supplies[0].status).toBeUndefined();
+    expect(empty.supplies[0]).toMatchObject({
+      qty: "",
+      quantity: null,
+      quantityValue: null,
+    });
+    expect(empty.supplies[0].status).toBeUndefined();
+
+    const fraction = buildExportPayload(
+      [],
+      [supply({ id: "s-frac", quantity: "1/2", condition: null })],
+      NOW,
+    );
+    expect(fraction.supplies[0]).toMatchObject({
+      qty: 0.5,
+      quantity: null,
+      quantityValue: 0.5,
+    });
+  });
+
+  it("omits status when absent and emits it when explicit (r11)", () => {
+    // Measured on live exports: the create modal stores NO status (its
+    // Stock Status select is inert) -> the field is omitted; an explicit
+    // "ok" saved through the edit panel IS emitted as "ok".
+    const absent = buildExportPayload(
+      [],
+      [supply({ id: "s-none", condition: null })],
+      NOW,
+    );
+    expect(absent.supplies[0].status).toBeUndefined();
+
+    const explicitOk = buildExportPayload(
+      [],
+      [supply({ id: "s-ok", condition: "ok" })],
+      NOW,
+    );
+    expect(explicitOk.supplies[0].status).toBe("ok");
   });
 
   it("marks old items as not new", () => {
@@ -259,6 +297,43 @@ describe("normalizeImportPayload", () => {
       subcategory: "Watercolor", // mapped from lowercase paint value
       quantity: "1/2",
       condition: "critical", // mapped from critical-out
+    });
+  });
+
+  it("round-trips the live's empty-qty and explicit-ok exports (r11)", () => {
+    // Captured from the live app 2026-09-19: a supply created without a
+    // quantity exports qty:"" / quantity:null / quantityValue:null with NO
+    // status; one edited through the edit panel exports status:"ok". The
+    // import must restore both states exactly (verified against the live's
+    // own import with this exact payload).
+    const live = {
+      app: "AST Studio",
+      version: 1,
+      projects: [],
+      supplies: [
+        { id: "e1", name: "EmptyQty", category: "Paint", qty: "", quantity: null, quantityValue: null },
+        { id: "e2", name: "ExplicitOk", category: "Paint", qty: 2, quantity: 2, quantityValue: 2, status: "ok" },
+        { id: "e3", name: "FracQty", category: "Paint", qty: 0.5, quantity: null, quantityValue: 0.5 },
+      ],
+    };
+    const normalized = normalizeImportPayload(live, NOW);
+    expect(normalized).not.toBeNull();
+    if (!normalized) return;
+
+    expect(normalized.supplies[0]).toMatchObject({
+      name: "EmptyQty",
+      quantity: "", // round-trips — NOT coerced to "1"
+      condition: null,
+    });
+    expect(normalized.supplies[1]).toMatchObject({
+      name: "ExplicitOk",
+      quantity: "2",
+      condition: "ok", // the explicit/absent distinction survives import
+    });
+    expect(normalized.supplies[2]).toMatchObject({
+      name: "FracQty",
+      quantity: "0.5",
+      condition: null,
     });
   });
 
