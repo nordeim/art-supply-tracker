@@ -40,3 +40,6 @@ server.log
 # ssh deploy keys — the push wrapper materializes keys outside the repo
 *.key
 ssh-key.txt
+e2e/.auth/
+test-results/
+playwright-report/

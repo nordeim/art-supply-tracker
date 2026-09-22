@@ -1,10 +1,13 @@
 name: verify-gate
 
 # The push gate (docs/how-to-git-push-using-ssh-wrapper_SKILL.md): every
-# push to main must keep lint, types, tests, and the production build green.
-# Prisma's client is generated explicitly (no postinstall hook exists) and
-# DATABASE_URL points at a throwaway SQLite file — `next build` evaluates
-# the page module but the force-dynamic route performs no queries.
+# push to main must keep lint, types, tests, the production build, and the
+# Playwright E2E suite green. Prisma's client is generated explicitly (no
+# postinstall hook exists) and DATABASE_URL points at a throwaway SQLite
+# file — `next build` evaluates the page module but the force-dynamic route
+# performs no queries. The E2E job instead uses the documented repo-root
+# db/ contract (src/lib/db-path.ts): the relative file:../db/custom.db URL
+# resolves against prisma/schema.prisma regardless of the runner's CWD.
 
 on:
   push:
@@ -41,3 +44,34 @@ jobs:
 
       - name: Production build
         run: bun run build
+
+  e2e:
+    runs-on: ubuntu-latest
+    env:
+      # The repo-root db/ contract — resolved absolutely by every consumer
+      # (prisma CLI via scripts/prisma-url.ts, the seed, and the dev server
+      # the Playwright webServer boots).
+      DATABASE_URL: file:../db/custom.db
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: bun run db:generate
+
+      - name: Install Playwright's chromium
+        run: bunx playwright install --with-deps chromium
+
+      - name: Push schema and seed the demo studio
+        run: |
+          bun run db:push
+          bun run db:seed
+
+      - name: E2E suite
+        run: bun run test:e2e

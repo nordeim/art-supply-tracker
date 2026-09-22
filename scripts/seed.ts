@@ -9,12 +9,17 @@
  * reproduced verbatim, including the detail payloads behind the overlay
  * panels: quotes, citations, rights notices, and tags).
  *
- * Run: bunx tsx scripts/seed.ts   (or: bun run db:seed)
+ * Run: bun scripts/seed.ts   (or: bun run db:seed)
  */
 import { PrismaClient } from "@prisma/client";
 import { scryptSync, randomBytes } from "node:crypto";
+import { resolveRepoDatabaseUrl } from "../src/lib/db-path";
 
-const db = new PrismaClient();
+// Same resolution contract as the repo tooling (scripts/prisma-url.ts): the
+// repo's OWN .env wins over an inherited process environment, and the
+// resolved absolute file: URL pins the seed to the repo-root db/ folder
+// regardless of the runtime that executes this script (r16).
+const db = new PrismaClient({ datasourceUrl: resolveRepoDatabaseUrl() });
 
 function hashPassword(password: string): string {
   const salt = randomBytes(16).toString("hex");
