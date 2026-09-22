@@ -1,9 +1,9 @@
-# AST Studio — Master Project Architecture Document (PAD) v1.14
+# AST Studio — Master Project Architecture Document (PAD) v1.15
 
 **Classification:** Internal Engineering Reference
 **Status:** DEFINITIVE, PRODUCTION-LOCKED BLUEPRINT
 **Companion Document:** `README.md` (onboarding), `AGENTS.md` (agent instructions), `CLAUDE.md` (engineering standards)
-**Last Updated:** 2026-09-19 (r15)
+**Last Updated:** 2026-09-22 (r16)
 **Audience:** Senior Engineers, Tech Leads, DevOps, and Onboarding Engineers
 **Rule:** Every architectural decision in this document traces to a specific rationale.
 Nothing is here "because it's popular."
@@ -356,6 +356,38 @@ Nothing is here "because it's popular."
   border-border positive, the docblock marker, and 8 modal-contract
   pins). 271 tests, all gates green; the 8 docs/screenshots/ re-shot on
   the remediated tree.
+- `[R16]` Session-26 verification hardening (2026-09-22): a full-session
+  audit against the live (8 paired VLM comparisons at the documented
+  baselines, 23/23 smoke, the mobile drawer contract re-verified) found
+  visual parity intact and closed three TOOLING-side gaps. r16-F1
+  (HIGH): the SQLite path was runtime-dependent — Prisma's CLI and
+  Node-side tooling resolve a relative `file:` URL against the CWD (the
+  DB silently landing OUTSIDE the repo) while the bun runtime resolves
+  it schema-relative — so the documented `file:../db/custom.db` contract
+  was nondeterministic. The new `src/lib/db-path.ts` layer pins ONE
+  contract (relative file: URLs resolve against `prisma/schema.prisma`
+  via a module-anchored + CWD-walking schemaDir; absolute and non-file
+  URLs pass through unchanged for the action layer's temp DBs; repo
+  tooling prefers the repo's OWN .env over an inherited absolute
+  DATABASE_URL so a workspace shell cannot relocate the database),
+  wired as PrismaClient's `datasourceUrl` in `db.ts` + the seed, and as
+  a `DATABASE_URL="$(bun scripts/prisma-url.ts)"` prefix on the
+  db:*/dev/start scripts (12 new tests). r16-F2 (HIGH): the Playwright
+  E2E suite (`playwright.config.ts` + 8 spec files, 25 specs) — a setup
+  project signs in ONCE and saves a storageState (the sign-in rate
+  limiter is a pinned contract), a desktop chromium project at the
+  1536×844 parity viewport, and a mobile-chromium project at 390×844
+  pinning the live's drawer contract (geometry, shared scrim, inert,
+  Escape no-op, Chat toggle); serial single-worker over the one shared
+  SQLite; every created row deleted through the real UI. CI gained an
+  `e2e` job (chromium install → db:push + db:seed → test:e2e). r16-F3
+  (MEDIUM): the verify-gate workflow's `branches:` lists were corrupted
+  (`ain]` → invalid YAML, the gate silently broken) — repaired to
+  `[main]`. Also: `db:seed` runs under plain `bun` (no network-fetched
+  tsx), `.env.example` corrected to the real test path, .gitignore
+  covers e2e/.auth/ + test-results/, and the 8 docs/screenshots/
+  re-shot (7/8 pixel-identical to the parity references). 283 vitest +
+  25 E2E, all gates green.
 
 ---
 
@@ -1044,10 +1076,11 @@ without pinning them to the live's v3 values first (all pinned by
 | Category | Count | Location | Framework |
 |---|---|---|---|
 | Static | — | `eslint .` / `tsc --noEmit` | ESLint 9 + TS 5.9 strict |
-| Automated unit | 243 tests | `src/lib/*.test.ts` — studio-domain (incl. bundle-pinned style maps + edit-panel budget/option mapping + the r11 two-state condition maps and quantity format gate), design-tokens (globals.css literal pinning incl. the Tailwind-v3 radius scale, the zero-webfont stack, and the r14 default-palette pins — pink-200/300/400/500, cyan-400, blue-400/500 pinned to the live's v3 values with a TW4-drift negative and usage-site class-string pins), validation (incl. the normalized import gate, the Cognito password-policy rules + permissive sign-in schema, the two-state condition + quantity format boundary), export-payload (incl. the three-slot quantity semantics and the empty-qty/explicit-ok round-trip), rate-limit, inspiration (incl. the rail section resolver with the live's inert "quote" / "spotlight-kevin-lewis" quirks), seed-fidelity (scripts/seed.ts pinned to the live chat byte-for-byte, typos included), login-fidelity + chat-fidelity (the live's measured Amplify login chrome incl. the alert-box error chrome, policy stack, reset-confirmation view, and content-width link buttons; logo aspect; chat-panel structure), drawer-fidelity (the mobile drawers' shared z-40 no-blur scrim with instant mount/unmount), supply-fidelity (the create modal's inert Stock Status select, the quantity format gate's exact copy, the edit panel's `?? "ok"` init, the chip's unconditional qty label, the detail panel's raw quantity), sidebar-tile-fidelity (the stat tiles' per-tile ACTIVE accent pairs — electric blue for Projects/Supplies, lavender for Inspo — with the card bg and hover classes dropped while active; the constant inner text classes; a negative pin on the old hardcoded electric-blue string), header-button-fidelity (the memory button's hyphen-family literal colors — idle border #5b3fd3, hover trio #f4f27a — with negative pins on the utility families, plus the `@custom-variant hover (&:hover);` override restoring the live's TW3 plain-:hover semantics), focus-fidelity (r15: no authored outline color — the UA-default focus ring renders like the live's — and the create modals' no-Escape/no-focus-steal contract with the kept dialog semantics) | Vitest (node env, `@/` alias) |
+| Automated unit | 255 tests | `src/lib/*.test.ts` — db-path (the r16 SQLite path contract: schema-relative resolution, pass-through for absolute/non-file URLs, repo-.env precedence for tooling), studio-domain (incl. bundle-pinned style maps + edit-panel budget/option mapping + the r11 two-state condition maps and quantity format gate), design-tokens (globals.css literal pinning incl. the Tailwind-v3 radius scale, the zero-webfont stack, and the r14 default-palette pins — pink-200/300/400/500, cyan-400, blue-400/500 pinned to the live's v3 values with a TW4-drift negative and usage-site class-string pins), validation (incl. the normalized import gate, the Cognito password-policy rules + permissive sign-in schema, the two-state condition + quantity format boundary), export-payload (incl. the three-slot quantity semantics and the empty-qty/explicit-ok round-trip), rate-limit, inspiration (incl. the rail section resolver with the live's inert "quote" / "spotlight-kevin-lewis" quirks), seed-fidelity (scripts/seed.ts pinned to the live chat byte-for-byte, typos included), login-fidelity + chat-fidelity (the live's measured Amplify login chrome incl. the alert-box error chrome, policy stack, reset-confirmation view, and content-width link buttons; logo aspect; chat-panel structure), drawer-fidelity (the mobile drawers' shared z-40 no-blur scrim with instant mount/unmount), supply-fidelity (the create modal's inert Stock Status select, the quantity format gate's exact copy, the edit panel's `?? "ok"` init, the chip's unconditional qty label, the detail panel's raw quantity), sidebar-tile-fidelity (the stat tiles' per-tile ACTIVE accent pairs — electric blue for Projects/Supplies, lavender for Inspo — with the card bg and hover classes dropped while active; the constant inner text classes; a negative pin on the old hardcoded electric-blue string), header-button-fidelity (the memory button's hyphen-family literal colors — idle border #5b3fd3, hover trio #f4f27a — with negative pins on the utility families, plus the `@custom-variant hover (&:hover);` override restoring the live's TW3 plain-:hover semantics), focus-fidelity (r15: no authored outline color — the UA-default focus ring renders like the live's — and the create modals' no-Escape/no-focus-steal contract with the kept dialog semantics) | Vitest (node env, `@/` alias) |
 | Automated action | 28 tests | `src/actions/studio.test.ts` (throwaway SQLite DB, mocked auth seam — incl. the mid-import rollback contract, the mid-delete no-strand contract, and the two-state condition round-trips) | Vitest |
+| E2E | 25 specs | `e2e/*.spec.ts` — setup (storageState sign-in), auth, dashboard, import-export, projects, supplies, mobile-navigation | Playwright (serial, 1 worker; desktop 1536×844 + mobile 390×844 projects) |
 | Manual golden paths | 11 flows | README "Testing & Quality" | Browser-executed (pinned by `scripts/smoke_functional.py`, 23 checks) |
-| CI verify-gate | — | `.github/workflows/verify-gate.yml` (lint + typecheck + test + build) | GitHub Actions |
+| CI verify-gate | — | `.github/workflows/verify-gate.yml` (lint + typecheck + test + build; separate `e2e` job: chromium install → db:push + db:seed → test:e2e) | GitHub Actions |
 
 ### 7.2 Test Patterns
 
@@ -1098,6 +1131,7 @@ dynamically after `DATABASE_URL` is set.
 - [ ] `bun run lint` — zero errors
 - [ ] `bun run typecheck` — zero errors
 - [ ] `bun run test` — zero failures
+- [ ] `bun run test:e2e` — zero failures (db:push + db:seed first)
 - [ ] Golden paths exercised in a browser
 - [ ] New action inputs have Zod schemas
 - [ ] `git status` clean of `.env`, `db/`, logs, keys
@@ -1129,12 +1163,15 @@ self-contained.
 
 ### 8.4 CI/CD Pipeline
 
-`.github/workflows/verify-gate.yml` runs the full gate (lint → typecheck →
-test → production build on Bun) on every push and pull request to `main`.
-The local push gate remains the operator contract: `lint` + `typecheck` +
-`test` + `build` green, then push via `docs/ssh_git_wrapper_v3.py`
-(main only, deploy key, shredded after use) — see
-`docs/how-to-git-push-using-ssh-wrapper_SKILL.md`.
+`.github/workflows/verify-gate.yml` runs two jobs on every push and pull
+request to `main`: `verify` (lint → typecheck → test → production build
+on Bun, against a throwaway `file:/tmp/verify-gate.db`) and `e2e`
+(Playwright's chromium → `db:push` + `db:seed` at the repo-root `db/`
+contract → `bun run test:e2e`, which boots its own dev server). The
+local push gate remains the operator contract: `lint` + `typecheck` +
+`test` + `test:e2e` + `build` green, then push via
+`docs/ssh_git_wrapper_v3.py` (main only, deploy key, shredded after use)
+— see `docs/how-to-git-push-using-ssh-wrapper_SKILL.md`.
 
 ---
 

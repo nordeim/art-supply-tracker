@@ -141,13 +141,22 @@ not secret — rotate before any public deployment).
 |---|---|
 | `bun run dev` | Dev server :3000 |
 | `bun run lint` / `typecheck` / `test` | ESLint / `tsc --noEmit` / Vitest |
+| `bun run test:e2e` | Playwright E2E (boots its own dev server) |
 | `bun run db:push` / `db:generate` / `db:seed` | Database lifecycle |
 | `bun run build` / `start` | Standalone production build / serve |
 
 ### Testing Strategy
 
 Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
-`src/**/*.test.ts`). The suite (271 tests) pins:
+`src/**/*.test.ts`). The suite (283 tests) pins:
+
+- **The SQLite path contract** (`src/lib/db-path.test.ts`) — relative
+  `file:` URLs resolve against `prisma/schema.prisma` (so
+  `file:../db/custom.db` = `<repo>/db/custom.db`) regardless of the
+  calling runtime or CWD; absolute and non-file URLs pass through
+  unchanged (the action layer's throwaway temp DBs depend on that), and
+  repo tooling prefers the repo's OWN `.env` over an inherited absolute
+  `DATABASE_URL` (a workspace shell must not relocate the database).
 
 - **Studio-domain vocabulary** — the per-category `SUPPLY_TYPE_LISTS` in the
   live app's tokens (Paint/Brush/Pastel/Paper/Canvas/Medium/Other categories,
@@ -287,13 +296,18 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
 
 Run `bun run test` — new domain logic in `src/lib` and new actions require
 tests first (red → green). Golden paths that live in the browser (view
-navigation, modals, detail panels) are additionally pinned by
-`python3 scripts/smoke_functional.py` (23 checks, needs the `agent-browser`
-CLI and a running server) — notably the post-create supplies navigation
-contract: create → flat list, away-and-back → category grid, re-click on
-Supplies keeps the current sub-view; and the Recent Projects focus flow:
-rail click → "All Projects" list + that project's panel, sticky across
-away-and-back (the live app's focusRequest semantics).
+navigation, modals, detail panels) are additionally pinned by two
+browser suites: `bun run test:e2e` (Playwright, 25 specs — the
+storageState setup signs in once per run so the rate limiter never
+self-throttles; the mobile-chromium project pins the drawer contract at
+the live's 390×844 viewport; every created row is deleted through the
+real UI) and `python3 scripts/smoke_functional.py` (23 checks, needs the
+`agent-browser` CLI and a running server) — notably the post-create
+supplies navigation contract: create → flat list, away-and-back →
+category grid, re-click on Supplies keeps the current sub-view; and the
+Recent Projects focus flow: rail click → "All Projects" list + that
+project's panel, sticky across away-and-back (the live app's
+focusRequest semantics).
 
 The broader verification contract is the golden-path checklist, exercised in
 a browser after every change:
