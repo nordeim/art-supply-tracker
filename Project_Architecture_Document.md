@@ -1,9 +1,9 @@
-# AST Studio — Master Project Architecture Document (PAD) v1.15
+# AST Studio — Master Project Architecture Document (PAD) v1.16
 
 **Classification:** Internal Engineering Reference
 **Status:** DEFINITIVE, PRODUCTION-LOCKED BLUEPRINT
 **Companion Document:** `README.md` (onboarding), `AGENTS.md` (agent instructions), `CLAUDE.md` (engineering standards)
-**Last Updated:** 2026-09-22 (r16)
+**Last Updated:** 2026-09-23 (r17)
 **Audience:** Senior Engineers, Tech Leads, DevOps, and Onboarding Engineers
 **Rule:** Every architectural decision in this document traces to a specific rationale.
 Nothing is here "because it's popular."
@@ -388,6 +388,38 @@ Nothing is here "because it's popular."
   covers e2e/.auth/ + test-results/, and the 8 docs/screenshots/
   re-shot (7/8 pixel-identical to the parity references). 283 vitest +
   25 E2E, all gates green.
+- `[R17]` Session-28 motion-contract pass (2026-09-23): a fresh
+  full-surface recon on the r16 tree (8 paired captures at or below the
+  documented baselines, export envelope byte-identical modulo its
+  timestamp, 23/23 smoke) plus THREE new probe dimensions — print
+  stylesheets (0 `@media print` rules on both sides: parity), live
+  regions (the clone's chat `role="log"` re-confirmed as the documented
+  intentional WCAG improvement; the login alert chrome pinned
+  byte-identical since r9), and the motion contract. The motion sweep
+  found ONE real divergence (r17-F1, Medium): the scaffold's
+  `@keyframes studio-fade-in` + `.studio-fade` played a 300ms
+  fade-and-translate entry animation on THIRTEEN surfaces (every view
+  switch, detail/edit panel swap, modal mount, and the login card) while
+  the live renders every studio surface instantly (CSSOM keyframes all
+  Amplify-internal; view wrappers and modals compute `animation: none`;
+  zero animating elements at steady state) — invisible in steady-state
+  pixel diffs since the initial scaffold commit, the same class as
+  r13-F1's hovers and r15-F1's focus ring. Removed the keyframes, the
+  utility rule, the ironic `prefers-reduced-motion` guard, and all 13
+  usage-site class references; the drawers' `transition-transform
+  duration-300` slide and the 0.15s hover tints stay (the live's real
+  motion contract, re-probed at parity). Verified at CSSOM,
+  computed-style, and animating-element level (zero animating elements
+  at mount and steady state; modal `animationName: none`); post-fix
+  paired capture at 0.34% baseline; the 8 docs/screenshots/ re-shot
+  (0.00% vs the r16 parity-verified references). New
+  `motion-fidelity.test.ts` (18 pins incl. the drawer-transition
+  positive guards). Also accepted-documented: the modal scrim's
+  z-[60] (live: z-50) is unreachable — the drawer always closes before
+  a modal opens (probed on both sides); the TW3/TW4 `transition`
+  utility's property-list difference is internal-only (every
+  hover-changed property is in both lists). 301 vitest + 25 E2E, all
+  gates green.
 
 ---
 
@@ -966,7 +998,15 @@ erDiagram
 Glow shadows (`--shadow-ast-pink`/`-turquoise`/`-blue`/`-cyan`/`-lavender`/
 `-warm`) are 24–28px radial blobs; the two scrollbar rails
 (`.scrollbar-left` turquoise→blue, `.scrollbar-right` pink→purple) come
-from the production CSS bundle. All values are pinned to the live app's
+from the production CSS bundle.
+**Motion contract (r17):** the studio ships NO entry animations — no
+authored `@keyframes`, no `.studio-fade` utility, no
+`prefers-reduced-motion` guard (the live renders every view, panel,
+modal, and the login card instantly; its CSSOM keyframes are all
+Amplify-internal). The live's only studio motion is the drawers'
+`transition-transform duration-300` slide and the `transition`
+utility's 0.15s hover tints; both are kept and pinned by
+`src/lib/motion-fidelity.test.ts`. All values are pinned to the live app's
 *compiled utility classes* — the rendered ground truth — and guarded by
 `src/lib/design-tokens.test.ts`. The live bundle also ships a `:root`
 CSS-variable block whose purple/yellow/coral values (`#5b3fd3`/`#f4f27a`/
@@ -1076,7 +1116,7 @@ without pinning them to the live's v3 values first (all pinned by
 | Category | Count | Location | Framework |
 |---|---|---|---|
 | Static | — | `eslint .` / `tsc --noEmit` | ESLint 9 + TS 5.9 strict |
-| Automated unit | 255 tests | `src/lib/*.test.ts` — db-path (the r16 SQLite path contract: schema-relative resolution, pass-through for absolute/non-file URLs, repo-.env precedence for tooling), studio-domain (incl. bundle-pinned style maps + edit-panel budget/option mapping + the r11 two-state condition maps and quantity format gate), design-tokens (globals.css literal pinning incl. the Tailwind-v3 radius scale, the zero-webfont stack, and the r14 default-palette pins — pink-200/300/400/500, cyan-400, blue-400/500 pinned to the live's v3 values with a TW4-drift negative and usage-site class-string pins), validation (incl. the normalized import gate, the Cognito password-policy rules + permissive sign-in schema, the two-state condition + quantity format boundary), export-payload (incl. the three-slot quantity semantics and the empty-qty/explicit-ok round-trip), rate-limit, inspiration (incl. the rail section resolver with the live's inert "quote" / "spotlight-kevin-lewis" quirks), seed-fidelity (scripts/seed.ts pinned to the live chat byte-for-byte, typos included), login-fidelity + chat-fidelity (the live's measured Amplify login chrome incl. the alert-box error chrome, policy stack, reset-confirmation view, and content-width link buttons; logo aspect; chat-panel structure), drawer-fidelity (the mobile drawers' shared z-40 no-blur scrim with instant mount/unmount), supply-fidelity (the create modal's inert Stock Status select, the quantity format gate's exact copy, the edit panel's `?? "ok"` init, the chip's unconditional qty label, the detail panel's raw quantity), sidebar-tile-fidelity (the stat tiles' per-tile ACTIVE accent pairs — electric blue for Projects/Supplies, lavender for Inspo — with the card bg and hover classes dropped while active; the constant inner text classes; a negative pin on the old hardcoded electric-blue string), header-button-fidelity (the memory button's hyphen-family literal colors — idle border #5b3fd3, hover trio #f4f27a — with negative pins on the utility families, plus the `@custom-variant hover (&:hover);` override restoring the live's TW3 plain-:hover semantics), focus-fidelity (r15: no authored outline color — the UA-default focus ring renders like the live's — and the create modals' no-Escape/no-focus-steal contract with the kept dialog semantics) | Vitest (node env, `@/` alias) |
+| Automated unit | 273 tests | `src/lib/*.test.ts` — db-path (the r16 SQLite path contract: schema-relative resolution, pass-through for absolute/non-file URLs, repo-.env precedence for tooling), studio-domain (incl. bundle-pinned style maps + edit-panel budget/option mapping + the r11 two-state condition maps and quantity format gate), design-tokens (globals.css literal pinning incl. the Tailwind-v3 radius scale, the zero-webfont stack, and the r14 default-palette pins — pink-200/300/400/500, cyan-400, blue-400/500 pinned to the live's v3 values with a TW4-drift negative and usage-site class-string pins), validation (incl. the normalized import gate, the Cognito password-policy rules + permissive sign-in schema, the two-state condition + quantity format boundary), export-payload (incl. the three-slot quantity semantics and the empty-qty/explicit-ok round-trip), rate-limit, inspiration (incl. the rail section resolver with the live's inert "quote" / "spotlight-kevin-lewis" quirks), seed-fidelity (scripts/seed.ts pinned to the live chat byte-for-byte, typos included), login-fidelity + chat-fidelity (the live's measured Amplify login chrome incl. the alert-box error chrome, policy stack, reset-confirmation view, and content-width link buttons; logo aspect; chat-panel structure), drawer-fidelity (the mobile drawers' shared z-40 no-blur scrim with instant mount/unmount), supply-fidelity (the create modal's inert Stock Status select, the quantity format gate's exact copy, the edit panel's `?? "ok"` init, the chip's unconditional qty label, the detail panel's raw quantity), sidebar-tile-fidelity (the stat tiles' per-tile ACTIVE accent pairs — electric blue for Projects/Supplies, lavender for Inspo — with the card bg and hover classes dropped while active; the constant inner text classes; a negative pin on the old hardcoded electric-blue string), header-button-fidelity (the memory button's hyphen-family literal colors — idle border #5b3fd3, hover trio #f4f27a — with negative pins on the utility families, plus the `@custom-variant hover (&:hover);` override restoring the live's TW3 plain-:hover semantics), focus-fidelity (r15: no authored outline color — the UA-default focus ring renders like the live's — and the create modals' no-Escape/no-focus-steal contract with the kept dialog semantics), motion-fidelity (r17: no authored @keyframes / .studio-fade / prefers-reduced-motion guard — the live renders studio surfaces instantly; positive pins keep the drawers' transition-transform duration-300 slide) | Vitest (node env, `@/` alias) |
 | Automated action | 28 tests | `src/actions/studio.test.ts` (throwaway SQLite DB, mocked auth seam — incl. the mid-import rollback contract, the mid-delete no-strand contract, and the two-state condition round-trips) | Vitest |
 | E2E | 25 specs | `e2e/*.spec.ts` — setup (storageState sign-in), auth, dashboard, import-export, projects, supplies, mobile-navigation | Playwright (serial, 1 worker; desktop 1536×844 + mobile 390×844 projects) |
 | Manual golden paths | 11 flows | README "Testing & Quality" | Browser-executed (pinned by `scripts/smoke_functional.py`, 23 checks) |
@@ -1245,6 +1285,8 @@ public exposure).
 | Medium | ~~Tailwind default-palette classes rendered TW4's re-derived values~~ | Seven surfaces use the DEFAULT families (Sign Out button, memory-button text, email gradient, barcode focus trio, chat alert) — and TW4's oklch palette drifts from the live's TW3 values (pink-400 #fb64b6 vs #f472b6, cyan-400 #00d2ef vs #22d3ee — up to 34/channel), rendering wrong colors on the always-visible Sign Out border and the email gradient; sub-threshold in screenshot diffs (Δ22 summed vs the 30 threshold), the same "invisible in captures" class as r13-F1's hovers | **Resolved 2026-09-19 (r14)** — the seven default-family tokens pinned to the live's v3 values in the @theme block (a user override replaces TW4's default emission entirely, spike-verified); emitted utilities byte-identical to the live's rules; canvas-verified identical rendered pixels; usage sites keep the live's class strings verbatim; pinned by design-tokens.test.ts |
 | Medium | ~~Authored focus-ring color on every element~~ | The shadcn scaffold's base rule (`* { @apply border-border outline-ring/50 }`) authored a universal turquoise/50 outline color — every keyboard-focused button/tile/link rendered a bright turquoise ring the live never shows (the live's compiled CSS has no universal outline-color rule; its elements render the browser-default ring, computed rgb(16,16,16) in Chromium — a 496-hot-pixel ring-band divergence on the Sign Out crop, canvas-verified; invisible in pointer-driven captures, the same class as r13-F1's hovers) | **Resolved 2026-09-19 (r15)** — `outline-ring/50` removed from the base rule (the inert `border-border` stays); the focused Sign Out ring renders 0 hot px, band pixels byte-identical to the live's UA default; verified on the dev server AND a production server; pinned by `focus-fidelity.test.ts` |
 | Medium | ~~Create modals carried keyboard affordances the live lacks~~ | The clone's create modals closed on Escape and moved focus into the first input on open — the live's modal has NO keyboard affordances (measured: focus stays on the trigger, Escape does nothing, only ✕ and the scrim click dismiss); a keyboard user directly experienced different behavior | **Resolved 2026-09-19 (r15)** — the Escape keydown handler and the initial focus steal removed from both modals; `role="dialog"` + `aria-modal` kept (invisible semantics — the drawer-landmark precedent); the ✕/scrim dismissal paths unchanged; pinned by `focus-fidelity.test.ts` |
+| Medium | ~~Studio surfaces played an entry animation the live lacks~~ | The scaffold's `@keyframes studio-fade-in` + `.studio-fade` played a 300ms fade-and-translate on thirteen surfaces (every view switch, detail/edit panel swap, modal mount, and the login card) — the live renders every studio surface instantly (CSSOM keyframes all Amplify-internal; view wrappers and modals compute `animation: none`; zero animating elements at steady state). Invisible in steady-state pixel diffs since the initial scaffold commit (the same class as r13-F1's hovers and r15-F1's focus ring), plus an ironic `prefers-reduced-motion` guard for an animation the live does not have | **Resolved 2026-09-23 (r17)** — the keyframes, the utility rule, the reduced-motion guard, and all 13 usage-site class references removed; the drawers' `transition-transform duration-300` slide and the 0.15s hover tints stay (the live's real motion contract); verified at CSSOM, computed-style, and animating-element level (zero animating at mount and steady state; modal `animationName: none`); pinned by `motion-fidelity.test.ts` (18 pins) |
+| Info | Modal scrim z-index differs (clone z-[60], live z-50) | The clone's create-modal scrim floats at `z-[60]` while the live's overlay is z-50 — but the drawer (z-50) always CLOSES before a modal opens (probed on both sides: clicking the drawer's Create button closes the drawer and opens the modal), so the two never stack in any reachable state | Accepted (unreachable in every reachable state — no user-visible effect) |
 | Low | Mobile login card offset by 0.5px | The live's card is 357px centered in its 358px content column (x=16.5 — Amplify internal responsive fractional layout); the clone fills the column (358px at x=16). Desktop is byte-identical (480×429 at 494,464) | Accepted (sub-pixel, below the visibility threshold — reproducing it would require guessing Amplify's viewport-dependent internal CSS) |
 | Low | Sidebar drawer semantic landmark differs | The live's mobile sidebar drawer is an `<aside>` (no role/label); the clone renders `<nav aria-label="Studio tools">` — a deliberate WCAG improvement documented in CLAUDE.md. Visual parity unaffected (identical classes/geometry, measured r11) | Accepted (accessibility improvement, intentionally kept) |
 | Low | Dev-mode-only browser artifacts | In `next dev`, the Next.js dev-tools badge (the "N" button) and 4 `__nextjs-Geist` FontFaces appear in `document.fonts` — neither ships in the production build (verified r11: prod build has `document.fonts.size === 0` and no badge) | Accepted (dev-mode artifact — sessions comparing dev-mode DOM must not misclassify these as parity gaps; production is the ground truth) |

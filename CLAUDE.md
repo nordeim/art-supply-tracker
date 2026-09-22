@@ -148,7 +148,7 @@ not secret — rotate before any public deployment).
 ### Testing Strategy
 
 Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
-`src/**/*.test.ts`). The suite (283 tests) pins:
+`src/**/*.test.ts`). The suite (301 tests) pins:
 
 - **The SQLite path contract** (`src/lib/db-path.test.ts`) — relative
   `file:` URLs resolve against `prisma/schema.prisma` (so
@@ -287,6 +287,16 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
   listener — while KEEPING `role="dialog"` + `aria-modal` (the invisible
   semantics). Guards against a future "improvement" re-adding keyboard
   affordances the live does not have.
+- **Motion-contract fidelity** (`motion-fidelity.test.ts`, r17) —
+  file-content pins on the live's measured motion contract: NO entry
+  animations — globals.css declares no `@keyframes`, no `.studio-fade`
+  utility, and no `prefers-reduced-motion` guard (the live renders every
+  studio surface instantly; its CSSOM keyframes are all Amplify-internal),
+  and none of the thirteen surfaces that once carried the scaffold's
+  studio-fade class reference it anymore. Positive pins keep the live's
+  REAL motion (the drawers' `transition-transform duration-300` slide).
+  Guards against a future "polish" re-adding mount animations the live
+  does not have.
 - **Action layer** (`src/actions/studio.test.ts`) — the mutation surface
   against a throwaway SQLite database with the auth seam mocked: CRUD,
   ownership/IDOR checks, supply assignment, delete-side-effects (incl. the
