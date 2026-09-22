@@ -86,7 +86,7 @@ export function ProjectDetailPanel({
   return (
     <section
       aria-label={`Project details for ${project.name}`}
-      className="mt-3 rounded-2xl border border-ast-turquoise/60 bg-ast-deep/95 p-6 shadow-ast-turquoise studio-fade"
+      className="mt-3 rounded-2xl border border-ast-turquoise/60 bg-ast-deep/95 p-6 shadow-ast-turquoise"
     >
       <div className="mb-4 flex items-start gap-4">
         <div className="min-w-0 flex-1">

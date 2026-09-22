@@ -100,7 +100,7 @@ export function ProjectsView({
   const openProject = projects.find((p) => p.id === openProjectId) ?? null;
 
   return (
-    <div className="studio-fade">
+    <div>
       <div className="mb-6 flex items-start justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.35em] text-ast-turquoise">Projects</p>

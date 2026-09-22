@@ -124,7 +124,7 @@ export function SupplyEditPanel({ supply, projects, onCancel, onSaved }: SupplyE
   return (
     <section
       aria-label={`Edit supply ${supply.name}`}
-      className="mt-3 rounded-2xl border border-ast-pink/60 bg-ast-deep/95 p-6 shadow-ast-pink studio-fade"
+      className="mt-3 rounded-2xl border border-ast-pink/60 bg-ast-deep/95 p-6 shadow-ast-pink"
     >
       <div className="mb-6 flex items-center justify-between">
         <h2 className="text-lg font-bold text-ast-pink">Edit Supply</h2>

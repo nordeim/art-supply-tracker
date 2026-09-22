@@ -80,7 +80,7 @@ export function ProjectEditPanel({ project, onCancel, onSaved }: ProjectEditPane
   return (
     <section
       aria-label={`Edit project ${project.name}`}
-      className="mt-3 rounded-2xl border border-ast-turquoise/60 bg-ast-deep/95 p-6 shadow-ast-turquoise studio-fade"
+      className="mt-3 rounded-2xl border border-ast-turquoise/60 bg-ast-deep/95 p-6 shadow-ast-turquoise"
     >
       <div className="mb-6 flex items-center justify-between">
         <h2 className="text-lg font-bold text-ast-turquoise">Edit Project</h2>

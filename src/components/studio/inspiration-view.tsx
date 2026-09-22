@@ -77,7 +77,7 @@ export function InspirationView({
   }, [initialSection]);
 
   return (
-    <div className="studio-fade flex h-full flex-col">
+    <div className="flex h-full flex-col">
       <div className="mb-4 shrink-0">
         <p className="text-xs font-bold uppercase tracking-[0.25em] text-ast-lavender">
           Inspiration
@@ -333,7 +333,7 @@ function InspirationDetailPanel({
   return (
     <section
       aria-label={PANEL_HEADER[entry.type]}
-      className="mt-3 rounded-2xl border border-ast-turquoise/40 bg-[#0d0420] p-5 studio-fade"
+      className="mt-3 rounded-2xl border border-ast-turquoise/40 bg-[#0d0420] p-5"
     >
       <div className="mb-3 flex items-start justify-between">
         <p

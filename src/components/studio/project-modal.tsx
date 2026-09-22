@@ -96,7 +96,7 @@ export function ProjectModal({ onClose, onSaved }: ProjectModalProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="project-modal-title"
-        className="flex max-h-[calc(100vh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-ast-turquoise/60 bg-ast-deep/95 shadow-ast-turquoise studio-fade md:max-w-xl"
+        className="flex max-h-[calc(100vh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-ast-turquoise/60 bg-ast-deep/95 shadow-ast-turquoise md:max-w-xl"
       >
         <div className="flex shrink-0 items-center justify-between px-6 pb-4 pt-6">
           <h2 id="project-modal-title" className="text-2xl font-bold text-ast-turquoise">

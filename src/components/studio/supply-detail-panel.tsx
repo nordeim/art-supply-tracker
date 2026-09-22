@@ -58,7 +58,7 @@ export function SupplyDetailPanel({
   return (
     <section
       aria-label={`Supply details for ${supply.name}`}
-      className="mt-3 rounded-2xl border border-ast-pink/60 bg-ast-deep/95 p-6 shadow-ast-pink studio-fade"
+      className="mt-3 rounded-2xl border border-ast-pink/60 bg-ast-deep/95 p-6 shadow-ast-pink"
     >
       <div className="mb-4 flex items-start justify-between">
         <div>

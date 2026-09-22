@@ -89,7 +89,7 @@ export function SuppliesView({
     subView && subView.kind !== "list" ? supplyCategoryLabel(subView.category) : "";
 
   return (
-    <div className="studio-fade">
+    <div>
       <div className="mb-6 flex items-start justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.35em] text-[#9F6BFF]">Inventory</p>

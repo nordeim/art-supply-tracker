@@ -23,7 +23,7 @@ export function DashboardView({
   onOpenSpotlight,
 }: DashboardViewProps) {
   return (
-    <div className="studio-fade">
+    <div>
       <div className="mb-6">
         <p className="text-xs uppercase tracking-[0.35em] text-ast-lavender">Studio</p>
         <h1 className="mt-2 bg-[linear-gradient(90deg,#00E6FF_0%,#2E64FF_35%,#8D5CFF_65%,#FF2FB3_100%)] bg-clip-text text-3xl font-bold text-transparent">

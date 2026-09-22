@@ -228,7 +228,7 @@ export function LoginScreen() {
 
   return (
     <main className="min-h-screen bg-[#050009] text-[#F7F2FF] flex items-center justify-center px-4 py-10">
-      <div className="w-full max-w-5xl grid gap-8 md:grid-cols-[1fr_420px] items-center studio-fade">
+      <div className="w-full max-w-5xl grid gap-8 md:grid-cols-[1fr_420px] items-center">
         {/* Marketing column — the live's contiguous stack: eyebrow, h1
          * (leading-none), description, and the spam-folder note carry no
          * vertical margins between them. */}

@@ -200,23 +200,16 @@
   background: #3d2b66;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .studio-fade {
-    animation: none !important;
-  }
-}
-
-@keyframes studio-fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-.studio-fade {
-  animation: studio-fade-in 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
+/*
+ * r17 motion parity: the live app renders every studio surface instantly —
+ * its compiled CSS holds no studio @keyframes (only Amplify-internal loader
+ * rules), and view wrappers, panels, modals, and the login card all compute
+ * `animation: none`. The scaffold's `studio-fade` entry animation (removed
+ * in r17) played a 300ms fade-and-slide on thirteen surfaces the live never
+ * animates — invisible in steady-state captures, which is why it survived
+ * fifteen parity rounds. Do NOT re-introduce mount animations here; the
+ * live's only studio motion is the drawers' `transition-transform
+ * duration-300` slide (pinned by the E2E mobile suite) and the TW3/TW4
+ * `transition` utility's 0.15s hover tints. Pinned by
+ * `src/lib/motion-fidelity.test.ts`.
+ */

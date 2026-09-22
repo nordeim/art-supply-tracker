@@ -322,7 +322,7 @@ export function StudioApp({
             </button>
           </div>
 
-          <div className="studio-fade">{views}</div>
+          <div>{views}</div>
         </section>
 
         {/* Community column — desktop glass card + mobile slide-in drawer. */}

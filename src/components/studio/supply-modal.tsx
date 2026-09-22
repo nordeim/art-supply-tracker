@@ -141,7 +141,7 @@ export function SupplyModal({ projects, onClose, onSaved }: SupplyModalProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="supply-modal-title"
-        className="flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-ast-pink/60 bg-ast-deep/95 shadow-ast-pink studio-fade md:max-w-2xl"
+        className="flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-ast-pink/60 bg-ast-deep/95 shadow-ast-pink md:max-w-2xl"
       >
         <div className="flex shrink-0 items-center justify-between px-6 pb-4 pt-6">
           <h2 id="supply-modal-title" className="text-2xl font-bold text-ast-pink">
