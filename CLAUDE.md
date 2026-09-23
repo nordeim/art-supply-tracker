@@ -148,7 +148,7 @@ not secret — rotate before any public deployment).
 ### Testing Strategy
 
 Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
-`src/**/*.test.ts`). The suite (301 tests) pins:
+`src/**/*.test.ts`). The suite (310 tests) pins:
 
 - **The SQLite path contract** (`src/lib/db-path.test.ts`) — relative
   `file:` URLs resolve against `prisma/schema.prisma` (so
@@ -297,6 +297,19 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
   REAL motion (the drawers' `transition-transform duration-300` slide).
   Guards against a future "polish" re-adding mount animations the live
   does not have.
+- **Landmark & reading-order fidelity** (`landmark-fidelity.test.ts`,
+  r18) — file-content pins on the reading-order probe's measured
+  contracts: the announcement order (header → sidebar → content → chat)
+  is identical on both sides at both viewports; the closed drawers carry
+  the `inert` + `aria-hidden` PAIR (the kept r5 improvement — the live's
+  closed drawers carry NEITHER, so its mobile reading order announces
+  the off-screen drawer content before the page; the r18 measurement
+  corrected session_26's misattribution) with labeled drawer landmarks
+  (`aria-label` "Studio tools" / "Community chat"); and the content pane
+  is a single `<section>` under ONE `<main>` (the live's nested inner
+  `<main>` and twin md-toggled content copies are accepted divergences —
+  invisible in pixels and in the a11y tree). Guards against dropping
+  either drawer attribute or introducing the twin-copy structure.
 - **Action layer** (`src/actions/studio.test.ts`) — the mutation surface
   against a throwaway SQLite database with the auth seam mocked: CRUD,
   ownership/IDOR checks, supply assignment, delete-side-effects (incl. the

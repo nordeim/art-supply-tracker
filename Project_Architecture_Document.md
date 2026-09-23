@@ -1,9 +1,9 @@
-# AST Studio — Master Project Architecture Document (PAD) v1.16
+# AST Studio — Master Project Architecture Document (PAD) v1.17
 
 **Classification:** Internal Engineering Reference
 **Status:** DEFINITIVE, PRODUCTION-LOCKED BLUEPRINT
 **Companion Document:** `README.md` (onboarding), `AGENTS.md` (agent instructions), `CLAUDE.md` (engineering standards)
-**Last Updated:** 2026-09-23 (r17)
+**Last Updated:** 2026-09-23 (r18)
 **Audience:** Senior Engineers, Tech Leads, DevOps, and Onboarding Engineers
 **Rule:** Every architectural decision in this document traces to a specific rationale.
 Nothing is here "because it's popular."
@@ -420,6 +420,40 @@ Nothing is here "because it's popular."
   utility's property-list difference is internal-only (every
   hover-changed property is in both lists). 301 vitest + 25 E2E, all
   gates green.
+- `[R18]` Session-30 reading-order & a11y-structure pass (2026-09-23):
+  a fresh full-surface recon on the r17 tree (8 paired captures at or
+  below the documented baselines — dashboard 0.53%, projects 0.39%,
+  supplies 0.39%, inspiration 0.54%, mobile-dashboard 0.17%, sidebar
+  drawer 0.47%, chat drawer 0.76%, login 0.21%, every cluster
+  decomposed to the accepted set: account email, dev badge, the quote
+  card's viewport-edge second line with byte-identical geometry on both
+  sides, and the scrollbar-thumb delta from the live's residue chat
+  message below the fold; export envelope byte-identical modulo
+  timestamp; 23/23 smoke) plus the three session-28-suggested probe
+  dimensions. Zoom/reflow: PARITY — zero horizontal overflow on both
+  sides at 200% zoom equivalent (640×400) and 320px width (WCAG
+  1.4.10), capture diffs 0.58%/0.05%. Forced-colors: PARITY — zero
+  forced-colors/prefers-contrast/inverted-colors rules in either CSSOM.
+  Reading order: the announcement order (header → sidebar → content →
+  chat) is identical on both sides at both viewports (probed on the
+  dashboard and the inspiration Feed), with three findings in the
+  invisible-semantics/documentation class. r18-F1 (Docs, Medium):
+  session_26 had misattributed the closed drawers' `inert` as
+  live-measured — direct probe shows the live's closed drawers carry
+  NEITHER `inert` NOR `aria-hidden` (10 sidebar + 3 chat focusable
+  descendants off-screen but tabbable and announced, its mobile reading
+  order walking the drawer content before the page); the clone's
+  `inert` + `aria-hidden` pair is the kept r5 improvement — the record
+  corrected, the pair pinned at source level, no code change. r18-F2
+  (accepted): the live nests an inner `<main>` around its content pane
+  (two main landmarks — invalid HTML); the clone's single-`<main>` +
+  `<section>` structure kept. r18-F3 (accepted): the live renders twin
+  md-toggled content copies (one always `display:none`); the clone
+  renders one responsive copy — invisible in pixels and the a11y tree.
+  Also fixed: §5.4's stale motion bullet still described the removed
+  studio-fade keyframe (an r17 miss) — rewritten to the r17/r18
+  contract. New `landmark-fidelity.test.ts` (9 characterization pins,
+  green on arrival). 310 vitest + 25 E2E, all gates green.
 
 ---
 
@@ -1043,15 +1077,35 @@ without pinning them to the live's v3 values first (all pinned by
 - shadcn/ui (New York style) provides dialog, select, toast primitives in
   `src/components/ui/`; studio surfaces compose them with the AST palette.
 - The two modals are hand-rolled dialogs (`role="dialog"`, `aria-modal`,
-  Escape-to-close, initial focus, scrim-click close) to match the original's
-  exact chrome.
+  scrim-click close, ✕-button close) to match the original's exact chrome —
+  NO Escape-close and NO initial focus (r15: the live's modal leaves focus
+  on the trigger and ignores Escape; pinned by `focus-fidelity.test.ts`).
 
 ### 5.4 Motion
 
-- One keyframe: `studio-fade-in` (300 ms, `cubic-bezier(.22,1,.36,1)`) used
-  as `.studio-fade` on view/root transitions; `prefers-reduced-motion`
-  disables it. Drawer transitions are Tailwind's `transition-transform
-  duration-300`. No other animation — the original is deliberately calm.
+**Motion contract (r17):** the studio ships NO entry animations — no
+authored `@keyframes`, no `.studio-fade` utility, no
+`prefers-reduced-motion` guard (the live renders every view, panel,
+modal, and the login card instantly; its CSSOM keyframes are all
+Amplify-internal). The live's only studio motion is the drawers'
+`transition-transform duration-300` slide and the `transition`
+utility's 0.15s hover tints; both are kept and pinned by
+`src/lib/motion-fidelity.test.ts`.
+
+### 5.5 Landmarks & reading order
+
+**Landmark contract (r18):** the announcement order — header → sidebar
+→ view content → chat — is identical to the live at both viewports.
+One `<main>` wraps the app; the content pane is a plain `<section>`
+(the live nests an inner `<main>` — two main landmarks, invalid HTML —
+and renders twin md-toggled content copies; both accepted as invisible
+divergences). The desktop sidebar and chat panes are unlabeled
+`<aside>`s like the live's. The mobile drawers carry the kept r5
+improvement: `inert` + `aria-hidden` on closed drawers (the live's
+closed drawers carry neither — its mobile reading order announces the
+off-screen drawer content before the page) plus accessible names
+("Studio tools" / "Community chat"). Pinned by
+`src/lib/landmark-fidelity.test.ts` and the E2E mobile suite.
 
 ---
 
@@ -1116,7 +1170,7 @@ without pinning them to the live's v3 values first (all pinned by
 | Category | Count | Location | Framework |
 |---|---|---|---|
 | Static | — | `eslint .` / `tsc --noEmit` | ESLint 9 + TS 5.9 strict |
-| Automated unit | 273 tests | `src/lib/*.test.ts` — db-path (the r16 SQLite path contract: schema-relative resolution, pass-through for absolute/non-file URLs, repo-.env precedence for tooling), studio-domain (incl. bundle-pinned style maps + edit-panel budget/option mapping + the r11 two-state condition maps and quantity format gate), design-tokens (globals.css literal pinning incl. the Tailwind-v3 radius scale, the zero-webfont stack, and the r14 default-palette pins — pink-200/300/400/500, cyan-400, blue-400/500 pinned to the live's v3 values with a TW4-drift negative and usage-site class-string pins), validation (incl. the normalized import gate, the Cognito password-policy rules + permissive sign-in schema, the two-state condition + quantity format boundary), export-payload (incl. the three-slot quantity semantics and the empty-qty/explicit-ok round-trip), rate-limit, inspiration (incl. the rail section resolver with the live's inert "quote" / "spotlight-kevin-lewis" quirks), seed-fidelity (scripts/seed.ts pinned to the live chat byte-for-byte, typos included), login-fidelity + chat-fidelity (the live's measured Amplify login chrome incl. the alert-box error chrome, policy stack, reset-confirmation view, and content-width link buttons; logo aspect; chat-panel structure), drawer-fidelity (the mobile drawers' shared z-40 no-blur scrim with instant mount/unmount), supply-fidelity (the create modal's inert Stock Status select, the quantity format gate's exact copy, the edit panel's `?? "ok"` init, the chip's unconditional qty label, the detail panel's raw quantity), sidebar-tile-fidelity (the stat tiles' per-tile ACTIVE accent pairs — electric blue for Projects/Supplies, lavender for Inspo — with the card bg and hover classes dropped while active; the constant inner text classes; a negative pin on the old hardcoded electric-blue string), header-button-fidelity (the memory button's hyphen-family literal colors — idle border #5b3fd3, hover trio #f4f27a — with negative pins on the utility families, plus the `@custom-variant hover (&:hover);` override restoring the live's TW3 plain-:hover semantics), focus-fidelity (r15: no authored outline color — the UA-default focus ring renders like the live's — and the create modals' no-Escape/no-focus-steal contract with the kept dialog semantics), motion-fidelity (r17: no authored @keyframes / .studio-fade / prefers-reduced-motion guard — the live renders studio surfaces instantly; positive pins keep the drawers' transition-transform duration-300 slide) | Vitest (node env, `@/` alias) |
+| Automated unit | 282 tests | `src/lib/*.test.ts` — db-path (the r16 SQLite path contract: schema-relative resolution, pass-through for absolute/non-file URLs, repo-.env precedence for tooling), studio-domain (incl. bundle-pinned style maps + edit-panel budget/option mapping + the r11 two-state condition maps and quantity format gate), design-tokens (globals.css literal pinning incl. the Tailwind-v3 radius scale, the zero-webfont stack, and the r14 default-palette pins — pink-200/300/400/500, cyan-400, blue-400/500 pinned to the live's v3 values with a TW4-drift negative and usage-site class-string pins), validation (incl. the normalized import gate, the Cognito password-policy rules + permissive sign-in schema, the two-state condition + quantity format boundary), export-payload (incl. the three-slot quantity semantics and the empty-qty/explicit-ok round-trip), rate-limit, inspiration (incl. the rail section resolver with the live's inert "quote" / "spotlight-kevin-lewis" quirks), seed-fidelity (scripts/seed.ts pinned to the live chat byte-for-byte, typos included), login-fidelity + chat-fidelity (the live's measured Amplify login chrome incl. the alert-box error chrome, policy stack, reset-confirmation view, and content-width link buttons; logo aspect; chat-panel structure), drawer-fidelity (the mobile drawers' shared z-40 no-blur scrim with instant mount/unmount), supply-fidelity (the create modal's inert Stock Status select, the quantity format gate's exact copy, the edit panel's `?? "ok"` init, the chip's unconditional qty label, the detail panel's raw quantity), sidebar-tile-fidelity (the stat tiles' per-tile ACTIVE accent pairs — electric blue for Projects/Supplies, lavender for Inspo — with the card bg and hover classes dropped while active; the constant inner text classes; a negative pin on the old hardcoded electric-blue string), header-button-fidelity (the memory button's hyphen-family literal colors — idle border #5b3fd3, hover trio #f4f27a — with negative pins on the utility families, plus the `@custom-variant hover (&:hover);` override restoring the live's TW3 plain-:hover semantics), focus-fidelity (r15: no authored outline color — the UA-default focus ring renders like the live's — and the create modals' no-Escape/no-focus-steal contract with the kept dialog semantics), motion-fidelity (r17: no authored @keyframes / .studio-fade / prefers-reduced-motion guard — the live renders studio surfaces instantly; positive pins keep the drawers' transition-transform duration-300 slide), landmark-fidelity (r18: the announcement order verified identical on both sides at both viewports; the closed drawers' inert + aria-hidden PAIR as the kept r5 improvement with labeled drawer landmarks; the content pane as a single `<section>` under one `<main>` — negative pins reject the live's twin-copy structure) | Vitest (node env, `@/` alias) |
 | Automated action | 28 tests | `src/actions/studio.test.ts` (throwaway SQLite DB, mocked auth seam — incl. the mid-import rollback contract, the mid-delete no-strand contract, and the two-state condition round-trips) | Vitest |
 | E2E | 25 specs | `e2e/*.spec.ts` — setup (storageState sign-in), auth, dashboard, import-export, projects, supplies, mobile-navigation | Playwright (serial, 1 worker; desktop 1536×844 + mobile 390×844 projects) |
 | Manual golden paths | 11 flows | README "Testing & Quality" | Browser-executed (pinned by `scripts/smoke_functional.py`, 23 checks) |
@@ -1289,6 +1343,9 @@ public exposure).
 | Info | Modal scrim z-index differs (clone z-[60], live z-50) | The clone's create-modal scrim floats at `z-[60]` while the live's overlay is z-50 — but the drawer (z-50) always CLOSES before a modal opens (probed on both sides: clicking the drawer's Create button closes the drawer and opens the modal), so the two never stack in any reachable state | Accepted (unreachable in every reachable state — no user-visible effect) |
 | Low | Mobile login card offset by 0.5px | The live's card is 357px centered in its 358px content column (x=16.5 — Amplify internal responsive fractional layout); the clone fills the column (358px at x=16). Desktop is byte-identical (480×429 at 494,464) | Accepted (sub-pixel, below the visibility threshold — reproducing it would require guessing Amplify's viewport-dependent internal CSS) |
 | Low | Sidebar drawer semantic landmark differs | The live's mobile sidebar drawer is an `<aside>` (no role/label); the clone renders `<nav aria-label="Studio tools">` — a deliberate WCAG improvement documented in CLAUDE.md. Visual parity unaffected (identical classes/geometry, measured r11) | Accepted (accessibility improvement, intentionally kept) |
+| Low | Closed drawers carry `inert` + `aria-hidden` (the live's carry neither) | Measured r18 with both drawers closed at 390×844: the live's off-screen panes keep 10 (sidebar) / 3 (chat) focusable descendants tabbable and announced — its mobile reading order walks the closed drawers' content BEFORE the page content, and Tab reaches invisible buttons. The clone's r5 `inert` + `aria-hidden` pair keeps closed drawers out of both the tab order and the a11y tree (the same invisible-semantics class as the chat's `role="log"`); either attribute alone breaks the contract. Session_26's "matches the live exactly" list had folded this in by mistake — r18 corrected the record | Accepted (accessibility improvement, intentionally kept — pinned by `landmark-fidelity.test.ts` + the E2E mobile suite) |
+| Low | Content-pane landmark: single `<main>` + `<section>` (live: nested inner `<main>`) | The live wraps its desktop content pane in a nested `<main class="col-span-7">` inside the outer `<main>` (two main landmarks — invalid HTML; a screen reader announces main twice); the clone's content pane is a plain `<section>` under one `<main>`. The announcement ORDER (header → sidebar → content → chat) is identical on both sides at both viewports (probed r18 on the dashboard and the inspiration Feed) | Accepted (the clone's structure is valid HTML; invisible in pixels and announcement sequencing) |
+| Low | View content rendered once (live: twin md-toggled copies) | The live renders every view's content TWICE — a `hidden md:grid` desktop copy and a `flex md:hidden` mobile copy, one always `display:none` (removed from the a11y tree); the clone renders ONE responsive copy (the layout container flips `flex-col` → `md:grid md:grid-cols-12`, the content pane carries the mobile margins + `md:col-span-7`). Pixel parity proven at both viewports (r18 captures) | Accepted (invisible in pixels and the a11y tree — the hidden copy never renders) |
 | Low | Dev-mode-only browser artifacts | In `next dev`, the Next.js dev-tools badge (the "N" button) and 4 `__nextjs-Geist` FontFaces appear in `document.fonts` — neither ships in the production build (verified r11: prod build has `document.fonts.size === 0` and no badge) | Accepted (dev-mode artifact — sessions comparing dev-mode DOM must not misclassify these as parity gaps; production is the ground truth) |
 | Low | View state not URL-addressable | Browser back doesn't switch studio views | Accepted (ADR-001 consequence) |
 | Low | Chat avatar colors keyed to seeded usernames | New users get the default purple avatar | Accepted (matches original's initials behavior) |
