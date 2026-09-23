@@ -1,6 +1,20 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/*
+ * r19: exclude the repo's skills/ folder from Tailwind v4's automatic
+ * content detection. The committed skill docs/tools carry class-like
+ * strings in their examples (e.g. the gift-evaluator skill's HTML template
+ * carries red-tinted selection utilities), and TW4 scans every
+ * non-gitignored file — so those documentation tokens compiled into the
+ * app's CSS as dead rules (measured: the live's CSSOM carries ZERO
+ * ::selection rules; the clone carried four, two of them skills-sourced,
+ * and the compiled stylesheet was 37% larger because of skills-scanned
+ * candidates). Paths are resolved relative to this stylesheet (src/app/),
+ * hence ../../.
+ */
+@source not "../../skills";
+
 @custom-variant dark (&:is(.dark *));
 
 /* r13: the live app's Tailwind v3 compiles hover: variants as plain `:hover`
