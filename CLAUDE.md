@@ -89,7 +89,10 @@ Prisma 6.19.2 + SQLite · Zod 4.3.5 · ESLint 9.
   transparent-outline utility is the only emitter of `@media
   (forced-colors: active)` blocks; its scaffold tokens were stripped (six
   dead rules; the live's CSSOM carries none). Do not re-introduce the
-  token anywhere under src/ (pinned by `css-hygiene.test.ts`).
+  token anywhere under src/ (pinned by `css-hygiene.test.ts`) — and the
+  same discipline extends to MARKDOWN: TW4 scans committed .md files, so
+  remediation records must refer to stripped tokens descriptively, never
+  literally (the r21 docs-token pin guards this).
 - The Tailwind DEFAULT palette is pinned to the live's v3 values (r14):
   `--color-pink-200/300/400/500`, `--color-cyan-400`, and
   `--color-blue-400/500` in the `@theme` block carry the live's TW3 hex
@@ -161,7 +164,7 @@ not secret — rotate before any public deployment).
 ### Testing Strategy
 
 Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
-`src/**/*.test.ts`). The suite (328 tests) pins:
+`src/**/*.test.ts`). The suite (333 tests) pins:
 
 - **The SQLite path contract** (`src/lib/db-path.test.ts`) — relative
   `file:` URLs resolve against `prisma/schema.prisma` (so
@@ -357,6 +360,23 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
   pending affordances). Guards against a future "polish" re-adding the
   TW utility's 0.15s fades, an unscoped reduced-motion guard, or
   pending-state affordances the live does not have.
+- **Layout-height fidelity** (`layout-fidelity.test.ts`, r21) —
+  file-content pins on the desktop app-shell height contract: the live's
+  shell is UNCAPPED (its grid row sizes to the chat column's intrinsic
+  878px; the page grows to 982 at 1536×844 and the window scrolls —
+  wheel-verified), so the scaffold's viewport-height cap token is
+  negative-pinned (runtime-constructed — TW4 scans test sources), the
+  exact uncapped main class string is pinned, and the chat column's
+  row-driving `max-h-[calc(100vh-16rem)]` scroll container is
+  cross-pinned. Guards against a future "fix" re-capping the page and
+  re-clipping the columns.
+- **Documentation token hygiene** (in `css-hygiene.test.ts`, r21) — TW4's
+  content detection scans committed markdown too; the r19/r20
+  selection/forced-colors remediations were regressed by their own session
+  records quoting the stripped tokens verbatim (the production CSS
+  regrew the dead rules). The pin scans every .md in the repo for the
+  two token families (runtime-constructed matchers) so documentation
+  cannot re-introduce what the code stripped.
 - **Action layer** (`src/actions/studio.test.ts`) — the mutation surface
   against a throwaway SQLite database with the auth seam mocked: CRUD,
   ownership/IDOR checks, supply assignment, delete-side-effects (incl. the
