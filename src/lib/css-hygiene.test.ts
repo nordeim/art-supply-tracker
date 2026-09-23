@@ -1,6 +1,6 @@
 /**
- * CSS-hygiene contract (r19, extended r20) — pins the compile-time
- * exclusion and the selection/caret/forced-colors non-authoring measured
+ * CSS-hygiene contract (r19, extended r20/r22) — pins the compile-time
+ * exclusions and the selection/caret/forced-colors non-authoring measured
  * on the live app.
  *
  * Three contracts, all measured against the live's CSSOM on 2026-09-23:
@@ -71,11 +71,50 @@ function collectSources(dir: string): string[] {
 }
 
 /** Strip block and line comments so the pins match AUTHORED rules only —
- * comments are free to discuss the very contract they guard. */
+ * comments are free to discuss the very contract they guard.
+ *
+ * String-aware (r22): the previous regex-based stripper ate ANY
+ * slash-asterisk sequence, including the recursive-glob shape INSIDE a
+ * quoted `@source not` path — the r22 markdown-exclusion directive's
+ * any-depth glob was corrupted into a single-asterisk path, and the pin
+ * failed against a directive the file demonstrably carried. This scanner
+ * skips real comments but copies quoted strings verbatim, which is also
+ * correct CSS semantics.
+ */
 function stripComments(text: string): string {
-  return text
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/^\s*\/\/.*$/gm, "");
+  let out = "";
+  let i = 0;
+  const n = text.length;
+  while (i < n) {
+    const ch = text[i];
+    if (ch === "/" && text[i + 1] === "*") {
+      const end = text.indexOf("*/", i + 2);
+      i = end === -1 ? n : end + 2;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      const quote = ch;
+      out += ch;
+      i++;
+      while (i < n) {
+        out += text[i];
+        if (text[i] === "\\" && i + 1 < n) {
+          out += text[i + 1];
+          i += 2;
+          continue;
+        }
+        if (text[i] === quote) {
+          i++;
+          break;
+        }
+        i++;
+      }
+      continue;
+    }
+    out += ch;
+    i++;
+  }
+  return out.replace(/^\s*\/\/.*$/gm, "");
 }
 
 const css = stripComments(cssRaw);
@@ -88,13 +127,34 @@ describe("CSS compile hygiene: skills/ excluded from content detection (r19)", (
     expect(css).toContain('@source not "../../skills";');
   });
 
-  it("does not exclude any source directory the app actually compiles", () => {
-    // Negative pin: only skills/ is excluded — a broader pattern (e.g.
-    // ../../src) would silently drop real utilities and break the UI.
+  it("excludes exactly skills/ and every committed markdown file — nothing else", () => {
+    // Negative pin: only skills/ and the markdown corpus are excluded — a
+    // broader pattern (e.g. ../../src) would silently drop real utilities
+    // and break the UI. The markdown exclusion (r22-F2) is the systemic fix
+    // for the recurring documentation-token regression: raw session
+    // narrations quote prior-session stripped tokens every round, and TW4
+    // scans committed .md files, so the dead rules recompiled between
+    // rounds even with the docs-token pin in place (measured r22: the
+    // session_37.md narration regrew the production CSS from 152,062 to
+    // 152,474 bytes — one forced-colors block and the selection pair).
+    // Documentation is not a render surface: every utility the app renders
+    // lives in src/**/*.{ts,tsx,css}, verified by build diff (the exclusion
+    // drops exactly the three dead rules and nothing else).
     const sources = [...css.matchAll(/@source not "([^"]+)";/g)].map(
       (m) => m[1],
     );
-    expect(sources).toEqual(["../../skills"]);
+    expect(sources).toEqual(["../../skills", "../../**/*.md"]);
+  });
+
+  it("markdown files are excluded from content detection (r22-F2)", () => {
+    // Dedicated pin: the .md exclusion is what ends the recurring class —
+    // without it, ANY future session log, README edit, or PAD revision
+    // quoting a class-shaped token recompiles it as a dead rule (the
+    // r21-F2 lesson: the pin caught it, but only at the NEXT round's
+    // baseline, leaving the regression on main in between). The glob
+    // covers root-level and nested markdown alike; skills/ needs its own
+    // directive because its corpus carries non-markdown files too.
+    expect(css).toContain('@source not "../../**/*.md";');
   });
 });
 

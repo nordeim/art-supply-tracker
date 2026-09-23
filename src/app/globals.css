@@ -15,6 +15,21 @@
  */
 @source not "../../skills";
 
+/*
+ * r22: exclude every committed MARKDOWN file from content detection too.
+ * Documentation is not a render surface — every utility the app renders
+ * lives in the src tree's ts, tsx, and css files — but TW4 scans .md
+ * files as candidates, and the session records naturally quote the very
+ * tokens earlier rounds stripped (measured twice: r21's own docs regrew
+ * the dead selection and forced-colors rules, and the r22 pull brought
+ * session_37.md quoting them again, regrowing the production CSS by 412
+ * bytes). The build diff with this directive drops exactly those dead
+ * rules and nothing else. The css-hygiene pins guard the full exclusion
+ * list; the docs-token pin stays as defense in depth (and documentation
+ * hygiene).
+ */
+@source not "../../**/*.md";
+
 @custom-variant dark (&:is(.dark *));
 
 /* r13: the live app's Tailwind v3 compiles hover: variants as plain `:hover`

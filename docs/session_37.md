@@ -36,19 +36,19 @@ My clone captures match the r20 references (0.003% — noise). So the **live sit
 The structural difference is now clear. Let me visually confirm the bottom-right corner difference and check the live's 6th chat message.
 Confirmed. Now the key question: is the live's 6th chat message new (which pushed its layout)? Let me extract the live's messages and check the docs for the "residue chat message" note.
 The live's residue message is documented as accepted. But the aside-height difference needs code-level investigation. Let me examine the clone's layout container.
-The clone's `<main>` is `md:h-screen overflow-hidden` — never page-scrolls. Let me probe the live's equivalent containers.
-**Root cause found.** The live's `<main>` is `display:block, min-h-screen, no height cap` — its chat column (878px intrinsic) drives the grid row and **the page scrolls** at desktop. The clone's `md:h-screen` + `min-h-0 flex-1` caps everything at 844. Let me decompose the remaining diff to see if this alone explains the elevation.
+The clone's `<main>` carries the viewport-height cap token plus a clip utility — never page-scrolls. Let me probe the live's equivalent containers.
+**Root cause found.** The live's `<main>` is `display:block, min-h-screen, no height cap` — its chat column (878px intrinsic) drives the grid row and **the page scrolls** at desktop. The clone's viewport-height cap plus flex sizing locks everything at 844. Let me decompose the remaining diff to see if this alone explains the elevation.
 Let me check whether prior sessions left any probe scripts or evidence in the repo, and verify what the live's layout looked like during r20.
 This is the central r21 finding. Let me get the live's full grid-children structure to design the fix precisely.
 Now let me read the clone's layout code in full to compare against the live's structure.
 Let me see the live's mobile structure and verify the page actually scrolls.
 Let me verify the live's page actually scrolls (functional behavior test) before designing the fix.
-Confirmed: **desktop-only divergence** — the live's desktop page scrolls (138px), the clone's is locked; mobile already matches (both docH=1563). Let me check when the clone's `md:h-screen` cap was introduced.
+Confirmed: **desktop-only divergence** — the live's desktop page scrolls (138px), the clone's is locked; mobile already matches (both docH=1563). Let me check when the clone's viewport-height cap was introduced.
 The live's bundles are UNCHANGED since r14 — so the live always scrolled, and r20's baselines must have included it. My 0.72% vs r20's 0.38% needs explanation. Let me identify exactly what's at each hot region via element inspection.
 The arithmetic doesn't close yet. Let me measure the exact contribution of each region by masking.
 The numbers suggest the live's chat "Studio Memory" card may be state-dependent. Let me examine it on both sides.
 The live's memory card shows "You were working on Watercolor Botanicals." Let me check what the clone's demo user has.
-The live's memory text matches the seed — not the cause. The structural finding stands on its own: **the live's desktop page grows and scrolls; the clone's `md:h-screen` cap (a scaffold-era invention, never live-measured) locks it**. Before designing the fix, let me decompose the mobile elevation too.
+The live's memory text matches the seed — not the cause. The structural finding stands on its own: **the live's desktop page grows and scrolls; the clone's viewport-height cap (a scaffold-era invention, never live-measured) locks it**. Before designing the fix, let me decompose the mobile elevation too.
 Mobile's extra diff is just the dev badge + email (both accepted). The desktop structural finding is solid. Let me check the inspiration view's extra elevation — possibly the quote carousel.
 The inspiration mid-content diffs are pure antialiasing (sampled pixels identical). The audit is nearly complete. Let me quickly decompose the login elevation, then run the export envelope probe and smoke suite.
 Login is at-baseline noise (identical sampled pixels — antialiasing class). Now the export envelope probe.
@@ -62,7 +62,7 @@ No conflicts. Presenting the remediation plan, then executing the TDD cycle.
 
 | ID | Finding | Fix |
 |---|---|---|
-| **r21-F1** (HIGH) | **Desktop app-shell height contract diverges.** Live: `main` is uncapped (`min-h-screen`, block) — the grid row sizes to the chat column's intrinsic content (sticky header 240 + scroll container max-h 588 + padding = **878px**), the page grows to **982** at 1536×844 and the **window scrolls** (wheel-verified 0→138). Clone: the scaffold-era `md:h-screen` cap (initial commit `f871e90`, never live-measured) locks the page at 844 — the chat card clips at 740 with its bottom border visible where the live's continues past the fold, and the wheel scroll is dead. ~0.43% hot strips on every desktop surface. Mobile unaffected (both docH 1563 ✓). | Remove `md:h-screen` from `main` in `studio-app.tsx:282`. The flex-col + min-h-screen shell then grows with content (empirically proven by the clone's own mobile path). Pin with new `layout-fidelity.test.ts`. |
+| **r21-F1** (HIGH) | **Desktop app-shell height contract diverges.** Live: `main` is uncapped (`min-h-screen`, block) — the grid row sizes to the chat column's intrinsic content (sticky header 240 + scroll container max-h 588 + padding = **878px**), the page grows to **982** at 1536×844 and the **window scrolls** (wheel-verified 0→138). Clone: the scaffold-era viewport-height cap (initial commit `f871e90`, never live-measured) locks the page at 844 — the chat card clips at 740 with its bottom border visible where the live's continues past the fold, and the wheel scroll is dead. ~0.43% hot strips on every desktop surface. Mobile unaffected (both docH 1563 ✓). | Remove the viewport-height cap token from `main` in `studio-app.tsx:282`. The flex-col + min-h-screen shell then grows with content (empirically proven by the clone's own mobile path). Pin with new `layout-fidelity.test.ts`. |
 
 **Confirmed at parity**: export envelope (byte-identical), smoke 23/23, drawer geometry (312×844, x=0/x=78), login (at-baseline noise), mobile surfaces (email+dev-badge only).
 
@@ -76,12 +76,12 @@ All gates green. Now verifying on the production server (the r15 precedent).
 Production verified: identical geometry + scroll. Let me verify the compiled CSS stayed clean (no dead utilities from the test file).
 The production CSS gained dead rules from my test file's string fragments! Let me examine exactly what leaked.
 All four dead rules leaked from my new test file. Let me locate every offending token in the sources.
-String literals in code are scanned; comments aren't. But `outline-hidden` isn't in any source — let me check whether it was already in the r20 CSS by rebuilding the pre-change tree.
+String literals in code are scanned; comments aren't. But the transparent-outline utility isn't in any source — let me check whether it was already in the r20 CSS by rebuilding the pre-change tree.
 The stash left my untracked test file in place — invalid test. Let me redo it properly.
 The counts were line-based on minified CSS — meaningless. Let me count actual occurrences in the true r20 build.
 A pre-existing leak in the committed tree. Let me find which committed file carries the tokens.
 The rg display is mangling highlighted matches, but the substance is clear: **the session docs themselves carry the literal tokens**. Let me verify byte-exactly.
-**r21-F2 confirmed**: the r19/r20 remediation records themselves re-introduced the stripped tokens — `outline-hidden` ×7 (session_35, AGENTS.md) and `selection:bg-primary`/`selection:text-primary-foreground` ×6 (session_32, README, PAD, css-hygiene.test.ts) — and TW4 scans every committed file, so the dead rules recompiled. The "verified clean" CSS was measured **before** the docs were written. Let me view each occurrence to reword them.
+**r21-F2 confirmed**: the r19/r20 remediation records themselves re-introduced the stripped tokens — the transparent-outline utility ×7 (session_35, AGENTS.md) and the selection-variant background/foreground pair ×6 (session_32, README, PAD, css-hygiene.test.ts) — and TW4 scans every committed file, so the dead rules recompiled. The "verified clean" CSS was measured **before** the docs were written. Let me view each occurrence to reword them.
 Now applying the rewords — first the docs, then the test comments, then my own test file.
 The existing pin scans `src/` only — docs were the blind spot. Now applying all rewords.
 Now fixing my own layout-fidelity test file's leaks (title string, docblock, array fragment).
@@ -121,7 +121,7 @@ Push verified: remote main = `f49975e` = local HEAD. Shredding my staged key cop
 ✅ **Session 36 (r21) complete — pushed and verified** (`0ae4389..f49975e` on main, confirmed via HTTPS, key shredded, no new branches).
 
 **The round in brief:**
-- **r21-F1 (HIGH, fixed)**: the live's desktop app shell is *uncapped* — its grid row sizes to the chat column's intrinsic content, the page grows past the fold, and the window scrolls (wheel-verified). The clone's scaffold-era `md:h-screen` cap locked the page, clipped the chat card, and killed the scroll. Removed — geometry now matches the live byte-for-byte on dev **and** production servers; desktop captures dropped below every baseline.
+- **r21-F1 (HIGH, fixed)**: the live's desktop app shell is *uncapped* — its grid row sizes to the chat column's intrinsic content, the page grows past the fold, and the window scrolls (wheel-verified). The clone's scaffold-era viewport-height cap locked the page, clipped the chat card, and killed the scroll. Removed — geometry now matches the live byte-for-byte on dev **and** production servers; desktop captures dropped below every baseline.
 - **r21-F2 (MEDIUM, fixed)**: the r19/r20 CSS remediations had been regressed by their *own documentation* — TW4 scans markdown, and the quoted tokens recompiled as dead rules. All 13 occurrences reworded + pinned; production CSS is now cleaner than the r20 record.
 - **Gates**: 333/333 vitest (5 new pins), 25/25 E2E, 23/23 smoke, lint, typecheck, production build + CSS verified; export envelope byte-identical; 8 screenshots re-shot.
 
