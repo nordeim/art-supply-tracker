@@ -1,8 +1,9 @@
 /**
- * CSS-hygiene contract (r19) — pins the compile-time exclusion and the
- * selection/caret non-authoring measured on the live app.
+ * CSS-hygiene contract (r19, extended r20) — pins the compile-time
+ * exclusion and the selection/caret/forced-colors non-authoring measured
+ * on the live app.
  *
- * Two contracts, both measured against the live's CSSOM on 2026-09-23:
+ * Three contracts, all measured against the live's CSSOM on 2026-09-23:
  *
  * 1. The live's stylesheet authors ZERO `::selection` rules and ZERO
  *    studio-surface `caret-color` rules — every text selection renders with
@@ -27,13 +28,22 @@
  *    live) and any future skill edit can leak arbitrary utilities into
  *    the production CSS.
  *
+ * 3. The live's stylesheet authors ZERO `forced-colors` rules (r20). TW4's
+ *    forced-colors-aware transparent-outline utility emits `@media
+ *    (forced-colors: active)` blocks — the scaffold's class strings
+ *    contributed six dead ones. See the r20 pin at the bottom of this file
+ *    (the utility's name is deliberately never written out in this file:
+ *    TW4's content detection scans test sources too, and a complete
+ *    class-shaped token in a comment or regex would compile the utility
+ *    straight back into the app's CSS).
+ *
  * Why a file-content test: the same precedent as the other fidelity pins
  * (design-tokens, focus-fidelity, motion-fidelity) — the source files are
  * the single authority for what Tailwind emits; a source pin guards the
  * contract against a future "cleanup" deleting the directive or a scaffold
  * refresh re-adding the selection utilities.
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -43,6 +53,22 @@ const cssPath = join(libDir, "../app/globals.css");
 const cssRaw = readFileSync(cssPath, "utf8");
 const inputPath = join(libDir, "../components/ui/input.tsx");
 const inputRaw = readFileSync(inputPath, "utf8");
+const srcRoot = join(libDir, "..");
+
+/** Recursively collect source files under src/ (the TW4 content-detection
+ * corpus — everything Tailwind scans for class strings). */
+function collectSources(dir: string): string[] {
+  const out: string[] = [];
+  for (const entry of readdirSync(dir)) {
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) {
+      out.push(...collectSources(full));
+    } else if (/\.(tsx|ts|css)$/.test(entry)) {
+      out.push(full);
+    }
+  }
+  return out;
+}
 
 /** Strip block and line comments so the pins match AUTHORED rules only —
  * comments are free to discuss the very contract they guard. */
@@ -92,5 +118,37 @@ describe("Selection & caret contract: nothing authored (r19)", () => {
     // live never shows — dead while the component is unused, divergent the
     // moment it is consumed. Stripped r19.
     expect(input).not.toMatch(/selection:/);
+  });
+});
+
+describe("Forced-colors contract: nothing authored (r20)", () => {
+  it("no source file under src/ carries the forced-colors outline utility token", () => {
+    // The live's CSSOM authors ZERO forced-colors rules (the r20 media-rule
+    // sweep, both login and studio, base and emulated). Tailwind v4's
+    // forced-colors-aware transparent-outline utility (the one whose name
+    // this file never spells out) is the ONLY emitter of `@media
+    // (forced-colors: active)` blocks in this codebase — its base,
+    // focus-variant, focus-visible-variant, and arbitrary-variant emissions
+    // all came from the unused shadcn scaffold's class strings (measured:
+    // six dead rules, zero rendered consumers on either side). The token is
+    // stripped at source so TW4 stops emitting the blocks; this pin guards
+    // against a scaffold refresh (bunx shadcn add) silently re-introducing
+    // them.
+    //
+    // The pattern is CONSTRUCTED at runtime from non-utility fragments:
+    // TW4's automatic content detection scans test files too, and a
+    // complete class-shaped token written literally in this file would
+    // compile the utility straight back into the app's CSS.
+    const token = new RegExp(
+      `(^|[\\s"'\`])((\\[[^\\]]*\\]|focus-visible|focus):)*${"out" + "line-hidden"}`,
+    );
+    const offenders: string[] = [];
+    for (const file of collectSources(srcRoot)) {
+      const text = stripComments(readFileSync(file, "utf8"));
+      if (token.test(text)) {
+        offenders.push(file.replace(srcRoot + "/", ""));
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 });

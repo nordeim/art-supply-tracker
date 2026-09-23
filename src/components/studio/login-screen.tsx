@@ -94,7 +94,7 @@ function AmplifyAlert({
         type="button"
         aria-label="Dismiss alert"
         onClick={onDismiss}
-        className="flex h-[34px] shrink-0 items-center justify-center rounded-[4px] border border-transparent px-4 font-bold text-[#660000]"
+        className="flex h-[34px] shrink-0 items-center justify-center rounded-[4px] border border-transparent px-4 font-bold text-[#660000] ast-amplify-button transition-all duration-[250ms] ease-[ease]"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path
@@ -108,12 +108,12 @@ function AmplifyAlert({
 }
 
 const inputClasses =
-  "h-[42px] w-full rounded-[4px] border border-[#89949f] bg-transparent px-3 text-sm text-[#0d1a26] placeholder:text-[#9ca3af] focus:border-[#047d95] focus:outline-none focus:ring-2 focus:ring-[#047d95]/30";
+  "h-[42px] w-full rounded-[4px] border border-[#89949f] bg-transparent px-3 text-sm text-[#0d1a26] placeholder:text-[#9ca3af] focus:border-[#047d95] focus:outline-none focus:ring-2 focus:ring-[#047d95]/30 transition-all duration-[250ms] ease-[ease]";
 /** The password variant: the live's Amplify input group rounds the input's
  * LEFT corners only (`4px 0px 0px 4px`) — the 50px eye toggle continues the
  * group's #89949f border and rounds the right side. */
 const passwordInputClasses =
-  "h-[42px] w-full rounded-l-[4px] border border-[#89949f] bg-transparent px-3 text-sm text-[#0d1a26] placeholder:text-[#9ca3af] focus:border-[#047d95] focus:outline-none focus:ring-2 focus:ring-[#047d95]/30";
+  "h-[42px] w-full rounded-l-[4px] border border-[#89949f] bg-transparent px-3 text-sm text-[#0d1a26] placeholder:text-[#9ca3af] focus:border-[#047d95] focus:outline-none focus:ring-2 focus:ring-[#047d95]/30 transition-all duration-[250ms] ease-[ease]";
 const labelClasses = "mb-2 block text-base font-normal text-[#304050]";
 
 export function LoginScreen() {
@@ -133,7 +133,13 @@ export function LoginScreen() {
   const [mismatch, setMismatch] = useState(false);
   /** The reset-confirmation view's code field. */
   const [resetCode, setResetCode] = useState("");
-  const [pending, startTransition] = useTransition();
+  /** r20-F3: the live's submit button holds its label, enabled state, and
+   * full opacity through the whole auth round-trip (measured at 120ms
+   * intervals on the deployed app: text/disabled/aria-busy/opacity/cursor
+   * all constant) — no pending affordances are rendered. The transition
+   * still wraps the action (React's non-blocking update semantics); only
+   * its isPending flag is deliberately not consumed. */
+  const [, startTransition] = useTransition();
 
   /** Clears every client-validation surface (mode switches reset the card
    * to its pristine state, like the live's Amplify route changes). */
@@ -215,7 +221,7 @@ export function LoginScreen() {
         role="switch"
         aria-checked={shown}
         aria-label={shown ? "Hide password" : "Show password"}
-        className="flex h-[42px] w-[50px] shrink-0 items-center justify-center rounded-r-[4px] border-y border-r border-[#89949f] text-[#0d1a26] transition hover:text-[#c5cdd6]"
+        className="flex h-[42px] w-[50px] shrink-0 items-center justify-center rounded-r-[4px] border-y border-r border-[#89949f] text-[#0d1a26] ast-amplify-button transition-all duration-[250ms] ease-[ease] hover:text-[#c5cdd6]"
       >
         {shown ? (
           <EyeOff aria-hidden="true" className="h-4 w-4" />
@@ -290,10 +296,10 @@ export function LoginScreen() {
                       setMode("signin");
                       clearValidation();
                     }}
-                    className={`flex h-[50px] flex-1 items-center justify-center border-t-2 text-base font-bold transition ${
+                    className={`flex h-[50px] flex-1 items-center justify-center border-t-2 text-base font-bold ${
                       mode === "signin"
-                        ? "border-[#2ec4b6] text-[#047d95]"
-                        : "border-[#dcdee0] text-[#304050] hover:text-[#3f5266]"
+                        ? "border-[#2ec4b6] text-[#047d95] transition-none duration-[250ms] ease-[ease]"
+                        : "border-[#dcdee0] text-[#304050] hover:text-[#3f5266] transition-all duration-[250ms] ease-[ease]"
                     }`}
                   >
                     Sign In
@@ -306,10 +312,10 @@ export function LoginScreen() {
                       setMode("signup");
                       clearValidation();
                     }}
-                    className={`flex h-[50px] flex-1 items-center justify-center border-t-2 text-base font-bold transition ${
+                    className={`flex h-[50px] flex-1 items-center justify-center border-t-2 text-base font-bold ${
                       mode === "signup"
-                        ? "border-[#2ec4b6] text-[#047d95]"
-                        : "border-[#dcdee0] text-[#304050] hover:text-[#3f5266]"
+                        ? "border-[#2ec4b6] text-[#047d95] transition-none duration-[250ms] ease-[ease]"
+                        : "border-[#dcdee0] text-[#304050] hover:text-[#3f5266] transition-all duration-[250ms] ease-[ease]"
                     }`}
                   >
                     Create Account
@@ -408,16 +414,9 @@ export function LoginScreen() {
 
                   <button
                     type="submit"
-                    disabled={pending}
-                    className="h-[42px] w-full rounded-[4px] bg-[#FE5FA7] px-4 text-base font-bold text-white transition hover:bg-[#fe77b6] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="h-[42px] w-full rounded-[4px] bg-[#FE5FA7] px-4 text-base font-bold text-white ast-amplify-button transition-all duration-[250ms] ease-[ease] hover:bg-[#fe77b6]"
                   >
-                    {pending
-                      ? mode === "signin"
-                        ? "Signing in…"
-                        : "Creating account…"
-                      : mode === "signin"
-                        ? "Sign in"
-                        : "Create Account"}
+                    {mode === "signin" ? "Sign in" : "Create Account"}
                   </button>
 
                   {mode === "signin" && (
@@ -428,7 +427,7 @@ export function LoginScreen() {
                           clearValidation();
                           setMode("reset");
                         }}
-                        className="flex h-[35px] items-center justify-center border border-transparent px-3 text-sm font-bold text-[#047d95]"
+                        className="flex h-[35px] items-center justify-center border border-transparent px-3 text-sm font-bold text-[#047d95] ast-amplify-button transition-all duration-[250ms] ease-[ease]"
                       >
                         Forgot your password?
                       </button>
@@ -463,7 +462,7 @@ export function LoginScreen() {
 
                 <button
                   type="submit"
-                  className="h-[42px] w-full rounded-[4px] bg-[#FE5FA7] px-4 text-base font-bold text-white transition hover:bg-[#fe77b6]"
+                  className="h-[42px] w-full rounded-[4px] bg-[#FE5FA7] px-4 text-base font-bold text-white ast-amplify-button transition-all duration-[250ms] ease-[ease] hover:bg-[#fe77b6]"
                 >
                   Send code
                 </button>
@@ -475,7 +474,7 @@ export function LoginScreen() {
                       clearValidation();
                       setMode("signin");
                     }}
-                    className="flex h-[35px] items-center justify-center border border-transparent px-3 text-sm font-bold text-[#047d95]"
+                    className="flex h-[35px] items-center justify-center border border-transparent px-3 text-sm font-bold text-[#047d95] ast-amplify-button transition-all duration-[250ms] ease-[ease]"
                   >
                     Back to Sign In
                   </button>
@@ -566,7 +565,7 @@ export function LoginScreen() {
 
                 <button
                   type="submit"
-                  className="h-[42px] w-full rounded-[4px] bg-[#FE5FA7] px-4 text-base font-bold text-white transition hover:bg-[#fe77b6]"
+                  className="h-[42px] w-full rounded-[4px] bg-[#FE5FA7] px-4 text-base font-bold text-white ast-amplify-button transition-all duration-[250ms] ease-[ease] hover:bg-[#fe77b6]"
                 >
                   Submit
                 </button>
@@ -578,7 +577,7 @@ export function LoginScreen() {
                   <button
                     type="button"
                     onClick={() => {}}
-                    className="flex h-[35px] items-center justify-center border border-transparent px-3 text-sm font-bold text-[#047d95]"
+                    className="flex h-[35px] items-center justify-center border border-transparent px-3 text-sm font-bold text-[#047d95] ast-amplify-button transition-all duration-[250ms] ease-[ease]"
                   >
                     Resend Code
                   </button>

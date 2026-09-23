@@ -32,6 +32,21 @@
  *   utility's 0.15s color/bg/border hover tints (the visible subset is
  *   identical on both sides). The positive pins below guard the drawer
  *   classes against over-removal.
+ *
+ * - r20 REFINEMENT: the r17 inventory above counted @keyframes only and
+ *   missed that the live's CSSOM DOES carry five prefers-reduced-motion
+ *   MEDIA rules: `.amplify-button { transition: none }` (rendered — the
+ *   login card's eye/submit/link/Dismiss buttons stop transitioning
+ *   under reduce) plus four dead ones (two .amplify-loader, one
+ *   .amplify-placeholder — no loader/placeholder renders in the
+ *   reachable login flow, measured; one TW3-preflight `html:focus-within
+ *   { scroll-behavior: auto }` — a no-op, nothing scrolls smoothly on
+ *   either side). The studio surfaces stay UNGUARDED on both sides (the
+ *   live's rule targets .amplify-button only — its studio buttons keep
+ *   their 0.15s tints under reduce, and so do the clone's). The clone
+ *   replicates the rendered guard via the scoped `ast-amplify-button`
+ *   marker (pinned by login-motion-fidelity.test.ts); the "no guard"
+ *   pin below is refined to "no guard beyond that one scoped rule".
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
@@ -73,8 +88,17 @@ describe("entry animations (r17-F1 — the live renders studio surfaces instantl
     expect(globalsCss).not.toContain(".studio-fade");
   });
 
-  it("globals.css carries no prefers-reduced-motion guard (nothing left to guard)", () => {
-    expect(globalsCss).not.toContain("prefers-reduced-motion");
+  it("globals.css carries no reduced-motion guard beyond the scoped login-button rule (r20)", () => {
+    // The live DOES guard .amplify-button under reduce (measured r20 —
+    // r17's original "nothing left to guard" claim was incomplete: that
+    // inventory counted @keyframes, not media rules). The clone's scoped
+    // .ast-amplify-button guard is that contract, pinned by
+    // login-motion-fidelity.test.ts; this pin guards against any OTHER
+    // reduced-motion authoring creeping in (a universal guard, an
+    // animation-targeting guard — the scaffold mistakes of r17).
+    const occurrences = globalsCss.split("prefers-reduced-motion").length - 1;
+    expect(occurrences).toBe(1);
+    expect(globalsCss).not.toMatch(/prefers-reduced-motion[^{]*\{[^}]*animation/);
   });
 
   it("documents the motion-parity contract", () => {

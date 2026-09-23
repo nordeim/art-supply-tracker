@@ -227,3 +227,28 @@
  * `transition` utility's 0.15s hover tints. Pinned by
  * `src/lib/motion-fidelity.test.ts`.
  */
+
+/*
+ * r20 reduced-motion guard: the live's CSSOM carries five
+ * prefers-reduced-motion media rules (measured 2026-09-23 — the r17
+ * inventory above counted @keyframes only and missed them). The one that
+ * renders: `.amplify-button { transition: none }` — under emulation the
+ * login card's eye toggle, submit buttons, link buttons, and the alert's
+ * Dismiss button stop transitioning on the live while the clone's kept
+ * fading. The guard below replicates that contract through the
+ * `ast-amplify-button` marker class carried by those eight elements. The
+ * live's other four rules are dead on both sides (two .amplify-loader +
+ * one .amplify-placeholder — no loader/placeholder renders in the
+ * reachable login flow; one TW3-preflight `html:focus-within` scroll
+ * behavior guard — nothing scrolls smoothly on either side) and are
+ * documented accepted divergences. The studio surfaces stay UNGUARDED on
+ * both sides: the live's rule targets .amplify-button only, so its studio
+ * buttons keep their 0.15s tints under reduce — and so do the clone's.
+ * Pinned by `src/lib/login-motion-fidelity.test.ts` and the refined r17
+ * pin in `src/lib/motion-fidelity.test.ts`.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .ast-amplify-button {
+    transition: none;
+  }
+}
