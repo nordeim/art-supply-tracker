@@ -84,7 +84,12 @@ Prisma 6.19.2 + SQLite · Zod 4.3.5 · ESLint 9.
   stylesheet inflation and skills-sourced `::selection` rules). Don't remove
   the directive; `css-hygiene.test.ts` pins it (and pins that skills/ is the
   only excluded source). Likewise: no `::selection` or `caret-color`
-  authoring anywhere — the live authors zero of either.
+  authoring anywhere — the live authors zero of either — and ZERO
+  forced-colors rules (r20): the TW4 forced-colors-aware
+  transparent-outline utility is the only emitter of `@media
+  (forced-colors: active)` blocks; its scaffold tokens were stripped (six
+  dead rules; the live's CSSOM carries none). Do not re-introduce the
+  token anywhere under src/ (pinned by `css-hygiene.test.ts`).
 - The Tailwind DEFAULT palette is pinned to the live's v3 values (r14):
   `--color-pink-200/300/400/500`, `--color-cyan-400`, and
   `--color-blue-400/500` in the `@theme` block carry the live's TW3 hex
@@ -156,7 +161,7 @@ not secret — rotate before any public deployment).
 ### Testing Strategy
 
 Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
-`src/**/*.test.ts`). The suite (315 tests) pins:
+`src/**/*.test.ts`). The suite (328 tests) pins:
 
 - **The SQLite path contract** (`src/lib/db-path.test.ts`) — relative
   `file:` URLs resolve against `prisma/schema.prisma` (so
@@ -329,7 +334,29 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
   app authors no `::selection` rules and no `caret-color` (the live's
   CSSOM carries zero of either on the studio — every selection renders
   with the UA default and every caret inherits the element color,
-  verified input-by-input on both sides).
+  verified input-by-input on both sides), and no source file under src/
+  carries the TW4 forced-colors-aware transparent-outline token (the
+  live authors ZERO forced-colors rules; the scaffold's class strings
+  had contributed six dead ones — the pin's matcher is constructed at
+  runtime because TW4 scans test sources too).
+- **Login-motion fidelity** (`login-motion-fidelity.test.ts`, r20) —
+  file-content pins on the login chrome's measured transition contract:
+  every Amplify login element computes `transition: all 0.25s ease` (the
+  inactive tabs, all inputs, the eye toggle, the three submits, the three
+  link buttons, the alert's Dismiss — via
+  `transition-all duration-[250ms] ease-[ease]`; note the arbitrary-value
+  `ease-[ease]`, because TW4 has no bare `ease` utility and silently
+  falls back to its cubic-bezier default), the ACTIVE tab carries the
+  property-none override (`transition-none duration-[250ms]
+  ease-[ease]`), the scoped `.ast-amplify-button` reduced-motion guard
+  replicates the live's `.amplify-button` rule (exactly one
+  prefers-reduced-motion rule in globals.css; tabs/inputs and every
+  studio surface stay UNGUARDED, matching the live), and the submit
+  button holds its label/enabled/opacity constant through the auth
+  round-trip (no "Signing in…" swap, no disabled dim — the live has no
+  pending affordances). Guards against a future "polish" re-adding the
+  TW utility's 0.15s fades, an unscoped reduced-motion guard, or
+  pending-state affordances the live does not have.
 - **Action layer** (`src/actions/studio.test.ts`) — the mutation surface
   against a throwaway SQLite database with the auth seam mocked: CRUD,
   ownership/IDOR checks, supply assignment, delete-side-effects (incl. the

@@ -1,9 +1,9 @@
-# AST Studio — Master Project Architecture Document (PAD) v1.18
+# AST Studio — Master Project Architecture Document (PAD) v1.19
 
 **Classification:** Internal Engineering Reference
 **Status:** DEFINITIVE, PRODUCTION-LOCKED BLUEPRINT
 **Companion Document:** `README.md` (onboarding), `AGENTS.md` (agent instructions), `CLAUDE.md` (engineering standards)
-**Last Updated:** 2026-09-23 (r19)
+**Last Updated:** 2026-09-23 (r20)
 **Audience:** Senior Engineers, Tech Leads, DevOps, and Onboarding Engineers
 **Rule:** Every architectural decision in this document traces to a specific rationale.
 Nothing is here "because it's popular."
@@ -491,6 +491,52 @@ Nothing is here "because it's popular."
   gate on a paint-settle condition. New `css-hygiene.test.ts` (5 pins,
   TDD red→green verified via git-stash of the fixes). 315 vitest +
   25 E2E, all gates green, production build + production CSS verified.
+- `[R20]` Session-34 media-contract pass (2026-09-23): a fresh
+  full-surface recon on the r19 tree (8 paired captures at or below the
+  documented baselines — dashboard 0.38%, projects 0.37%, supplies
+  0.37%, inspiration 0.53%, mobile-dashboard 0.17%, sidebar drawer
+  0.47%, chat drawer 0.76%, login 0.17%; export envelope byte-identical
+  modulo timestamp; 23/23 smoke; drawer geometry byte-identical) plus
+  the three session-32-suggested probe dimensions.
+  `forced-colors: active` emulated rendering: captures at PARITY
+  (desktop 0.35%, mobile 0.14%) — but the probe's CSSOM media-rule
+  sweep surfaced r20-F1: the clone's compiled CSS carried SIX
+  `@media (forced-colors: active)` rules (TW4's forced-colors-aware
+  transparent-outline utility, emitted from the unused shadcn
+  scaffold's class strings) while the live authors zero — the 29
+  scaffold tokens stripped (dev CSS 189,849 → 188,388 bytes;
+  production CSS 153,077 → 152,241 with 0 forced-colors rules;
+  rendering unchanged, all 8 screenshots byte-identical).
+  `prefers-reduced-transparency: reduce` (raw-CDP engaged —
+  Playwright's emulateMedia option silently fails in this environment,
+  matchMedia verified true on both sides): PARITY — 0.34%/0.17%, zero
+  authored rules in either CSSOM. Firefox engine matrix (WebKit cannot
+  launch in the sandbox — missing GTK system libraries): PARITY — 8/8
+  paired surfaces at/below the Chromium baselines, 0.00%
+  cross-context determinism on BOTH sides, and the ~7.7% cross-engine
+  delta is symmetric (live 7.83% / clone 7.71% — engine font
+  rasterization shifts both sides equally). Decomposing the CSSOM
+  media-class inventory also surfaced the login chrome's transition
+  contract (r20-F2): the live's login elements compute `transition:
+  all 0.25s ease` (inactive tabs, inputs, eye toggle, submits, link
+  buttons, the alert's Dismiss) with `transition-property: none` on
+  the ACTIVE tab, and `.amplify-button { transition: none }` under
+  `prefers-reduced-motion: reduce` (the r17 "no reduced-motion guard"
+  record was incomplete — its inventory counted @keyframes only; the
+  live carries five reduced-motion MEDIA rules, four of them dead on
+  both sides and documented as accepted divergences); the clone had
+  the TW utility's 0.15s fades and no guard — fixed with
+  `transition-all duration-[250ms] ease-[ease]` everywhere measured
+  (computed byte-identical to the live, verified per element — note
+  the arbitrary-value `ease-[ease]`: TW4 has no bare `ease` utility
+  and silently falls back to its cubic-bezier default), the ACTIVE-tab
+  override, and the scoped `.ast-amplify-button` guard. Plus r20-F3:
+  the live's login submit holds its label/enabled/opacity CONSTANT
+  through the auth round-trip (measured at 120ms intervals) — the
+  clone's "Signing in…" swap and disabled dim removed. 13 new pins
+  (css-hygiene extension + the new `login-motion-fidelity.test.ts` +
+  the refined r17 motion pin). 328 vitest + 25 E2E, all gates green,
+  production build + production CSS verified.
 
 ---
 
@@ -1070,14 +1116,38 @@ Glow shadows (`--shadow-ast-pink`/`-turquoise`/`-blue`/`-cyan`/`-lavender`/
 `-warm`) are 24–28px radial blobs; the two scrollbar rails
 (`.scrollbar-left` turquoise→blue, `.scrollbar-right` pink→purple) come
 from the production CSS bundle.
-**Motion contract (r17):** the studio ships NO entry animations — no
-authored `@keyframes`, no `.studio-fade` utility, no
-`prefers-reduced-motion` guard (the live renders every view, panel,
-modal, and the login card instantly; its CSSOM keyframes are all
-Amplify-internal). The live's only studio motion is the drawers'
-`transition-transform duration-300` slide and the `transition`
-utility's 0.15s hover tints; both are kept and pinned by
-`src/lib/motion-fidelity.test.ts`. All values are pinned to the live app's
+**Motion contract (r17, refined r20):** the studio ships NO entry
+animations — no authored `@keyframes`, no `.studio-fade` utility, no
+`prefers-reduced-motion` guard on any studio surface (the live renders
+every view, panel, modal, and the login card instantly; its CSSOM
+keyframes are all Amplify-internal). The live's only studio motion is
+the drawers' `transition-transform duration-300` slide and the
+`transition` utility's 0.15s hover tints; both are kept and pinned by
+`src/lib/motion-fidelity.test.ts`.
+
+**Login chrome transition contract (r20):** the login card's motion is
+AMPLIFY's, not the TW utility's — every element computes
+`transition: all 0.25s ease` (the inactive tabs, all inputs, the eye
+toggle, the three submits, the three link buttons, and the alert's
+Dismiss), the ACTIVE tab computes `transition-property: none`
+(Amplify's active-tab override; duration/timing stay 0.25s/ease), and
+under `prefers-reduced-motion: reduce` the live guards `.amplify-button`
+— the eye, submits, links, and Dismiss stop transitioning while the
+tabs/inputs keep their fades. The clone replicates this via
+`transition-all duration-[250ms] ease-[ease]` (the arbitrary-value
+`ease-[ease]` because TW4 has no bare `ease` utility), the ACTIVE-tab
+`transition-none duration-[250ms] ease-[ease]` override, and the
+scoped `.ast-amplify-button` marker + one globals.css guard rule (8
+elements; the tabs/inputs and every studio surface stay UNGUARDED,
+matching the live). The live's other four reduced-motion rules are
+dead on both sides and documented accepted divergences: two
+`.amplify-loader` + one `.amplify-placeholder` (no loader/placeholder
+ever renders in the reachable login flow — measured) and the TW3
+preflight `html:focus-within { scroll-behavior: auto }` (a no-op —
+nothing scrolls smoothly on either side). The login submit also holds
+its label/enabled/opacity CONSTANT through the auth round-trip (no
+pending affordances — the live has none). Pinned by
+`src/lib/login-motion-fidelity.test.ts` and the refined r17 pin. All values are pinned to the live app's
 *compiled utility classes* — the rendered ground truth — and guarded by
 `src/lib/design-tokens.test.ts`. The live bundle also ships a `:root`
 CSS-variable block whose purple/yellow/coral values (`#5b3fd3`/`#f4f27a`/
@@ -1172,6 +1242,19 @@ unused, but would render a styled selection the live never shows the
 moment it is consumed). The compiled CSS carries zero `::selection`
 rules — matching the live's CSSOM.
 
+**Forced-colors contract (r20):** the live's CSSOM authors ZERO
+`forced-colors` rules. TW4's forced-colors-aware transparent-outline
+utility is the only emitter of `@media (forced-colors: active)` blocks
+in this codebase — its 29 class-string tokens across the 13 scaffold
+files that carried them were stripped (six dead rules, zero rendered
+consumers on either side; dev CSS 189,849 → 188,388 bytes, production
+CSS 153,077 → 152,241 with 0 forced-colors rules). The token must not
+return, including via a `bunx shadcn add` scaffold refresh — pinned by
+`css-hygiene.test.ts`, whose matcher is constructed at runtime from
+non-utility fragments because TW4's content detection scans test
+sources too (a complete class-shaped token in a comment or regex would
+compile the utility straight back into the CSS).
+
 ---
 
 ## 6. Security Architecture
@@ -1235,7 +1318,7 @@ rules — matching the live's CSSOM.
 | Category | Count | Location | Framework |
 |---|---|---|---|
 | Static | — | `eslint .` / `tsc --noEmit` | ESLint 9 + TS 5.9 strict |
-| Automated unit | 287 tests | `src/lib/*.test.ts` — db-path (the r16 SQLite path contract: schema-relative resolution, pass-through for absolute/non-file URLs, repo-.env precedence for tooling), studio-domain (incl. bundle-pinned style maps + edit-panel budget/option mapping + the r11 two-state condition maps and quantity format gate), design-tokens (globals.css literal pinning incl. the Tailwind-v3 radius scale, the zero-webfont stack, and the r14 default-palette pins — pink-200/300/400/500, cyan-400, blue-400/500 pinned to the live's v3 values with a TW4-drift negative and usage-site class-string pins), validation (incl. the normalized import gate, the Cognito password-policy rules + permissive sign-in schema, the two-state condition + quantity format boundary), export-payload (incl. the three-slot quantity semantics and the empty-qty/explicit-ok round-trip), rate-limit, inspiration (incl. the rail section resolver with the live's inert "quote" / "spotlight-kevin-lewis" quirks), seed-fidelity (scripts/seed.ts pinned to the live chat byte-for-byte, typos included), login-fidelity + chat-fidelity (the live's measured Amplify login chrome incl. the alert-box error chrome, policy stack, reset-confirmation view, and content-width link buttons; logo aspect; chat-panel structure), drawer-fidelity (the mobile drawers' shared z-40 no-blur scrim with instant mount/unmount), supply-fidelity (the create modal's inert Stock Status select, the quantity format gate's exact copy, the edit panel's `?? "ok"` init, the chip's unconditional qty label, the detail panel's raw quantity), sidebar-tile-fidelity (the stat tiles' per-tile ACTIVE accent pairs — electric blue for Projects/Supplies, lavender for Inspo — with the card bg and hover classes dropped while active; the constant inner text classes; a negative pin on the old hardcoded electric-blue string), header-button-fidelity (the memory button's hyphen-family literal colors — idle border #5b3fd3, hover trio #f4f27a — with negative pins on the utility families, plus the `@custom-variant hover (&:hover);` override restoring the live's TW3 plain-:hover semantics), focus-fidelity (r15: no authored outline color — the UA-default focus ring renders like the live's — and the create modals' no-Escape/no-focus-steal contract with the kept dialog semantics), motion-fidelity (r17: no authored @keyframes / .studio-fade / prefers-reduced-motion guard — the live renders studio surfaces instantly; positive pins keep the drawers' transition-transform duration-300 slide), landmark-fidelity (r18: the announcement order verified identical on both sides at both viewports; the closed drawers' inert + aria-hidden PAIR as the kept r5 improvement with labeled drawer landmarks; the content pane as a single `<section>` under one `<main>` — negative pins reject the live's twin-copy structure), css-hygiene (r19: the `@source not "../../skills"` directive keeping the skills corpus out of TW4's automatic content detection, with skills/ pinned as the only excluded source, and the nothing-authored selection/caret contract — no ::selection rules, no caret-color, the shadcn Input's selection utilities stripped) | Vitest (node env, `@/` alias) |
+| Automated unit | 300 tests | `src/lib/*.test.ts` — db-path (the r16 SQLite path contract: schema-relative resolution, pass-through for absolute/non-file URLs, repo-.env precedence for tooling), studio-domain (incl. bundle-pinned style maps + edit-panel budget/option mapping + the r11 two-state condition maps and quantity format gate), design-tokens (globals.css literal pinning incl. the Tailwind-v3 radius scale, the zero-webfont stack, and the r14 default-palette pins — pink-200/300/400/500, cyan-400, blue-400/500 pinned to the live's v3 values with a TW4-drift negative and usage-site class-string pins), validation (incl. the normalized import gate, the Cognito password-policy rules + permissive sign-in schema, the two-state condition + quantity format boundary), export-payload (incl. the three-slot quantity semantics and the empty-qty/explicit-ok round-trip), rate-limit, inspiration (incl. the rail section resolver with the live's inert "quote" / "spotlight-kevin-lewis" quirks), seed-fidelity (scripts/seed.ts pinned to the live chat byte-for-byte, typos included), login-fidelity + chat-fidelity (the live's measured Amplify login chrome incl. the alert-box error chrome, policy stack, reset-confirmation view, and content-width link buttons; logo aspect; chat-panel structure), drawer-fidelity (the mobile drawers' shared z-40 no-blur scrim with instant mount/unmount), supply-fidelity (the create modal's inert Stock Status select, the quantity format gate's exact copy, the edit panel's `?? "ok"` init, the chip's unconditional qty label, the detail panel's raw quantity), sidebar-tile-fidelity (the stat tiles' per-tile ACTIVE accent pairs — electric blue for Projects/Supplies, lavender for Inspo — with the card bg and hover classes dropped while active; the constant inner text classes; a negative pin on the old hardcoded electric-blue string), header-button-fidelity (the memory button's hyphen-family literal colors — idle border #5b3fd3, hover trio #f4f27a — with negative pins on the utility families, plus the `@custom-variant hover (&:hover);` override restoring the live's TW3 plain-:hover semantics), focus-fidelity (r15: no authored outline color — the UA-default focus ring renders like the live's — and the create modals' no-Escape/no-focus-steal contract with the kept dialog semantics), motion-fidelity (r17: no authored @keyframes / .studio-fade / prefers-reduced-motion guard — the live renders studio surfaces instantly; positive pins keep the drawers' transition-transform duration-300 slide), landmark-fidelity (r18: the announcement order verified identical on both sides at both viewports; the closed drawers' inert + aria-hidden PAIR as the kept r5 improvement with labeled drawer landmarks; the content pane as a single `<section>` under one `<main>` — negative pins reject the live's twin-copy structure), css-hygiene (r19: the `@source not "../../skills"` directive keeping the skills corpus out of TW4's automatic content detection, with skills/ pinned as the only excluded source, and the nothing-authored selection/caret contract — no ::selection rules, no caret-color, the shadcn Input's selection utilities stripped; extended r20 with the forced-colors contract — no source token for TW4's forced-colors-aware transparent-outline utility, the only emitter of `@media (forced-colors: active)` blocks, the live authors zero), login-motion (r20: the login chrome's Amplify transition contract — `all 0.25s ease` on every login element via `transition-all duration-[250ms] ease-[ease]`, the ACTIVE tab's property-none override, the scoped `.ast-amplify-button` reduced-motion guard replicating the live's `.amplify-button` rule with tabs/inputs/studio surfaces unguarded, and the constant pending-state contract — the live's submit never swaps its label or dims) | Vitest (node env, `@/` alias) |
 | Automated action | 28 tests | `src/actions/studio.test.ts` (throwaway SQLite DB, mocked auth seam — incl. the mid-import rollback contract, the mid-delete no-strand contract, and the two-state condition round-trips) | Vitest |
 | E2E | 25 specs | `e2e/*.spec.ts` — setup (storageState sign-in), auth, dashboard, import-export, projects, supplies, mobile-navigation | Playwright (serial, 1 worker; desktop 1536×844 + mobile 390×844 projects) |
 | Manual golden paths | 11 flows | README "Testing & Quality" | Browser-executed (pinned by `scripts/smoke_functional.py`, 23 checks) |
@@ -1407,6 +1490,9 @@ public exposure).
 | Medium | ~~Studio surfaces played an entry animation the live lacks~~ | The scaffold's `@keyframes studio-fade-in` + `.studio-fade` played a 300ms fade-and-translate on thirteen surfaces (every view switch, detail/edit panel swap, modal mount, and the login card) — the live renders every studio surface instantly (CSSOM keyframes all Amplify-internal; view wrappers and modals compute `animation: none`; zero animating elements at steady state). Invisible in steady-state pixel diffs since the initial scaffold commit (the same class as r13-F1's hovers and r15-F1's focus ring), plus an ironic `prefers-reduced-motion` guard for an animation the live does not have | **Resolved 2026-09-23 (r17)** — the keyframes, the utility rule, the reduced-motion guard, and all 13 usage-site class references removed; the drawers' `transition-transform duration-300` slide and the 0.15s hover tints stay (the live's real motion contract); verified at CSSOM, computed-style, and animating-element level (zero animating at mount and steady state; modal `animationName: none`); pinned by `motion-fidelity.test.ts` (18 pins) |
 | High | ~~Tailwind scanned the skills/ folder — skills-sourced dead CSS~~ | TW4's automatic content detection scans every non-gitignored file, so the committed skills corpus (excluded from compilation by the task contract) leaked class-like strings from its docs/tools into the compiled CSS as dead rules — measured: the gift-evaluator skill's HTML template contributed two red-tinted `::selection` rules; skills-scanned candidates inflated the dev stylesheet 37% (300,314 → 189,577 bytes) and the CSSOM to 3,147 rules vs the live's 1,442 | **Resolved 2026-09-23 (r19)** — `@source not "../../skills";` in globals.css (skills/ pinned as the only excluded source); rendering verified 100.00% identical; production CSS 153,077 bytes with zero skills-sourced utilities; pinned by `css-hygiene.test.ts` |
 | Medium | ~~shadcn Input carried styled-selection utilities the live lacks~~ | The scaffold's `selection:bg-primary selection:text-primary-foreground` emitted `::selection` rules in the compiled CSS (the live authors ZERO) — dead while the component is unused (no studio surface renders it), but a styled selection the live never shows would render the moment it is consumed | **Resolved 2026-09-23 (r19)** — stripped from `src/components/ui/input.tsx`; the compiled CSS now carries zero `::selection` rules, matching the live's CSSOM; pinned by `css-hygiene.test.ts` |
+| Medium | ~~Compiled CSS carried six forced-colors rules the live lacks~~ | TW4's forced-colors-aware transparent-outline utility (emitted from the unused shadcn scaffold's class strings) compiled six `@media (forced-colors: active)` blocks — the live's CSSOM authors ZERO. Dead while unused (no element carries the class on either side — verified), the same dead-rule class as r19-F2, but a measurable authored-rule-class divergence surfaced by the r20 forced-colors probe | **Resolved 2026-09-23 (r20)** — the 29 scaffold tokens stripped; dev CSS 189,849 → 188,388 bytes, production CSS 153,077 → 152,241 with 0 forced-colors rules; rendering unchanged (all 8 screenshots byte-identical); pinned by the extended `css-hygiene.test.ts` (runtime-constructed matcher — TW4 scans test sources too) |
+| Medium | ~~Login chrome's transition contract diverged~~ | The live's login elements compute `transition: all 0.25s ease` (inactive tabs, inputs, eye toggle, submits, link buttons, the alert's Dismiss) with `transition-property: none` on the ACTIVE tab, and `.amplify-button { transition: none }` under `prefers-reduced-motion: reduce` — the clone carried the TW utility's 0.15s cubic-bezier fades on some elements, NO transition on the inputs/links/Dismiss, and no guard. Transient-only (invisible in steady-state captures — why it survived nineteen rounds), but user-experienced: the live's input focus border fades 250ms, the clone's snapped; under reduce the live's buttons stop transitioning, the clone's kept fading | **Resolved 2026-09-23 (r20)** — `transition-all duration-[250ms] ease-[ease]` everywhere measured (computed byte-identical per element, verified), the ACTIVE-tab override, and the scoped `.ast-amplify-button` guard (8 elements, one globals.css rule; tabs/inputs/studio surfaces stay unguarded like the live); pinned by the new `login-motion-fidelity.test.ts` |
+| Low | ~~Login submit carried pending affordances the live lacks~~ | The live's submit button holds its label ("Sign In"), enabled state, and full opacity CONSTANT through the whole auth round-trip (measured at 120ms intervals: text/disabled/aria-busy/opacity/cursor all constant) — the clone swapped to "Signing in…", set disabled, and dimmed to 60% opacity (the r15 modal-escape precedent: affordances the live does not have) | **Resolved 2026-09-23 (r20)** — constant label, no disabled attribute, the dead `disabled:` classes stripped; the useTransition isPending flag deliberately unconsumed; pinned by `login-motion-fidelity.test.ts` |
 | Info | Modal scrim z-index differs (clone z-[60], live z-50) | The clone's create-modal scrim floats at `z-[60]` while the live's overlay is z-50 — but the drawer (z-50) always CLOSES before a modal opens (probed on both sides: clicking the drawer's Create button closes the drawer and opens the modal), so the two never stack in any reachable state | Accepted (unreachable in every reachable state — no user-visible effect) |
 | Low | Mobile login card offset by 0.5px | The live's card is 357px centered in its 358px content column (x=16.5 — Amplify internal responsive fractional layout); the clone fills the column (358px at x=16). Desktop is byte-identical (480×429 at 494,464) | Accepted (sub-pixel, below the visibility threshold — reproducing it would require guessing Amplify's viewport-dependent internal CSS) |
 | Low | Sidebar drawer semantic landmark differs | The live's mobile sidebar drawer is an `<aside>` (no role/label); the clone renders `<nav aria-label="Studio tools">` — a deliberate WCAG improvement documented in CLAUDE.md. Visual parity unaffected (identical classes/geometry, measured r11) | Accepted (accessibility improvement, intentionally kept) |
@@ -1414,6 +1500,9 @@ public exposure).
 | Low | Content-pane landmark: single `<main>` + `<section>` (live: nested inner `<main>`) | The live wraps its desktop content pane in a nested `<main class="col-span-7">` inside the outer `<main>` (two main landmarks — invalid HTML; a screen reader announces main twice); the clone's content pane is a plain `<section>` under one `<main>`. The announcement ORDER (header → sidebar → content → chat) is identical on both sides at both viewports (probed r18 on the dashboard and the inspiration Feed) | Accepted (the clone's structure is valid HTML; invisible in pixels and announcement sequencing) |
 | Low | View content rendered once (live: twin md-toggled copies) | The live renders every view's content TWICE — a `hidden md:grid` desktop copy and a `flex md:hidden` mobile copy, one always `display:none` (removed from the a11y tree); the clone renders ONE responsive copy (the layout container flips `flex-col` → `md:grid md:grid-cols-12`, the content pane carries the mobile margins + `md:col-span-7`). Pixel parity proven at both viewports (r18 captures) | Accepted (invisible in pixels and the a11y tree — the hidden copy never renders) |
 | Low | Dev-mode-only browser artifacts | In `next dev`, the Next.js dev-tools badge (the "N" button) and 4 `__nextjs-Geist` FontFaces appear in `document.fonts` — neither ships in the production build (verified r11: prod build has `document.fonts.size === 0` and no badge) | Accepted (dev-mode artifact — sessions comparing dev-mode DOM must not misclassify these as parity gaps; production is the ground truth) |
+| Low | The live's four dead prefers-reduced-motion rules are not replicated | The live's CSSOM carries two `.amplify-loader` rules, one `.amplify-placeholder` rule, and the TW3-preflight `html:focus-within { scroll-behavior: auto }` under reduced-motion — all measured DEAD on both sides: no loader/placeholder element ever renders in the reachable login flow (probed through the auth round-trip), and nothing scrolls smoothly on either side (`scroll-behavior: auto` everywhere, verified) | Accepted (no rendered effect on either side — replicating dead rules adds CSS the live renders nothing from; only the rendered `.amplify-button` guard is replicated, r20) |
+| Low | WebKit engine unmeasured | The engine matrix covers Chromium + Firefox; Playwright's WebKit cannot launch in this sandbox (missing GTK-4/libsoup system libraries — an environment limitation, not a repo defect) | Accepted (documented limitation — the Firefox matrix plus the 0.00% cross-context determinism on both sides bound the risk) |
+| Info | The unused shadcn scaffold still feeds ~188 dead utility families into the compiled CSS | TW4 scans the 49 unused `src/components/ui/` files; measured 188 of 1,299 compiled selector tokens are scaffold-only (animate-in/out, semantic bg-*, the recharts utilities…). They render nothing (zero consumers — the studio hand-rolls every surface) but keep the clone's CSSOM at ~1,900 rules vs the live's ~1,440 | Accepted as documented state (the forced-colors class — the one measured authored-rule divergence — was fixed in r20; the remaining dead utilities are inert. Deleting the scaffold entirely is a future option; the files stay as the re-addable shadcn toolkit) |
 | Low | View state not URL-addressable | Browser back doesn't switch studio views | Accepted (ADR-001 consequence) |
 | Low | Chat avatar colors keyed to seeded usernames | New users get the default purple avatar | Accepted (matches original's initials behavior) |
 | Low | SQLite single-writer | No multi-process horizontal scale | Accepted (ADR-002); swap to Postgres by changing `provider` + URL if ever needed |
