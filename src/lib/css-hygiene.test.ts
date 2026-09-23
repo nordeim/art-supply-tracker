@@ -138,8 +138,16 @@ describe("CSS compile hygiene: skills/ excluded from content detection (r19)", (
     // session_37.md narration regrew the production CSS from 152,062 to
     // 152,474 bytes — one forced-colors block and the selection pair).
     // Documentation is not a render surface: every utility the app renders
-    // lives in src/**/*.{ts,tsx,css}, verified by build diff (the exclusion
-    // drops exactly the three dead rules and nothing else).
+    // lives in src/**/*.{ts,tsx,css}, verified by the r23 audited build
+    // diff — the exclusion drops NINE dead rules + TEN dead theme-variable
+    // emissions (152,035 -> 150,821 bytes: the three session_37 regrown
+    // rules plus six older doc-derived rules — incl. a garbage
+    // arbitrary-property rule compiled from CLAUDE.md's error-log example —
+    // and ten consumerless :root variable emissions), every one verified
+    // dead against the src tree, with no real utility lost (the -xl backdrop
+    // variant, the opacity-modified coral backgrounds, and the glow-shadow
+    // utility rules all survive; every rendered class compiles from a
+    // literal string in src).
     const sources = [...css.matchAll(/@source not "([^"]+)";/g)].map(
       (m) => m[1],
     );

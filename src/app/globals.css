@@ -23,10 +23,25 @@
  * tokens earlier rounds stripped (measured twice: r21's own docs regrew
  * the dead selection and forced-colors rules, and the r22 pull brought
  * session_37.md quoting them again, regrowing the production CSS by 412
- * bytes). The build diff with this directive drops exactly those dead
- * rules and nothing else. The css-hygiene pins guard the full exclusion
- * list; the docs-token pin stays as defense in depth (and documentation
- * hygiene).
+ * bytes). The r23 audited build diff with this directive (r21 tree vs
+ * r22 tree, 152,035 -> 150,821 bytes) drops NINE dead rules and TEN dead
+ * theme-variable emissions: the three session_37 regrown rules PLUS six
+ * older rules that had silently compiled from the repo's own token
+ * tables and prose for many rounds (the bare display-contents and
+ * table-row-collapse utilities, a bare coral-background utility, a bare
+ * ring-color utility, the bare 8px backdrop utility — only the -xl
+ * variant is ever rendered — and a garbage arbitrary-property rule that
+ * compiled from CLAUDE.md's error-log example), plus ten :root variable
+ * emissions with zero consumers (the inlined body-font variable, two
+ * legacy canvas-accent colors documented in README's token table for
+ * reference, six glow-shadow variables whose utility rules carry literal
+ * fallbacks, and the dead backdrop variable). Every dropped item was
+ * verified dead against the src tree: no rendered surface uses any of
+ * them, and every utility the app DOES render compiles from a literal
+ * class string in src (the status/condition style maps and component
+ * ternaries are all TW4-visible literals). The css-hygiene pins guard
+ * the full exclusion list; the docs-token pin stays as defense in depth
+ * (and documentation hygiene).
  */
 @source not "../../**/*.md";
 

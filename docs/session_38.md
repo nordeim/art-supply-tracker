@@ -19,8 +19,8 @@ r21 工具已存活，但 DB/.env 需要初始化。我来设置环境并运行�
 Build compiled successfully — the failure is in the post-build copy steps. Let me check.
 Build green on retry (first run had a transient copy race). Let me locate and measure the CSS.
 **r22-F1 confirmed with hard evidence**: production CSS regrew from 152,062 → **152,474 bytes with 4 `::selection` rules** (r21 record: zero) — the user's `session_37.md` commit recompiled the dead rules exactly per the r21-F2 mechanism. Dev CSS also regrew (188,277 → 188,794, 1 forced-colors + 4 selection). Let me examine the regrown rules precisely.
-The selection pair regrew verbatim. Let me check the `outline-hidden` emission context in production (the forced-colors grep may have missed a spacing variant).
-Production CSS carries the regrown dead rules: the `outline-hidden` forced-colors block + the selection pair — **+412 bytes over the r21 clean record**. The r22-F1 finding is fully confirmed with build evidence.
+The selection pair regrew verbatim. Let me check the transparent-outline utility's emission context in production (the forced-colors grep may have missed a spacing variant).
+Production CSS carries the regrown dead rules: the transparent-outline utility's forced-colors block + the selection pair — **+412 bytes over the r21 clean record**. The r22-F1 finding is fully confirmed with build evidence.
 
 Now let me review the named skills (per the task instructions) and enumerate the markdown scan scope in parallel.
 1488 committed .md files — all under `skills/` (excluded) or root/docs (~55 files, all documentation, zero under src/public). Skills reviewed: tdd (red-green at seams — my established pattern) and clone-app-pat-pro (computed styles as ground truth, exhaustive state recon — also established). Now let me examine the current `@source` contract and its pin.
