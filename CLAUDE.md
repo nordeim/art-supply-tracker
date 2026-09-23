@@ -77,6 +77,14 @@ Prisma 6.19.2 + SQLite · Zod 4.3.5 · ESLint 9.
   values only (`var()` chains are dropped by the build; `--font-sans` is the
   sole sanctioned var() reference). No `tailwind.config.js` exists; don't add
   one.
+- The `skills/` folder is excluded from automatic content detection:
+  globals.css carries `@source not "../../skills";` (r19). TW4 scans every
+  non-gitignored file, and the skills corpus's docs carry class-like strings
+  that otherwise compile into the app's CSS as dead rules (measured: a 37%
+  stylesheet inflation and skills-sourced `::selection` rules). Don't remove
+  the directive; `css-hygiene.test.ts` pins it (and pins that skills/ is the
+  only excluded source). Likewise: no `::selection` or `caret-color`
+  authoring anywhere — the live authors zero of either.
 - The Tailwind DEFAULT palette is pinned to the live's v3 values (r14):
   `--color-pink-200/300/400/500`, `--color-cyan-400`, and
   `--color-blue-400/500` in the `@theme` block carry the live's TW3 hex
@@ -148,7 +156,7 @@ not secret — rotate before any public deployment).
 ### Testing Strategy
 
 Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
-`src/**/*.test.ts`). The suite (310 tests) pins:
+`src/**/*.test.ts`). The suite (315 tests) pins:
 
 - **The SQLite path contract** (`src/lib/db-path.test.ts`) — relative
   `file:` URLs resolve against `prisma/schema.prisma` (so
@@ -310,6 +318,18 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
   `<main>` and twin md-toggled content copies are accepted divergences —
   invisible in pixels and in the a11y tree). Guards against dropping
   either drawer attribute or introducing the twin-copy structure.
+- **CSS compile hygiene** (`css-hygiene.test.ts`, r19) — file-content pins
+  on the compile-time exclusion and the selection/caret non-authoring
+  measured on the live: globals.css carries `@source not
+  "../../skills";` (Tailwind v4's automatic content detection scans every
+  non-gitignored file — without the directive, the committed skills
+  corpus leaks class-like strings from its docs into the compiled CSS as
+  dead rules and inflates the stylesheet), skills/ is the ONLY excluded
+  source (a broader pattern would silently drop real utilities), and the
+  app authors no `::selection` rules and no `caret-color` (the live's
+  CSSOM carries zero of either on the studio — every selection renders
+  with the UA default and every caret inherits the element color,
+  verified input-by-input on both sides).
 - **Action layer** (`src/actions/studio.test.ts`) — the mutation surface
   against a throwaway SQLite database with the auth seam mocked: CRUD,
   ownership/IDOR checks, supply assignment, delete-side-effects (incl. the
