@@ -77,22 +77,29 @@ Prisma 6.19.2 + SQLite · Zod 4.3.5 · ESLint 9.
   values only (`var()` chains are dropped by the build; `--font-sans` is the
   sole sanctioned var() reference). No `tailwind.config.js` exists; don't add
   one.
-- The `skills/` folder is excluded from automatic content detection:
-  globals.css carries `@source not "../../skills";` (r19). TW4 scans every
-  non-gitignored file, and the skills corpus's docs carry class-like strings
-  that otherwise compile into the app's CSS as dead rules (measured: a 37%
-  stylesheet inflation and skills-sourced `::selection` rules). Don't remove
-  the directive; `css-hygiene.test.ts` pins it (and pins that skills/ is the
-  only excluded source). Likewise: no `::selection` or `caret-color`
-  authoring anywhere — the live authors zero of either — and ZERO
-  forced-colors rules (r20): the TW4 forced-colors-aware
-  transparent-outline utility is the only emitter of `@media
-  (forced-colors: active)` blocks; its scaffold tokens were stripped (six
+- The `skills/` folder AND every committed `.md` file are excluded from
+  automatic content detection: globals.css carries `@source not
+  "../../skills";` (r19) and `@source not "../../**/*.md";` (r22). TW4
+  scans every non-gitignored file — the skills corpus's docs carry
+  class-like strings that compile into the app's CSS as dead rules
+  (measured: a 37% stylesheet inflation and skills-sourced selection
+  rules), and the session records themselves quote prior rounds' stripped
+  tokens EVERY round (the regression class measured three times:
+  r21's own docs, then session_37.md, then session_38.md). Documentation
+  is not a render surface — the r23 audited build diff verified the .md
+  exclusion drops only dead weight (nine dead rules + ten dead var
+  emissions, every one verified consumerless; every rendered utility
+  compiles from a literal class string in src). Don't remove either
+  directive; `css-hygiene.test.ts` pins the exact exclusion list.
+  Likewise: no `::selection` or `caret-color` authoring anywhere — the
+  live authors zero of either — and ZERO forced-colors rules (r20): the
+  TW4 forced-colors-aware transparent-outline utility is the only emitter
+  of forced-colors media blocks; its scaffold tokens were stripped (six
   dead rules; the live's CSSOM carries none). Do not re-introduce the
-  token anywhere under src/ (pinned by `css-hygiene.test.ts`) — and the
-  same discipline extends to MARKDOWN: TW4 scans committed .md files, so
-  remediation records must refer to stripped tokens descriptively, never
-  literally (the r21 docs-token pin guards this).
+  token anywhere under src/ (pinned by `css-hygiene.test.ts`). Keep
+  referring to stripped tokens descriptively in documentation anyway —
+  the docs-token pin scans every repo .md for the guarded families and
+  must stay green (defense in depth + documentation hygiene).
 - The Tailwind DEFAULT palette is pinned to the live's v3 values (r14):
   `--color-pink-200/300/400/500`, `--color-cyan-400`, and
   `--color-blue-400/500` in the `@theme` block carry the live's TW3 hex
@@ -164,7 +171,7 @@ not secret — rotate before any public deployment).
 ### Testing Strategy
 
 Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
-`src/**/*.test.ts`). The suite (333 tests) pins:
+`src/**/*.test.ts`). The suite (334 tests) pins:
 
 - **The SQLite path contract** (`src/lib/db-path.test.ts`) — relative
   `file:` URLs resolve against `prisma/schema.prisma` (so
@@ -326,22 +333,26 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
   `<main>` and twin md-toggled content copies are accepted divergences —
   invisible in pixels and in the a11y tree). Guards against dropping
   either drawer attribute or introducing the twin-copy structure.
-- **CSS compile hygiene** (`css-hygiene.test.ts`, r19) — file-content pins
-  on the compile-time exclusion and the selection/caret non-authoring
-  measured on the live: globals.css carries `@source not
-  "../../skills";` (Tailwind v4's automatic content detection scans every
-  non-gitignored file — without the directive, the committed skills
-  corpus leaks class-like strings from its docs into the compiled CSS as
-  dead rules and inflates the stylesheet), skills/ is the ONLY excluded
-  source (a broader pattern would silently drop real utilities), and the
-  app authors no `::selection` rules and no `caret-color` (the live's
-  CSSOM carries zero of either on the studio — every selection renders
-  with the UA default and every caret inherits the element color,
-  verified input-by-input on both sides), and no source file under src/
-  carries the TW4 forced-colors-aware transparent-outline token (the
-  live authors ZERO forced-colors rules; the scaffold's class strings
-  had contributed six dead ones — the pin's matcher is constructed at
-  runtime because TW4 scans test sources too).
+- **CSS compile hygiene** (`css-hygiene.test.ts`, r19, extended r22) —
+  file-content pins on the compile-time exclusions and the
+  selection/caret non-authoring measured on the live: globals.css
+  carries `@source not "../../skills";` AND `@source not
+  "../../**/*.md";` (Tailwind v4's automatic content detection scans
+  every non-gitignored file — without the directives, the committed
+  skills corpus and the session records' own token quotations leak
+  class-like strings into the compiled CSS as dead rules; the markdown
+  exclusion is the r22 systemic fix for the every-round recurrence, and
+  the r23 audited build diff verified it drops only dead weight), the
+  exclusion list is EXACTLY those two entries (a broader pattern would
+  silently drop real utilities), and the app authors no `::selection`
+  rules and no `caret-color` (the live's CSSOM carries zero of either on
+  the studio — every selection renders with the UA default and every
+  caret inherits the element color, verified input-by-input on both
+  sides), and no source file under src/ carries the TW4
+  forced-colors-aware transparent-outline token (the live authors ZERO
+  forced-colors rules; the scaffold's class strings had contributed six
+  dead ones — the pin's matcher is constructed at runtime because TW4
+  scans test sources too).
 - **Login-motion fidelity** (`login-motion-fidelity.test.ts`, r20) —
   file-content pins on the login chrome's measured transition contract:
   every Amplify login element computes `transition: all 0.25s ease` (the
