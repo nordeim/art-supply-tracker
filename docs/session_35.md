@@ -33,8 +33,8 @@ The forced-colors probe shows parity (0 authored rules both sides, media engaged
 `reduced-transparency` doesn't engage via emulateMedia, and the clone's CSSOM shows only 113 rules (r19 recorded 1,922). Let me check the actual dev CSS file and the r19 evidence.
 The dev CSS is byte-identical to r19's post-fix snapshot (189,849 bytes / ~1,922 rules) — my inventory walk was missing `@layer`-nested rules (TW4 nests everything in `@layer`, unlike the live's TW3). Let me fix the walk and test CDP for reduced-transparency.
 Both diagnostics solved — CDP works for reduced-transparency, and the fixed walk counts 1,924 rules. But there's a lead: the clone's CSSOM contains a `(forced-colors: active)` media rule. Let me enumerate those rules on both sides.
-**REAL FINDING (r20-F1)**: the clone's compiled CSS carries **six `@media (forced-colors: active)` rules** (the TW4 `outline-hidden` utility + variants, incl. three recharts-scoped ones) — the live authors **zero**. Let me find the source-level consumers.
-All `outline-hidden` occurrences live in shadcn scaffold files. Let me check which ui components the app actually uses.
+**REAL FINDING (r20-F1)**: the clone's compiled CSS carries **six `@media (forced-colors: active)` rules** (the TW4 forced-colors-aware transparent-outline utility + variants, incl. three recharts-scoped ones) — the live authors **zero**. Let me find the source-level consumers.
+All transparent-outline token occurrences live in shadcn scaffold files. Let me check which ui components the app actually uses.
 **MAJOR finding**: the ENTIRE 49-file shadcn scaffold (`src/components/ui/`) is unused — no app code imports it. Its class strings feed TW4's content detection and emit dead CSS (including the six forced-colors rules). Let me quantify the dead-CSS scope.
 ~188 scaffold-only dead utilities (14.5% of compiled CSS). Before deciding the remediation scope, let me systematically compare ALL media-feature classes in both CSSOMs — the authored-rule-class contract.
 Two divergences found in opposite directions! The clone has 6 forced-colors rules (live: 0), but the **live has 5 `prefers-reduced-motion` rules the clone lacks**. Let me enumerate the live's reduced-motion rules.
@@ -60,7 +60,7 @@ The audit is complete. Let me formalize the comprehensive remediation plan and v
 
 | ID | Finding | Fix |
 |---|---|---|
-| **r20-F1** | Clone's compiled CSS carries **6 `@media (forced-colors: active)` rules** (TW4's `outline-hidden` emission from the unused shadcn scaffold, 26 tokens across 13 ui/ files); live authors **zero** | Strip the token from all scaffold sources; verify 0 forced-colors rules in dev + production CSS; pin |
+| **r20-F1** | Clone's compiled CSS carries **6 `@media (forced-colors: active)` rules** (TW4's transparent-outline token emission from the unused shadcn scaffold, 26 tokens across 13 ui/ files); live authors **zero** | Strip the token from all scaffold sources; verify 0 forced-colors rules in dev + production CSS; pin |
 | **r20-F2** | Login chrome transition contract diverges: live = `all 0.25s ease` on tabs(inactive)/inputs/eye/submits/links/Dismiss + `property:none` on the ACTIVE tab + a reduced-motion guard on `.amplify-button`; clone = TW utility `0.15s` on some elements, nothing on inputs/links, no guard | `transition-all duration-[250ms] ease` everywhere measured + `transition-none duration-[250ms] ease` on the active tab + scoped `.ast-amplify-button` guard in globals.css; refine the r17 pin (its inventory missed the live's 5 media rules) |
 | **r20-F3** | Live's login submit stays constant ("Sign In", enabled, opacity 1) through auth; clone swaps to "Signing in…" + disables (opacity 0.6) | Constant label, remove `disabled={pending}` + dead `disabled:` classes |
 
@@ -75,7 +75,7 @@ All three link buttons share the exact class string. Let me strengthen the input
 Now applying the login-screen.tsx fixes — all r20-F2a/F2b/F3 changes:
 Now the remaining elements — Dismiss, Send code, Submit, Back to Sign In, Resend Code, and the now-unused `pending`:
 Now the globals.css guard. Let me check the current structure first:
-Now the r20-F1 fix — stripping `outline-hidden` tokens from the 13 scaffold files with a precise script:
+Now the r20-F1 fix — stripping the transparent-outline tokens from the 13 scaffold files with a precise script:
 Only 7 of 26 stripped — the regex missed mid-string tokens. Let me check what remains:
 One line got corrupted (`transition-[margin,opacity]` → `transition-argin,opacity]`). Let me inspect the git diff to understand exactly what happened:
 Git says sidebar.tsx is unchanged — let me look at the actual file content directly:
@@ -87,12 +87,12 @@ Now fixing the three login-motion pins to match the actual template-literal stru
 **GREEN — 36/36.** Now the full gate suite:
 328/328 vitest (315 + 13 new). Now the browser verification — restarting the dev server cleanly (the r19 Turbopack incremental-CSS lesson):
 One nit remains: the timing computes `cubic-bezier(0.4,0,0.2,1)` — TW4 has **no bare `ease` utility** (it's not in the scale), so my `ease` token was silently ignored and the default kicked in. The live's Amplify CSS uses the CSS keyword `ease`. Let me confirm and fix with the arbitrary-value form `ease-[ease]`:
-CSS confirmed: 0 forced-colors, 0 outline-hidden, no bare `.ease` utility. Now fixing the timing to the `ease` keyword via `ease-[ease]`:
+CSS confirmed: 0 forced-colors, 0 transparent-outline tokens, no bare `.ease` utility. Now fixing the timing to the `ease` keyword via `ease-[ease]`:
 The test file shows `duration-s]` — let me verify whether this is real corruption or a display artifact:
 The bytes are correct — `duration-[250ms] ease-[ease]` is intact (the `[250m` was a terminal display artifact). Let me verify one source line byte-exactly and re-run the tests:
 All 14 tokens in place, 12/12 green. Re-verifying the computed timing in the browser:
 **ALL SPECS MATCH THE LIVE** — byte-identical computed transitions. Now the full gates — vitest, E2E, production build:
-**Production CSS verified clean**: 0 forced-colors, 0 outline-hidden, the scoped guard present, 152,241 bytes. All gates green. Now the paired login capture to confirm steady-state parity, then the screenshot re-shoot:
+**Production CSS verified clean**: 0 forced-colors, 0 transparent-outline tokens, the scoped guard present, 152,241 bytes. All gates green. Now the paired login capture to confirm steady-state parity, then the screenshot re-shoot:
 0.89% — elevated above baseline! Let me decompose the hot regions:
 Two hot regions — the h1 text area and a left-edge stripe. Let me investigate what's at those coordinates:
 The sessions were still at the **mobile viewport** (390×844) from the drawer work — those captures are mobile logins, where the documented 0.5px card offset and text-wrapping divergences live. Let me re-capture at the proper desktop viewport:

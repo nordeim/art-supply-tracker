@@ -113,8 +113,8 @@ describe("Selection & caret contract: nothing authored (r19)", () => {
   });
 
   it("the shadcn Input scaffold carries no selection: utility classes", () => {
-    // The scaffold default (selection:bg-primary
-    // selection:text-primary-foreground) emits styled-selection rules the
+    // The scaffold default (the selection-variant bg-primary /
+    // text-primary-foreground pair) emits styled-selection rules the
     // live never shows — dead while the component is unused, divergent the
     // moment it is consumed. Stripped r19.
     expect(input).not.toMatch(/selection:/);
@@ -147,6 +147,50 @@ describe("Forced-colors contract: nothing authored (r20)", () => {
       const text = stripComments(readFileSync(file, "utf8"));
       if (token.test(text)) {
         offenders.push(file.replace(srcRoot + "/", ""));
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+});
+
+describe("Documentation token hygiene (r21-F2)", () => {
+  it("no committed markdown file re-introduces the stripped outline/selection tokens", () => {
+    // TW4's automatic content detection scans every non-gitignored file —
+    // MARKDOWN INCLUDED. The r19/r20 remediations were regressed by their
+    // own session records: the stripped transparent-outline and
+    // selection-variant tokens were quoted verbatim in the committed docs
+    // (session logs, README, PAD, AGENTS), and the next build compiled the
+    // dead rules straight back into the production CSS (measured r21: the
+    // r20 tree's "clean" 152,241-byte stylesheet had regrown to 152,390
+    // with one forced-colors block and the selection pair). The tokens are
+    // assembled at runtime from non-utility fragments — the same discipline
+    // this file's own pins use — so this guard cannot leak what it guards.
+    const transparentOutline = "out" + "line-hidden";
+    const selectionVariant = "selection" + ":";
+    const bgPrimary = "bg" + "-primary";
+    // r21-F1's stripped scaffold token joins the guarded families: docs
+    // quoting it verbatim would recompile the dead viewport-cap rule.
+    const viewportCap = ["md", ["h", "screen"].join("-")].join(":");
+    const repoRoot = join(libDir, "../..");
+    const mdFiles: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir)) {
+        if (entry === "node_modules" || entry === ".next" || entry === ".git" || entry === "skills" || entry === "db") continue;
+        const full = join(dir, entry);
+        if (statSync(full).isDirectory()) walk(full);
+        else if (/\.md$/.test(entry)) mdFiles.push(full);
+      }
+    };
+    walk(repoRoot);
+    const offenders: string[] = [];
+    for (const file of mdFiles) {
+      const text = readFileSync(file, "utf8");
+      if (
+        text.includes(transparentOutline) ||
+        text.includes(selectionVariant + bgPrimary) ||
+        text.includes(viewportCap)
+      ) {
+        offenders.push(file.replace(repoRoot + "/", ""));
       }
     }
     expect(offenders).toEqual([]);

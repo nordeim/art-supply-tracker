@@ -394,7 +394,7 @@ One breakpoint rules the app: **`md` (768px)** — everything is desktop-or-draw
 | Community chat | fixed right drawer (same geometry, `rounded-l-3xl`) | `aside` column `md:col-span-2` |
 | Main card | full-width, carries the "☰ Studio Tools / Chat ☰" bar (`md:hidden`) | `md:col-span-7`, no toggle bar |
 | Grid | stacked flex column | `md:grid md:grid-cols-12 md:gap-4` |
-| Shell height | `min-h-screen` | `md:h-screen` with per-card internal scroll |
+| Shell height | `min-h-screen` | `min-h-screen` — UNCAPPED like the live's: the grid row sizes to the chat column's intrinsic content (878px), the page grows past the fold and the window scrolls (r21; the scaffold's viewport-cap token is pinned out by `layout-fidelity.test.ts`) |
 | Header | 126px, logo 159×40 | 88px, logo 222×56 |
 
 **The parity viewports:** desktop captures/E2E at **1536×844**, mobile at **390×844** — always these; the documented baselines were measured at them.

@@ -279,7 +279,14 @@ export function StudioApp({
   );
 
   return (
-    <main className="flex min-h-screen flex-col overflow-hidden bg-[#050009] text-white md:h-screen">
+    // The shell is UNCAPPED like the live's (r21-F1): min-h-screen is a
+    // minimum, never a viewport cap. The desktop grid's auto row sizes to
+    // the chat column's intrinsic content (sticky header 240 + the scroll
+    // container's max-h-[calc(100vh-16rem)] 588 + padding = 878px), so the
+    // page grows past the fold and the window scrolls — the live's measured
+    // behavior. The scaffold's viewport-height cap token (never
+    // live-measured) is pinned out by layout-fidelity.test.ts.
+    <main className="flex min-h-screen flex-col overflow-hidden bg-[#050009] text-white">
       <StudioHeader
         email={user.email}
         onSignOut={handleSignOut}
