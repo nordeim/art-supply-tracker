@@ -171,7 +171,7 @@ not secret — rotate before any public deployment).
 ### Testing Strategy
 
 Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
-`src/**/*.test.ts`). The suite (335 tests) pins:
+`src/**/*.test.ts`). The suite (348 tests) pins:
 
 - **The SQLite path contract** (`src/lib/db-path.test.ts`) — relative
   `file:` URLs resolve against `prisma/schema.prisma` (so
@@ -398,7 +398,10 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
 Run `bun run test` — new domain logic in `src/lib` and new actions require
 tests first (red → green). Golden paths that live in the browser (view
 navigation, modals, detail panels) are additionally pinned by two
-browser suites: `bun run test:e2e` (Playwright, 25 specs — the
+browser suites: `bun run test:e2e` (Playwright, 28 specs — the
+sign-up pre-submission validation spec (r25) drives the blur-gated
+state machine through the real UI with zero auth requests, leaving the
+limiter budget untouched; the
 storageState setup signs in once per run so the rate limiter never
 self-throttles; the mobile-chromium project pins the drawer contract at
 the live's 390×844 viewport; every created row is deleted through the
