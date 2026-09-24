@@ -153,6 +153,13 @@ export function LoginScreen() {
     if (result.ok) {
       // Re-render the server component with the fresh session cookie.
       router.refresh();
+      // The live's SPA swaps the login view for the dashboard on auth
+      // success and the document lands scrolled to top; router.refresh()
+      // re-renders in place and the browser would otherwise PRESERVE the
+      // pre-submit offset (measured r24: pre 201 -> live 0 / clone 201 on
+      // WebKit mobile, pre 128 -> live 0 / clone 128 on Chromium with a
+      // forced wheel — reachable whenever the login card exceeds the fold).
+      window.scrollTo(0, 0);
       return;
     }
     setError(result.error.message);

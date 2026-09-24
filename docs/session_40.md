@@ -10,7 +10,7 @@ The r22 WIP was committed but the critical CSS-drop investigation (session_38's 
 The r22 commit contains an unverified claim ("drops exactly those dead rules and nothing else") — session 38 was interrupted while auditing the -1,241 byte CSS drop. Let me set up the environment and run baseline gates:
 Found doc gap #1: `.env.example` references nonexistent `docs/DEPLOYMENT.md`. Now baseline gates:
 Baseline is **RED** — exactly the recurring regression class: the committed `session_38.md` narration itself carries a stripped token. Let me identify it:
-Offender identified: `outline-hidden` in session_38.md lines 22-23. Now let me examine the src structure, then complete the interrupted CSS-drop audit:
+Offender identified: the transparent-outline utility token (quoted verbatim) in session_38.md lines 22-23. Now let me examine the src structure, then complete the interrupted CSS-drop audit:
 Now let me complete the interrupted r22 audit. First, build the current tree and measure the CSS, then compare against the r21 clean tree:
 Current tree confirmed at 150,821 bytes (matches session_38's measurement). Now let me build the r21 clean tree (f49975e) for the comparison baseline:
 r21 tree builds at 152,035 bytes in this environment (session_36 recorded 152,062 — minor environment variance). The drop is 1,214 bytes. Now the critical audit — account for every dropped rule. Let me write the diff script:

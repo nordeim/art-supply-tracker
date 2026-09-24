@@ -354,3 +354,18 @@ describe("mobile chat drawer (live class parity)", () => {
     );
   });
 });
+
+describe("auth-success scroll reset (r24 — the live's view-swap semantic)", () => {
+  // The live's SPA swaps the login view for the dashboard when auth
+  // succeeds and the document scroll lands at top; the clone's
+  // router.refresh() re-renders in place and the browser otherwise
+  // PRESERVES the pre-submit offset. Measured on BOTH engines
+  // (WebKit 390x844: pre 201 -> live 0 / clone 201; Chromium with a
+  // forced 300px wheel: pre 128 -> live 0 / clone 128) — reachable
+  // whenever the mobile login card exceeds the viewport (WebKit
+  // metrics: the submit lands at y=851 against the 844 fold; Chromium
+  // keeps it at 778, which is why the r23 battery never saw it).
+  it("resets the window scroll when auth succeeds", () => {
+    expect(login).toMatch(/if \(result\.ok\) \{[\s\S]{0,600}window\.scrollTo\(0, 0\)/);
+  });
+});

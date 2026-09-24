@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { DEMO_EMAIL, signIn } from "./helpers";
+import { DEMO_EMAIL, DEMO_PASSWORD, signIn } from "./helpers";
 
 /**
  * The auth gate — the Amplify login chrome (r8/r9 pins) plus the sign-in /
@@ -44,8 +44,27 @@ test.describe("auth", () => {
   });
 
   test("demo sign-in reaches the dashboard and sign-out returns to login", async ({ page }) => {
-    await signIn(page);
+    // r24: the live's SPA view swap lands the dashboard scrolled to top;
+    // router.refresh() re-renders in place and would otherwise preserve the
+    // pre-submit offset (measured: forced-wheel Chromium 128 -> live 0 /
+    // clone 128; WebKit mobile 201 -> live 0 / clone 201). The scroll reset
+    // is pinned here through the real sign-in flow, at the live's mobile
+    // viewport where the login card scrolls.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/");
+    await expect(
+      page.getByRole("heading", { name: "Join the Art Supply Tracker Artist Beta" }),
+    ).toBeVisible();
+    await page.getByLabel("Email").fill(DEMO_EMAIL);
+    await page.getByLabel("Password", { exact: true }).fill(DEMO_PASSWORD);
+    await page.mouse.wheel(0, 300);
+    await page.waitForTimeout(300);
+    await expect(page.evaluate(() => window.scrollY)).resolves.toBeGreaterThan(0);
+    await page.getByRole("button", { name: "Sign in" }).click();
     await expect(page.getByRole("heading", { name: "Today in the Studio" })).toBeVisible();
+    await expect
+      .poll(() => page.evaluate(() => window.scrollY))
+      .toBe(0);
     await expect(page.getByRole("button", { name: "Sign Out" })).toBeVisible();
 
     await page.getByRole("button", { name: "Sign Out" }).click();
