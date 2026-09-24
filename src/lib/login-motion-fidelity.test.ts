@@ -136,6 +136,28 @@ describe("reduced-motion guard (r20-F2b — the live's .amplify-button rule)", (
   });
 });
 
+describe("amplify button cursor contract (r25 — the live's pointer rule)", () => {
+  // Measured on the live 2026-09-24: every .amplify-button element (the
+  // three submits, both eye toggles, the three link buttons, the alert's
+  // Dismiss) computes cursor: pointer — Amplify's own button rule — while
+  // the clone's equivalents computed default. The tab strip carries
+  // cursor: auto on the live (an equivalent non-pointer rendering — no
+  // action). One globals rule covers the clone's whole marker set.
+  it("globals.css pins the marker set to the live's pointer cursor", () => {
+    // The rule is :not(:disabled)-scoped — TW4 emits utilities inside
+    // @layer and an unlayered rule would otherwise outrank the sign-up
+    // submit's disabled:cursor-not-allowed utility (the cascade-layers
+    // trap caught by the E2E spec).
+    expect(globalsCss).toMatch(
+      /\.ast-amplify-button:not\(:disabled\)\s*\{\s*cursor:\s*pointer;\s*\}/,
+    );
+  });
+
+  it("the disabled sign-up submit overrides the pointer with not-allowed (utility specificity)", () => {
+    expect(login).toContain("disabled:cursor-not-allowed");
+  });
+});
+
 describe("login pending state (r20-F3 — the live's constant submit button)", () => {
   it("the submit label stays constant — no pending text swap", () => {
     expect(login).not.toContain("Signing in…");
@@ -144,7 +166,15 @@ describe("login pending state (r20-F3 — the live's constant submit button)", (
 
   it("the submit button is never disabled by pending state", () => {
     expect(login).not.toMatch(/disabled=\{pending\}/);
-    expect(login).not.toMatch(/disabled:cursor-not-allowed/);
     expect(login).not.toMatch(/disabled:opacity-60/);
+    // r25 refinement: the sign-UP submit now carries a VALIDATION-keyed
+    // disabled chrome (the live's blur-gated state machine — measured
+    // 2026-09-24: gray #EFF0F0/#89949F + not-allowed exactly while a
+    // policy/mismatch line renders). That is measured parity, not a
+    // pending affordance; the r20 matchers that forbade the literal
+    // disabled: utilities were written against the sign-in round-trip
+    // only and are superseded by login-fidelity's r25 disabled-chrome
+    // pins. The pending contract itself stands: no isPending-consumed
+    // disabled, no opacity dim, no label swap.
   });
 });

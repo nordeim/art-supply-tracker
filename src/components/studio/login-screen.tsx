@@ -125,12 +125,17 @@ export function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  /** The Cognito password-policy stack — every violated rule renders as
-   * its own inline line directly after the Password field (the live app
-   * shows ALL violations at once, never just the first). */
-  const [policyErrors, setPolicyErrors] = useState<string[]>([]);
-  /** The "Your passwords must match" line (client-side confirmation check). */
-  const [mismatch, setMismatch] = useState(false);
+  /** The r25 blur-gated engagement model (measured keystroke-level on the
+   * live 2026-09-24): the deployed Amplify signUp / reset-confirmation
+   * forms validate each field on its first BLUR and then live-update on
+   * every keystroke — pw blur renders the Cognito policy stack (empty pw
+   * = all five lines), confirm blur renders the mismatch line (confirm
+   * !== pw, including an emptied confirm). Pristine forms render nothing
+   * regardless of content; a SUBMIT (click or Enter) validates every
+   * field at once. The lines below replace the r9/r20 submit-only
+   * policyErrors/mismatch state with the derivation the live computes. */
+  const [pwTouched, setPwTouched] = useState(false);
+  const [confirmTouched, setConfirmTouched] = useState(false);
   /** The reset-confirmation view's code field. */
   const [resetCode, setResetCode] = useState("");
   /** r20-F3: the live's submit button holds its label, enabled state, and
@@ -142,12 +147,31 @@ export function LoginScreen() {
   const [, startTransition] = useTransition();
 
   /** Clears every client-validation surface (mode switches reset the card
-   * to its pristine state, like the live's Amplify route changes). */
+   * to its pristine state, like the live's Amplify route changes — the
+   * r25 engagement flags reset with it: re-entering a view renders
+   * nothing until the pw blurs again, measured on the live). */
   function clearValidation() {
     setError(null);
-    setPolicyErrors([]);
-    setMismatch(false);
+    setPwTouched(false);
+    setConfirmTouched(false);
   }
+
+  /** The r25 derived validation state — the live's per-field touch model:
+   * the stack renders when the pw has blurred AND the current value
+   * violates the policy (live-updating on every keystroke); the mismatch
+   * renders when the confirm has blurred AND the values differ. On the
+   * sign-in view neither flag can be true (the blur handler is mode-
+   * gated and clearValidation resets on every switch — the live's
+   * sign-in form has NO pre-submission validation). */
+  const policyViolations = passwordPolicyViolations(password);
+  const showPolicyStack = pwTouched && policyViolations.length > 0;
+  const showMismatch = confirmTouched && confirmPassword !== password;
+  /** The sign-up submit's touch-gated disabled state (measured on the
+   * live): the button disables EXACTLY while a validation line renders
+   * — email format is irrelevant (bad email + valid matching pw stays
+   * enabled while form.checkValidity() is false). The sign-in submit and
+   * both reset-view submits never disable (measured in every state). */
+  const signupSubmitDisabled = mode === "signup" && (showPolicyStack || showMismatch);
 
   function handleResult(result: ActionResult<{ email: string; displayName: string }>) {
     if (result.ok) {
@@ -178,10 +202,13 @@ export function LoginScreen() {
     // The live's Cognito client validation: every violated policy rule
     // stacks after the Password field AND the confirmation mismatch shows
     // after Confirm — both at once when both are broken (submission
-    // blocked until the form is clean).
+    // blocked until the form is clean). A submit touches EVERY field
+    // (measured on the live: Enter in the pw field on a pristine form
+    // renders the stack and disables the button; r9's submitted abc/xyz
+    // state carried stack + mismatch together).
+    setPwTouched(true);
+    setConfirmTouched(true);
     const violations = passwordPolicyViolations(password);
-    if (violations.length > 0) setPolicyErrors(violations);
-    if (password !== confirmPassword) setMismatch(true);
     if (violations.length > 0 || password !== confirmPassword) return;
     startTransition(async () => {
       handleResult(await signUpAction({ email, password }));
@@ -205,10 +232,11 @@ export function LoginScreen() {
     event.preventDefault();
     clearValidation();
     // Same client validation as sign-up: the policy stack after New
-    // Password, the mismatch after Confirm.
+    // Password, the mismatch after Confirm — and a submit touches every
+    // field at once (the live's Enter/click path, r25).
+    setPwTouched(true);
+    setConfirmTouched(true);
     const violations = passwordPolicyViolations(password);
-    if (violations.length > 0) setPolicyErrors(violations);
-    if (password !== confirmPassword) setMismatch(true);
     if (violations.length > 0 || password !== confirmPassword) return;
     // No mailer exists (ADR-003) — no code was ever emailed, so no code can
     // be valid. Cognito's exact rejection, measured on the live app.
@@ -360,6 +388,7 @@ export function LoginScreen() {
                         required
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
+                        onBlur={() => { if (mode !== "signin") setPwTouched(true); }}
                         placeholder="Enter your Password"
                         className={`${passwordInputClasses} min-w-0 flex-1`}
                       />
@@ -369,10 +398,12 @@ export function LoginScreen() {
 
                   {/* The live's Cognito policy stack: every violated rule as
                    * its own contiguous 24px line, directly under the Password
-                   * field (measured on the live: no vertical gaps). */}
-                  {mode === "signup" && policyErrors.length > 0 && (
+                   * field (measured on the live: no vertical gaps). Rendered
+                   * pre-submission once the pw has blurred (r25) and on the
+                   * submit path (a submit touches every field). */}
+                  {mode === "signup" && showPolicyStack && (
                     <div>
-                      {policyErrors.map((message) => (
+                      {policyViolations.map((message) => (
                         <p key={message} className="text-base text-[#660000]">
                           {message}
                         </p>
@@ -394,6 +425,7 @@ export function LoginScreen() {
                           required
                           value={confirmPassword}
                           onChange={(e) => setConfirmPassword(e.target.value)}
+                          onBlur={() => setConfirmTouched(true)}
                           placeholder="Please confirm your Password"
                           className={`${passwordInputClasses} min-w-0 flex-1`}
                         />
@@ -406,8 +438,9 @@ export function LoginScreen() {
                   )}
 
                   {/* The live's confirmation mismatch line (client-side,
-                   * inline — never in the alert box). */}
-                  {mode === "signup" && mismatch && (
+                   * inline — never in the alert box; rendered pre-submission
+                   * once the confirm has blurred, r25). */}
+                  {mode === "signup" && showMismatch && (
                     <p className="text-base text-[#660000]">
                       Your passwords must match
                     </p>
@@ -421,7 +454,8 @@ export function LoginScreen() {
 
                   <button
                     type="submit"
-                    className="h-[42px] w-full rounded-[4px] bg-[#FE5FA7] px-4 text-base font-bold text-white ast-amplify-button transition-all duration-[250ms] ease-[ease] hover:bg-[#fe77b6]"
+                    disabled={signupSubmitDisabled}
+                    className="h-[42px] w-full rounded-[4px] bg-[#FE5FA7] px-4 text-base font-bold text-white ast-amplify-button transition-all duration-[250ms] ease-[ease] hover:bg-[#fe77b6] disabled:bg-[#EFF0F0] disabled:text-[#89949F] disabled:cursor-not-allowed disabled:hover:bg-[#EFF0F0]"
                   >
                     {mode === "signin" ? "Sign in" : "Create Account"}
                   </button>
@@ -522,15 +556,16 @@ export function LoginScreen() {
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
+                      onBlur={() => setPwTouched(true)}
                       className={`${passwordInputClasses} min-w-0 flex-1`}
                     />
                     {renderEyeToggle(showPassword, () => setShowPassword((v) => !v))}
                   </div>
                 </div>
 
-                {policyErrors.length > 0 && (
+                {showPolicyStack && (
                   <div>
-                    {policyErrors.map((message) => (
+                    {policyViolations.map((message) => (
                       <p key={message} className="text-base text-[#660000]">
                         {message}
                       </p>
@@ -551,6 +586,7 @@ export function LoginScreen() {
                       required
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
+                      onBlur={() => setConfirmTouched(true)}
                       className={`${passwordInputClasses} min-w-0 flex-1`}
                     />
                     {renderEyeToggle(
@@ -560,7 +596,7 @@ export function LoginScreen() {
                   </div>
                 </div>
 
-                {mismatch && (
+                {showMismatch && (
                   <p className="text-base text-[#660000]">
                     Your passwords must match
                   </p>

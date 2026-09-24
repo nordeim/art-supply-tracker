@@ -282,3 +282,23 @@
     transition: none;
   }
 }
+
+/*
+ * r25 cursor contract: the live's .amplify-button rule sets
+ * `cursor: pointer` on every one of its button chrome elements (the
+ * three submits, both eye toggles, the three link buttons, and the
+ * alert's Dismiss — measured computed-style on the deployed app
+ * 2026-09-24; the tab strip carries cursor: auto, an equivalent
+ * non-pointer rendering). The clone's equivalents computed the UA
+ * default. One rule through the same ast-amplify-button marker set
+ * covers all eight elements. The rule is deliberately UNLAYERED but
+ * :not(:disabled)-scoped: TW4 emits utilities inside @layer, and an
+ * unlayered rule outranks every layered one — without the scope it
+ * would also defeat the sign-up submit's validation-keyed
+ * disabled:cursor-not-allowed utility (measured on the live:
+ * not-allowed while the gray disabled chrome shows). Pinned by
+ * `src/lib/login-motion-fidelity.test.ts`.
+ */
+.ast-amplify-button:not(:disabled) {
+  cursor: pointer;
+}

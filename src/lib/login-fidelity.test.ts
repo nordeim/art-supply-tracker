@@ -282,12 +282,14 @@ describe("signup password-policy stack (live Cognito rules, r9)", () => {
   it("stacks the policy lines contiguously after the Password field", () => {
     // The live renders the violated rules as back-to-back 24px lines (no
     // vertical gap — 651/675/699/723 measured) directly after the Password
-    // field group, BEFORE the Confirm Password label.
+    // field group, BEFORE the Confirm Password label. (r25: the mapped
+    // array is the derived policyViolations — the blur-gated model's
+    // current-value computation.)
     expect(login).toMatch(
-      /id="password"[\s\S]{0,1100}?policyErrors\.map[\s\S]{0,900}?id="confirmPassword"/,
+      /id="password"[\s\S]{0,1400}?policyViolations\.map[\s\S]{0,900}?id="confirmPassword"/,
     );
     expect(login).toMatch(
-      /policyErrors\.map[\s\S]{0,200}?text-base text-\[#660000\]/,
+      /policyViolations\.map[\s\S]{0,200}?text-base text-\[#660000\]/,
     );
   });
 });
@@ -367,5 +369,99 @@ describe("auth-success scroll reset (r24 — the live's view-swap semantic)", ()
   // keeps it at 778, which is why the r23 battery never saw it).
   it("resets the window scroll when auth succeeds", () => {
     expect(login).toMatch(/if \(result\.ok\) \{[\s\S]{0,600}window\.scrollTo\(0, 0\)/);
+  });
+});
+
+describe("sign-up pre-submission validation (r25 — the live's blur-gated state machine)", () => {
+  // Measured on the live 2026-09-24, keystroke-level: the deployed
+  // Amplify signUp form validates per field on BLUR and then live-updates
+  // on every keystroke. The password field's first blur renders the
+  // Cognito policy stack (empty pw = all five lines, 24px each, pushing
+  // the submit down); the confirm field's first blur renders the mismatch
+  // line (confirm !== pw, including an emptied confirm). Pristine forms
+  // (no blur yet) render NOTHING regardless of content — the clone's
+  // submit-only rendering was the r25 gap (r9 measured the submitted
+  // state; r20 measured the sign-in round-trip; neither covered the
+  // pre-submission machine).
+  it("derives the policy stack from the password field's touched flag, not submit-only state", () => {
+    expect(login).toContain(
+      "const showPolicyStack = pwTouched && policyViolations.length > 0;",
+    );
+  });
+
+  it("derives the mismatch line from the confirm field's touched flag", () => {
+    expect(login).toContain(
+      "const showMismatch = confirmTouched && confirmPassword !== password;",
+    );
+  });
+
+  it("engages the password validation on blur — sign-up view, never sign-in", () => {
+    // The shared sign-in/sign-up password input: the blur handler is
+    // mode-gated because the live's sign-in form has NO pre-submission
+    // validation (measured: weak/empty sign-in passwords render nothing).
+    expect(login).toContain(
+      'onBlur={() => { if (mode !== "signin") setPwTouched(true); }}',
+    );
+  });
+
+  it("engages the password validation on blur — reset-confirmation view's own field", () => {
+    expect(login).toMatch(/onBlur=\{\(\) => setPwTouched\(true\)\}/);
+  });
+
+  it("engages the mismatch on confirm blur (both views)", () => {
+    expect(login).toMatch(/onBlur=\{\(\) => setConfirmTouched\(true\)\}/);
+  });
+
+  it("a submit validates every field at once (the Enter/click path)", () => {
+    // Measured: Enter in the pw field on a pristine form renders the
+    // stack AND disables the button; the r9 submitted abc/xyz state
+    // carried stack + mismatch together. A submit touches both fields.
+    expect(login).toMatch(
+      /setPwTouched\(true\);\s*\n\s*setConfirmTouched\(true\);\s*\n\s*const violations = passwordPolicyViolations\(password\);[\s\S]{0,200}if \(violations\.length > 0 \|\| password !== confirmPassword\) return;/,
+    );
+  });
+
+  it("mode switches reset the engagement (the card returns to pristine)", () => {
+    // The live resets the card on tab/view swaps (measured: re-entering
+    // the sign-up tab renders nothing until the pw blurs again).
+    const clear = login.slice(
+      login.indexOf("function clearValidation"),
+      login.indexOf("function handleResult"),
+    );
+    expect(clear).toContain("setPwTouched(false);");
+    expect(clear).toContain("setConfirmTouched(false);");
+  });
+});
+
+describe("sign-up submit disabled state (r25 — the live's touch-gated gray chrome)", () => {
+  // Measured on the live: the Create Account submit flips to a disabled
+  // look exactly while a validation line renders (engaged + policy-invalid
+  // OR mismatch): bg #EFF0F0, text #89949F, cursor not-allowed, label /
+  // height / opacity constant. It re-enables (pink, pointer) when the form
+  // cleans up. The email format is IRRELEVANT (bad email + valid matching
+  // pw = enabled while form.checkValidity() is false). The sign-IN submit
+  // and BOTH reset-view submits never disable (measured in every state).
+  it("disables only while a validation line renders", () => {
+    expect(login).toContain(
+      'const signupSubmitDisabled = mode === "signup" && (showPolicyStack || showMismatch);',
+    );
+  });
+
+  it("carries the disabled attribute keyed to that derivation", () => {
+    expect(login).toContain("disabled={signupSubmitDisabled}");
+  });
+
+  it("carries the live's disabled chrome (flat gray, not-allowed, hover held)", () => {
+    expect(login).toContain("disabled:bg-[#EFF0F0]");
+    expect(login).toContain("disabled:text-[#89949F]");
+    expect(login).toContain("disabled:cursor-not-allowed");
+    expect(login).toContain("disabled:hover:bg-[#EFF0F0]");
+  });
+
+  it("keeps every other submit always enabled (exactly one disabled attr)", () => {
+    // The shared sign-in/sign-up button is the ONLY submit that may
+    // disable; the Send code and reset-confirmation Submit buttons
+    // never do (measured on the live in all states).
+    expect(login.match(/disabled=\{/g)).toHaveLength(1);
   });
 });
