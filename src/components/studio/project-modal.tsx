@@ -237,7 +237,7 @@ export function ProjectModal({ onClose, onSaved }: ProjectModalProps) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-lg border border-ast-yellow/30 bg-transparent px-4 py-2 text-sm text-ast-yellow transition hover:bg-ast-yellow/10 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex-1 rounded-lg border border-ast-yellow/30 bg-transparent px-4 py-2 text-ast-yellow transition hover:bg-ast-yellow/10 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Cancel
             </button>

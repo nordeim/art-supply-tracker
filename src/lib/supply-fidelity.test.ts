@@ -71,3 +71,57 @@ describe("supply chip + detail panel source pins (rendering contract)", () => {
     expect(detail).not.toContain('supply.quantity || "—"');
   });
 });
+
+describe("supply modal button-row pins (r26: the live's 16px chrome)", () => {
+  const modal = read("src/components/studio/supply-modal.tsx");
+
+  it("renders the Cancel button at the live's base font — no text-sm", () => {
+    // Measured on the live 2026-09-26: the modal Cancel computes 16px/24px
+    // (the class string carries no font-size utility). With its 1px border
+    // and py-2 it is the row's tallest child at 42px, and the flex-stretch
+    // row sizes BOTH buttons to 42 — the text-sm variant renders 40px and
+    // shrinks the whole modal card by 2px (792 vs the live's 794).
+    const cancelCls = modal.match(/className="([^"]*border-ast-yellow\/30[^"]*)"/)?.[1];
+    expect(cancelCls).toBeDefined();
+    expect(cancelCls).not.toContain("text-sm");
+    expect(cancelCls).toContain("px-4 py-2");
+    expect(cancelCls).toContain("text-ast-yellow");
+  });
+
+  it("renders the Add Supply submit at the base font with font-semibold", () => {
+    const submitCls = modal.match(/className="([^"]*from-ast-pink[^"]*)"/)?.[1];
+    expect(submitCls).toBeDefined();
+    expect(submitCls).not.toContain("text-sm");
+    expect(submitCls).toContain("font-semibold");
+  });
+
+  it("keeps the live's button-row layout (flex gap-3, top border, padding)", () => {
+    // The live's row: `shrink-0 flex gap-3 px-6 pt-4 pb-6 border-t border-white/5`
+    // — the default align-items (stretch) is what carries the 42px parity.
+    expect(modal).toContain("flex shrink-0 gap-3 border-t border-white/5 px-6 pb-6 pt-4");
+  });
+});
+
+describe("supply detail heading pins (r26: the live's plain-block H2)", () => {
+  const detail = read("src/components/studio/supply-detail-panel.tsx");
+
+  it("renders the detail H2 as a plain block exactly like the live", () => {
+    // Measured on the live: the detail H2 is `text-lg font-bold text-ast_cyan`
+    // — a plain block whose NEW badge flows inline (the badge's own ml-2
+    // supplies the 8px gap; the inline box renders 18px tall). A flex row
+    // (flex-wrap/items-center/gap-2) doubles the gap to 16px (gap-2 + ml-2),
+    // inflates the badge to 20px and shifts it 2px up.
+    const h2 = detail.match(/<h2\s+className="([^"]+)"/)?.[1];
+    expect(h2).toBe("text-lg font-bold text-ast-cyan");
+  });
+
+  it("keeps the badge as an inline span with its own ml-2 spacing", () => {
+    const badge = detail.match(
+      /className="(ml-2 [^"]*bg-ast-pink\/40[^"]*)"/,
+    )?.[1];
+    expect(badge).toBeDefined();
+    expect(badge).toContain("ml-2");
+    expect(badge).toContain("align-middle");
+    expect(badge).not.toContain("flex");
+  });
+});

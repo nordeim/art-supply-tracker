@@ -91,7 +91,7 @@ export function ProjectDetailPanel({
       <div className="mb-4 flex items-start gap-4">
         <div className="min-w-0 flex-1">
           <p className="mb-1 text-xs uppercase tracking-wider text-ast-turquoise">Project</p>
-          <h2 className="flex flex-wrap items-center gap-2 text-lg font-bold text-ast-cyan">
+          <h2 className="text-lg font-bold text-ast-cyan">
             {project.name}
             {isNewItem(project.createdAt) && (
               <span className="ml-2 rounded-full bg-ast-turquoise/40 px-2 py-0.5 align-middle text-xs font-semibold text-ast-turquoise">
