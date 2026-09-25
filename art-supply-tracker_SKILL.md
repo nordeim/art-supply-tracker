@@ -1,9 +1,9 @@
 ---
 name: art-supply-tracker
-description: "AST Studio — a pixel-perfect, behavior-exact clone of studiobeta.artsupplytracker.com: Next.js 16 + React 19 + Tailwind v4 CSS-first + Prisma/SQLite + Server Actions + scrypt cookie auth, verified by 348 vitest + 28 Playwright E2E specs and 25 rounds of live-site parity audits"
+description: "AST Studio — a pixel-perfect, behavior-exact clone of studiobeta.artsupplytracker.com: Next.js 16 + React 19 + Tailwind v4 CSS-first + Prisma/SQLite + Server Actions + scrypt cookie auth, verified by 358 vitest + 28 Playwright E2E specs and 26 rounds of live-site parity audits"
 version: 1.0.0
-last_updated: 2026-09-24
-project_state: "r25 sign-up pre-submission state machine verified (348 vitest + 28 E2E green); visual + functional parity with the live site re-confirmed at the documented baselines on THREE engines (Chromium / WebKit via the user-space GTK stack / Firefox); the error/reset views pixel-baselined; the blur-gated validation + disabled-chrome + cursor contracts pinned"
+last_updated: 2026-09-26
+project_state: "r26 modal button-row + detail-heading chrome verified (358 vitest + 28 E2E green); visual + functional parity with the live site re-confirmed with matched test data (modal cards 544/794 byte-exact, Cancel/Create 42px at 16px, detail H2 plain blocks with inline 18px badges); the create-modal button-row 42px contract and the plain-block detail-heading contract pinned; the twin-copy state-instance split documented as the r18 divergence's consequence"
 audience: "engineers + AI agents extending, debugging, onboarding, or replicating the Art Supply Tracker clone"
 tags: [nextjs16, react19, tailwind-v4, prisma, sqlite, server-actions, playwright, vitest, parity-clone, aws-amplify-ui]
 ---
@@ -43,7 +43,7 @@ tags: [nextjs16, react19, tailwind-v4, prisma, sqlite, server-actions, playwrigh
 18. [§18 Z-Index Layer Map](#18-z-index-layer-map)
 19. [§19 Color Reference (Complete)](#19-color-reference-complete)
 20. [§20 The Complete TypeScript Interface Reference](#20-the-complete-typescript-interface-reference)
-- [Appendix A — Parity Audit History (r1–r25)](#appendix-a--parity-audit-history-r1r25)
+- [Appendix A — Parity Audit History (r1–r26)](#appendix-a--parity-audit-history-r1r26)
 - [Appendix B — The Live-Site Validation Method](#appendix-b--the-live-site-validation-method)
 - [Quick Reference Card](#quick-reference-card)
 
@@ -468,7 +468,7 @@ StockFilter: all | low | out      // Low = low OR critical; Out = critical only
 
 ---
 
-## Appendix A — Parity Audit History (r1–r25)
+## Appendix A — Parity Audit History (r1–r26)
 
 Every round: fresh live recon → findings → TDD remediation → all gates → docs aligned. The full narrative lives in `docs/session_*.md`; the one-line ledger:
 
@@ -495,8 +495,9 @@ Every round: fresh live recon → findings → TDD remediation → all gates →
 - **r23** the audited markdown-exclusion diff (nine dead rules + ten dead var emissions, all consumerless) + docs/DEPLOYMENT.md.
 - **r24** the WebKit engine matrix (user-space GTK stack under Xvfb) + the auth-success scroll reset + slow-network/gradient probes.
 - **r25** the sign-up pre-submission state machine (blur-gated per-field validation, the disabled gray chrome, the cursor contract) + the error/reset views pixel-baselined on three engines.
+- **r26** the modal button-row + detail-heading chrome (the create modals' Cancel at 16px with the flex-stretch 42px row; the detail H2s as plain blocks with inline 18px NEW badges) + the twin-copy state-instance split documented.
 
-Current baselines: pixel diffs 0.148–1.144% per pair on Chromium (the documented accepted set), fresh WebKit baselines 0.87–3.15% (symmetric engine noise), error/reset views 0.125–0.352% Chromium / 1.56–2.19% WebKit, 348 vitest + 28 E2E, 23/23 smoke.
+Current baselines: pixel diffs 0.148–1.144% per pair on Chromium (the documented accepted set), fresh WebKit baselines 0.87–3.15% (symmetric engine noise), error/reset views 0.125–0.352% Chromium / 1.56–2.19% WebKit, 358 vitest + 28 E2E, 23/23 smoke.
 
 ## Appendix B — The Live-Site Validation Method
 

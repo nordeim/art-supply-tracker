@@ -171,7 +171,7 @@ not secret — rotate before any public deployment).
 ### Testing Strategy
 
 Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
-`src/**/*.test.ts`). The suite (348 tests) pins:
+`src/**/*.test.ts`). The suite (358 tests) pins:
 
 - **The SQLite path contract** (`src/lib/db-path.test.ts`) — relative
   `file:` URLs resolve against `prisma/schema.prisma` (so
@@ -211,7 +211,13 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
   format gate's exact "Enter a valid quantity, like 2, 1.5, or 1/2" copy,
   the edit panel's `?? "ok"` condition init, the chip's unconditional
   "qty" label, and the detail panel's raw (blank-when-empty) quantity
-  value — so the measured quirks cannot be silently "fixed".
+  value — plus the r26 button-row + detail-heading chrome: the create
+  modal's Cancel at the live's base 16px font (NO text-sm; the bordered
+  Cancel is the flex-stretch row's 42px tallest child) and the supply
+  detail H2 as a plain block (the NEW badge inline at 18px, ml-2 gap).
+  `project-fidelity.test.ts` (r26) pins the project-side twins of both
+  contracts — the project-modal Cancel/row and the project detail H2 /
+  badge — so the measured quirks cannot be silently "fixed".
 - **Boundary contracts** (`validation.test.ts`) — photo data-URL caps
   (client 300 KB ↔ server 400k chars), the Other/Custom free-form
   subcategory flow (live parity: the pickers are the vocabulary guard, the
