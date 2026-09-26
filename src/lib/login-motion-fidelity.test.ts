@@ -72,10 +72,13 @@ describe("login chrome transition spec (r20-F2a — the live's all 0.25s ease)",
   });
 
   it("every login input carries the Amplify spec (the live's inputs fade focus at 250ms)", () => {
-    expect(login).toContain(`rounded-[4px] border border-[#89949f] bg-transparent px-3 text-sm text-[#0d1a26] placeholder:text-[#9ca3af] focus:border-[#047d95] focus:outline-none focus:ring-2 focus:ring-[#047d95]/30 ${SPEC}`);
+    // r27: the input base classes carry the live's measured font/padding
+    // (px-4 py-2 text-base = 16px/24px on 8px/16px padding) — see
+    // login-fidelity's input-chrome pin for the measurement record.
+    expect(login).toContain(`rounded-[4px] border border-[#89949f] bg-transparent px-4 py-2 text-base text-[#0d1a26] placeholder:text-[#9ca3af] focus:border-[#047d95] focus:outline-none focus:ring-2 focus:ring-[#047d95]/30 ${SPEC}`);
     // the password variant (rounded-l only — the eye toggle continues the
     // group's border) carries the same measured spec
-    expect(login).toContain(`rounded-l-[4px] border border-[#89949f] bg-transparent px-3 text-sm text-[#0d1a26] placeholder:text-[#9ca3af] focus:border-[#047d95] focus:outline-none focus:ring-2 focus:ring-[#047d95]/30 ${SPEC}`);
+    expect(login).toContain(`rounded-l-[4px] border border-[#89949f] bg-transparent px-4 py-2 text-base text-[#0d1a26] placeholder:text-[#9ca3af] focus:border-[#047d95] focus:outline-none focus:ring-2 focus:ring-[#047d95]/30 ${SPEC}`);
   });
 
   it("the eye toggle carries the Amplify spec", () => {

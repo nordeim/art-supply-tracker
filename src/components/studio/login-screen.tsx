@@ -107,13 +107,17 @@ function AmplifyAlert({
   );
 }
 
+/** r27: the live's amplify-input computes 16px/24px on 8px/16px padding
+ * (measured on the live DOM at both viewports); the box height stays the
+ * deterministic h-[42px] — its 24px content box exactly fits the 24px
+ * line the live's 8+24+8+2borders emerges to. */
 const inputClasses =
-  "h-[42px] w-full rounded-[4px] border border-[#89949f] bg-transparent px-3 text-sm text-[#0d1a26] placeholder:text-[#9ca3af] focus:border-[#047d95] focus:outline-none focus:ring-2 focus:ring-[#047d95]/30 transition-all duration-[250ms] ease-[ease]";
+  "h-[42px] w-full rounded-[4px] border border-[#89949f] bg-transparent px-4 py-2 text-base text-[#0d1a26] placeholder:text-[#9ca3af] focus:border-[#047d95] focus:outline-none focus:ring-2 focus:ring-[#047d95]/30 transition-all duration-[250ms] ease-[ease]";
 /** The password variant: the live's Amplify input group rounds the input's
  * LEFT corners only (`4px 0px 0px 4px`) — the 50px eye toggle continues the
  * group's #89949f border and rounds the right side. */
 const passwordInputClasses =
-  "h-[42px] w-full rounded-l-[4px] border border-[#89949f] bg-transparent px-3 text-sm text-[#0d1a26] placeholder:text-[#9ca3af] focus:border-[#047d95] focus:outline-none focus:ring-2 focus:ring-[#047d95]/30 transition-all duration-[250ms] ease-[ease]";
+  "h-[42px] w-full rounded-l-[4px] border border-[#89949f] bg-transparent px-4 py-2 text-base text-[#0d1a26] placeholder:text-[#9ca3af] focus:border-[#047d95] focus:outline-none focus:ring-2 focus:ring-[#047d95]/30 transition-all duration-[250ms] ease-[ease]";
 const labelClasses = "mb-2 block text-base font-normal text-[#304050]";
 
 export function LoginScreen() {
@@ -255,9 +259,16 @@ export function LoginScreen() {
         onClick={onToggle}
         role="switch"
         aria-checked={shown}
-        aria-label={shown ? "Hide password" : "Show password"}
+        aria-label="Show password"
         className="flex h-[42px] w-[50px] shrink-0 items-center justify-center rounded-r-[4px] border-y border-r border-[#89949f] text-[#0d1a26] ast-amplify-button transition-all duration-[250ms] ease-[ease] hover:text-[#c5cdd6]"
       >
+        {/* r27: the live keeps the accessible name CONSTANT ("Show
+         * password") — role=switch + aria-checked carries the state —
+         * and announces the flip through this sr-only aria-live span
+         * (measured: "Password is hidden" / "Password is shown"). */}
+        <span className="sr-only" aria-live="polite">
+          {shown ? "Password is shown" : "Password is hidden"}
+        </span>
         {shown ? (
           <EyeOff aria-hidden="true" className="h-4 w-4" />
         ) : (
@@ -315,7 +326,19 @@ export function LoginScreen() {
          * corners, 1px #5B3FD3 border, solid #120724 surface, the soft
          * Amplify shadow, zero card padding (the form carries it). */}
         <section className="w-full" aria-label="Account access">
-          <div className="mx-auto w-full max-w-[480px] border border-[#5B3FD3] bg-[#120724] shadow-[0_2px_6px_rgba(13,26,38,0.15)] pb-3">
+          {/* r27: below md the live's reset EMAIL view sizes its card to
+           * the content (307px at 390 — the h3 "Reset Password" at 32px
+           * drives the max-content) and centers it; every other view (and
+           * md+ everywhere) renders the card full-width. The twin copies
+           * disagree on the reset email view — the single copy renders
+           * both behaviors with w-fit md:w-full. The mobile cap 357 is
+           * the live's own content-driven card width (see the fidelity
+           * pin for the 0.5px-centering measurement record). */}
+          <div
+            className={`mx-auto max-w-[357px] md:max-w-[480px] border border-[#5B3FD3] bg-[#120724] shadow-[0_2px_6px_rgba(13,26,38,0.15)] pb-3 ${
+              mode === "reset" ? "w-fit md:w-full" : "w-full"
+            }`}
+          >
             {mode !== "reset" && mode !== "reset-confirm" ? (
               <>
                 <div
@@ -477,7 +500,7 @@ export function LoginScreen() {
                 </form>
               </>
             ) : mode === "reset" ? (
-              <form onSubmit={onResetSubmit} className="space-y-4 px-8 pt-8 pb-5">
+              <form onSubmit={onResetSubmit} className="space-y-4 p-8">
                 {/* The live's Amplify heading renders #0d1a26 on the
                  * #120724 card — dark on dark, an authentic quirk kept
                  * deliberately (do not "fix" the contrast). */}
@@ -522,7 +545,7 @@ export function LoginScreen() {
                 </div>
               </form>
             ) : (
-              <form onSubmit={onResetConfirmSubmit} className="space-y-4 px-8 pt-8 pb-5">
+              <form onSubmit={onResetConfirmSubmit} className="space-y-4 p-8">
                 {/* The live's confirmation view (after "Send code" with a
                  * valid email): Code + New Password + Confirm + Submit +
                  * Resend Code — same dark-on-dark heading quirk. */}

@@ -97,7 +97,7 @@ describe("login card chrome (live Amplify geometry)", () => {
 
   it("pads the auth form like the live (mt-3 px-8 pt-8 pb-8) with a 12px card tail", () => {
     expect(login).toMatch(/<form[^>]*className="[^"]*mt-3[^"]*px-8[^"]*pt-8[^"]*pb-8[^"]*"/);
-    expect(login).toMatch(/pb-3"/);
+    expect(login).toMatch(/pb-3 (\$\{|")/); // the card tail (r27: the className is now a template literal on the reset-email view)
   });
 
   it("renders equal-width 50px text-base tabs", () => {
@@ -125,9 +125,19 @@ describe("login card chrome (live Amplify geometry)", () => {
     // 70% blend), and TYPED text rgb(13,26,38) = #0d1a26 — effectively
     // invisible on the #120724 card, the live's Amplify-on-dark quirk
     // (pixel-verified by typing into the live's field). The clone keeps its
-    // focus ring (documented a11y hardening; the live has none). */
-    expect(login).toMatch(/border border-\[#89949f\] bg-transparent px-3 text-sm text-\[#0d1a26\] placeholder:text-\[#9ca3af\]/);
+    // focus ring (documented a11y hardening; the live has none).
+    //
+    // r27: the live's amplify-input computes font 16px/24px with padding
+    // 8px 16px (measured on the live DOM at BOTH viewports, sign-in,
+    // create, and reset views — the box height emerges to 42px from
+    // 8+24+8+2borders). The clone's text-sm (14px/20px) + px-3 (12px)
+    // rendered the typed text and placeholders 2px smaller with a 4px
+    // narrower inset — capture-visible in the input rows. The class pins
+    // px-4 py-2 text-base (with the deterministic h-[42px], whose content
+    // box 24px exactly fits the 24px line). */
+    expect(login).toMatch(/border border-\[#89949f\] bg-transparent px-4 py-2 text-base text-\[#0d1a26\] placeholder:text-\[#9ca3af\]/);
     expect(login).not.toContain("#89949b");
+    expect(login).not.toMatch(/border-\[#89949f\] bg-transparent[^"`]*text-sm/);
   });
 
   it("gives the eye the live's input-segment chrome", () => {
@@ -138,6 +148,27 @@ describe("login card chrome (live Amplify geometry)", () => {
     expect(login).toMatch(
       /w-\[50px\][^>]*rounded-r-\[4px\] border-y border-r border-\[#89949f\]/,
     );
+  });
+
+  it("keeps the eye's accessible name CONSTANT (r27: the live never relabels)", () => {
+    // Measured on the live DOM (both eye toggles, both states): the
+    // amplify-field__show-password button carries aria-label="Show
+    // password" whether hidden or shown — role=switch + aria-checked
+    // carries the state, the name never flips. The clone's "Hide
+    // password" relabel was an invented affordance.
+    expect(login).toMatch(/role="switch"[\s\S]{0,220}?aria-label="Show password"/);
+    expect(login).not.toContain("Hide password");
+  });
+
+  it("announces the eye's visibility state via the live's sr-only aria-live span (r27)", () => {
+    // Measured on the live DOM: each eye toggle renders
+    // <span class="amplify-visually-hidden" aria-live="polite"> with the
+    // text "Password is hidden" / "Password is shown" (flips on toggle —
+    // verified by clicking the live's eye). The sr-only span precedes the
+    // icon. Screen readers announce the flip; the pixels never change.
+    expect(login).toMatch(/className="sr-only" aria-live="polite"/);
+    expect(login).toContain("Password is shown");
+    expect(login).toContain("Password is hidden");
   });
 
   it("rounds the password input on the left only (the eye caps the right)", () => {
@@ -194,8 +225,48 @@ describe("reset password view (live Amplify forgot flow)", () => {
     expect(login).toContain("text-[#0d1a26]");
   });
 
-  it("pads the reset form like the live (no tabs, px-8 pt-8 pb-5)", () => {
-    expect(login).toMatch(/<form[^>]*className="[^"]*px-8[^"]*pt-8[^"]*pb-5[^"]*"/);
+  it("pads the reset form like the live (no tabs, p-8 — r27 re-measure)", () => {
+    // r27 re-measure: the live's reset forms (email view AND confirmation
+    // view) compute padding 32px on ALL four sides at BOTH viewports
+    // (fieldset margin 0, padding 0 — measured three independent times).
+    // The r9 pin's pb-5 (20px) bottom left the clone's reset cards 12px
+    // short (form height 471 vs the live's 483 on the confirmation view).
+    expect(login).toMatch(/<form[^>]*className="[^"]*space-y-4 p-8[^"]*"/);
+    expect(login).not.toMatch(/space-y-4[^"]*pb-5/);
+  });
+
+  it("sizes the reset EMAIL card to its content below md (r27: the live's shrink-to-fit)", () => {
+    // Measured on the live at 390x844: the reset EMAIL view's card
+    // (border+bg) is content-sized at 307px wide, centered in the 358px
+    // auth column (grid + justify-self: center on the live) — the h3
+    // "Reset Password" at 32px drives the max-content (241 + 64 padding),
+    // so the email input and Send code render 241px, not the full-width
+    // 292px. At md+ the DESKTOP copy renders the form full-width (478px
+    // in the 480px card) — the twin copies disagree, and the clone's
+    // single copy renders BOTH via w-fit md:w-full. The reset
+    // CONFIRMATION view stays full-width at every viewport (measured:
+    // 355px form at mobile) — only the email view shrinks.
+    expect(login).toMatch(/mode === "reset" \? "w-fit md:w-full" : "w-full"/);
+    // exactly ONE conditional-shrink ternary — the confirmation view and
+    // the sign-in/create card never shrink (the comment above mentions
+    // w-fit too, so count the ternary, not the bare token)
+    expect((login.match(/\? "w-fit md:w-full" : "w-full"/g) ?? []).length).toBe(1);
+  });
+
+  it("caps the mobile card at the live's content-driven 357px (r27: the 0.5px centering)", () => {
+    // Measured on the live: below md the auth card is CONTENT-SIZED at
+    // 357px (its own max-content), so at 390 the 358px column centers it
+    // with 0.5px margins each side (card x16.5, form x17.5, inputs
+    // x49.5 — the clone's w-full card rendered x16/49 and shifted every
+    // 1px border and glyph edge by a half pixel, a measurable AA residual
+    // concentrated in the input rows). At viewports where the column is
+    // NARROWER than the intrinsic (375 -> 343) the live's card fills the
+    // column — replicated by the max-w cap over w-full. At md+ the cap
+    // lifts to the desktop copy's measured 480px (both sides render
+    // 480.00 @ x174.00 y323.50 byte-exact). The 357 held across the
+    // sign-in, sign-up, and confirmation views (form 355 + 2px border).
+    expect(login).toMatch(/mx-auto max-w-\[357px\] md:max-w-\[480px\]/);
+    expect(login).not.toMatch(/w-full max-w-\[480px\]/);
   });
 
   it("transitions to the confirmation view on Send code (no static notice)", () => {
