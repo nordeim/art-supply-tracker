@@ -171,7 +171,7 @@ not secret — rotate before any public deployment).
 ### Testing Strategy
 
 Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
-`src/**/*.test.ts`). The suite (358 tests) pins:
+`src/**/*.test.ts`). The suite (362 tests) pins:
 
 - **The SQLite path contract** (`src/lib/db-path.test.ts`) — relative
   `file:` URLs resolve against `prisma/schema.prisma` (so
@@ -276,7 +276,15 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
   no support notice), the content-width 35px link buttons, the
   native-validation attribute set, the sticky community header +
   scroll-container split (the sticky `top-4` displacement is load-bearing),
-  and the absence of chat auto-scroll (the live has none).
+  and the absence of chat auto-scroll (the live has none) — plus the r27
+  login chrome: the inputs' 16px/24px font on 8px/16px padding
+  (px-4 py-2 text-base, negative-pinned against text-sm/px-3), the eye's
+  CONSTANT "Show password" accessible name + the sr-only aria-live
+  "Password is hidden/shown" announcement span, the reset forms' uniform
+  p-8, the reset EMAIL view's content-sized card (the
+  mode==="reset" w-fit ternary), and the below-md 357px card cap
+  (max-w-[357px] md:max-w-[480px] — the live's content-driven card and
+  its 0.5px centering at 390).
 - **Drawer-scrim fidelity** (`drawer-fidelity.test.ts`) — file-content pins
   on the live's measured mobile chrome: both drawer scrims render the
   live's shared `fixed inset-0 z-40 bg-black/60 md:hidden` shape — no
