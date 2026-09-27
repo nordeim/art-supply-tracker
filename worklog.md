@@ -95,3 +95,52 @@ Work Log:
 Stage Summary:
 - r28 fully delivered: remote main @ 2fe1c2a, working tree clean, no new branches (main only), live site left pristine (0/0/15)
 - All gates green at push time: lint, typecheck, vitest 371/371, build, E2E 28/28, smoke 23/23, production CSS 151,282 bytes / 0 forced-colors / 0 selection
+
+---
+Task ID: 6
+Agent: main (Super Z, r29 session)
+Task: git pull refresh + docs review + baseline gates
+
+Work Log:
+- git pull: 2fe1c2a..91e1bb8 (the user committed session_50.md — the raw r28 narration — and this worklog.md as repo files)
+- Read session_50.md (the r28 continuation narration) + the repo worklog; core docs verified current at r28-complete
+- Baseline gates on the pulled tree: lint, typecheck, vitest 371/371 (deps + db intact; no build needed — pull brought only .md files)
+- Dev server (the r28 double-fork daemon) still running and serving
+
+Stage Summary:
+- Project at r28-complete; ready for the r29 survey targeting session_49's queued probes: the 480-768 viewport band and the prod-mode capture battery
+
+---
+Task ID: 7
+Agent: main (Super Z, r29 session)
+Task: r29 survey (480-768 band + prod-mode battery)
+
+Work Log:
+- Built the standalone prod server (port 3001; single-invocation runs — the sandbox reaper kills it between invocations, so each battery ran server+captures in one Bash call)
+- PROD-MODE BATTERY: login 1280/390 and dashboard 1280/390, dev vs prod: 0.000% on all four probes (a first-pass 2.88%/4.27% was a first-load transient; clean re-captures byte-identical, stable) — dev/prod render equivalence CONFIRMED, the r28 badge fix was the only gap
+- BAND SWEEP on the live login (480/560/640/720/768 + regression checks 390/414/1024/1280): the live's auth card is FIXED 480 from viewport 480 up; the clone's r27 md:max-w-[480px] rendered 357 across 480-767 (10.17-17.42% diffs) and collapsed the 1fr track to 284 at 768 (text rewrap h416 vs 244, grid 877 vs 705, card 142px low — 38.93%)
+- Traced the live's mechanism: the inner Amplify grid's 480px track at min-width:480 supplies the card's min-content — below md it raises the implicit track to max(480, column) (overflowing at exactly 480, card right edge x496), at md+ it holds the 1fr track at 480
+- Found the live's overflow clip by CSSOM rule-sweep: `html, body, #root { overflow-x: hidden }` — scrollWidth stays at the viewport width; the clone had overflow-x: visible
+
+Stage Summary:
+- TWO findings: r29-F1 (HIGH) the card's fixed-480-from-480 handoff; r29-F2 (MEDIUM) the html/body overflow-x clip
+- The prod-mode probe answered CLEAN (no action)
+
+---
+Task ID: 8
+Agent: main (Super Z, r29 session)
+Task: r29 TDD remediation + verification + screenshots + docs
+
+Work Log:
+- RED: new src/lib/viewport-fidelity.test.ts (3 pins: the card pair, the layout-grid template UNCHANGED, the globals overflow-x rule) + the r27 card-cap pin in login-fidelity.test.ts re-measured — exactly 3 intended failures
+- GREEN: login-screen.tsx md:max-w-[480px] -> min-[480px]:min-w-[480px] min-[480px]:max-w-[480px]; globals.css the live's `html, body { overflow-x: hidden }`
+- Gates: vitest 374/374, lint/typecheck/build clean; production CSS 151,432 bytes (r28's 151,282 + 150), 0 forced-colors / 0 selection
+- Browser verification: every band metric byte-exact vs the live (480: 480@x16 track 480px scrollW 480; 560: 480@x40 track 528; 768: grid 480px 420px, text h244, grid y70 h705, card (16,346); 1024/1280 at x46/x174; 390/414 at 357@x16.5/x28.5)
+- Paired band captures: 0.002-0.003% at every viewport (was 10.17-38.93%); residuals = 2 sub-perceptual AA pixels (max delta 10)
+- Steady-state regression: login 0.001%/0.012% (r28 records hold), dashboard 0.307%/0.168% (profiled to the two documented data-only bands); a mixed-state capture false-alarm (7.9%) was traced to an auth-error alert state and re-captured clean
+- E2E 28/28 + smoke 23/23 on a clean re-seeded db
+- All 9 reference screenshots re-shot with pre-capture state checks (caught and fixed two drawer-state mistakes mid-shoot)
+- Docs: session_51.md (new), AGENTS.md (374 + r29 quirks + card-cap re-measure), CLAUDE.md/README.md (374 + r29 row), PAD (R29 entry + 346 unit + ledger), SKILL.md (description/project_state/Appendix A/baselines); .env.example verified
+
+Stage Summary:
+- r29 complete in code and docs; 374 tests, all gates green; the live left pristine (0/0/15)
