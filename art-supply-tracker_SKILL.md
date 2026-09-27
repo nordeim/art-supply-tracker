@@ -1,9 +1,9 @@
 ---
 name: art-supply-tracker
-description: "AST Studio — a pixel-perfect, behavior-exact clone of studiobeta.artsupplytracker.com: Next.js 16 + React 19 + Tailwind v4 CSS-first + Prisma/SQLite + Server Actions + scrypt cookie auth, verified by 362 vitest + 28 Playwright E2E specs and 27 rounds of live-site parity audits"
+description: "AST Studio — a pixel-perfect, behavior-exact clone of studiobeta.artsupplytracker.com: Next.js 16 + React 19 + Tailwind v4 CSS-first + Prisma/SQLite + Server Actions + scrypt cookie auth, verified by 371 vitest + 28 Playwright E2E specs and 28 rounds of live-site parity audits"
 version: 1.0.0
-last_updated: 2026-09-26
-project_state: "r27 login-chrome pass verified (362 vitest + 28 E2E green); visual + functional parity with the live site re-confirmed (the create modals at 390x844 byte-exact, the duplicate-email alert byte-exact, the steady-state battery 0.22-0.97% mobile / 0.35-0.54% desktop); the login inputs' 16px/24px-on-8/16px font contract, the eye toggle's constant-name + sr-only aria-live contract, the reset EMAIL view's content-sized card, the reset forms' uniform p-8, and the below-md 357px card cap (the r10-accepted 0.5px centering reproduced byte-exact) all pinned; the paired-capture state-verification rule hardened"
+last_updated: 2026-09-27
+project_state: "r28 asset-fidelity + rail-type-scale pass verified (371 vitest + 28 E2E green); visual + functional parity with the live site re-confirmed (login-desktop 0.00% / login-mobile 0.01% — the steady-state battery's accepted bands explained and eliminated); the static-asset image contract (every public-asset next/image carries unoptimized — the optimizer's q75 re-encode drifts against the live's original CDN bytes), the rail cards' two type scales (the drawer's copy at text-xs/10px, the view's copy at text-sm/11px, the Partners title's no-leading-snug counter-example), the link buttons' emergent 21px line pair (py-1.5 + leading-normal, h-[35px] negative-pinned), and devIndicators: false all pinned in three new test files (image-fidelity, rail-card-fidelity, dev-chrome-fidelity)"
 audience: "engineers + AI agents extending, debugging, onboarding, or replicating the Art Supply Tracker clone"
 tags: [nextjs16, react19, tailwind-v4, prisma, sqlite, server-actions, playwright, vitest, parity-clone, aws-amplify-ui]
 ---
@@ -43,7 +43,7 @@ tags: [nextjs16, react19, tailwind-v4, prisma, sqlite, server-actions, playwrigh
 18. [§18 Z-Index Layer Map](#18-z-index-layer-map)
 19. [§19 Color Reference (Complete)](#19-color-reference-complete)
 20. [§20 The Complete TypeScript Interface Reference](#20-the-complete-typescript-interface-reference)
-- [Appendix A — Parity Audit History (r1–r27)](#appendix-a--parity-audit-history-r1r27)
+- [Appendix A — Parity Audit History (r1–r28)](#appendix-a--parity-audit-history-r1r28)
 - [Appendix B — The Live-Site Validation Method](#appendix-b--the-live-site-validation-method)
 - [Quick Reference Card](#quick-reference-card)
 
@@ -468,7 +468,7 @@ StockFilter: all | low | out      // Low = low OR critical; Out = critical only
 
 ---
 
-## Appendix A — Parity Audit History (r1–r27)
+## Appendix A — Parity Audit History (r1–r28)
 
 Every round: fresh live recon → findings → TDD remediation → all gates → docs aligned. The full narrative lives in `docs/session_*.md`; the one-line ledger:
 
@@ -497,8 +497,9 @@ Every round: fresh live recon → findings → TDD remediation → all gates →
 - **r25** the sign-up pre-submission state machine (blur-gated per-field validation, the disabled gray chrome, the cursor contract) + the error/reset views pixel-baselined on three engines.
 - **r26** the modal button-row + detail-heading chrome (the create modals' Cancel at 16px with the flex-stretch 42px row; the detail H2s as plain blocks with inline 18px NEW badges) + the twin-copy state-instance split documented.
 - **r27** the login-chrome pass (the inputs' 16px/24px-on-8/16 metrics, the eye's constant name + sr-only aria-live announcement, the reset email view's content-sized card, the reset forms' p-8, the 357px below-md card cap) + the paired-capture state-verification rule (scrim DOM presence, drawer translate-x, scrollY, visible h1 — offsetParent is null for fixed elements).
+- **r28** the asset-fidelity + rail-type-scale pass (three straggler next/image usages still serving the optimizer's q75 re-encode → unoptimized — byte-identity with the live's CDN assets is the contract; the inspiration-view Partners body at text-[11px]; the drawer's Partners title without leading-snug — the live's own Quote/Art-History counter-examples kept; the link buttons' emergent lh-21px chrome; devIndicators: false) — login-desktop 0.00% / login-mobile 0.01%.
 
-Current baselines: pixel diffs 0.148–1.144% per pair on Chromium (the documented accepted set), fresh WebKit baselines 0.87–3.15% (symmetric engine noise), error/reset views 0.125–0.352% Chromium / 1.56–2.19% WebKit, 362 vitest + 28 E2E, 23/23 smoke (the r27 post-fix login captures: desktop 0.04%, mobile 0.14%).
+Current baselines: pixel diffs 0.148–1.144% per pair on Chromium (the documented accepted set), fresh WebKit baselines 0.87–3.15% (symmetric engine noise), error/reset views 0.125–0.352% Chromium / 1.56–2.19% WebKit, 371 vitest + 28 E2E, 23/23 smoke (the r28 post-fix captures: login-desktop 0.00% / login-mobile 0.01%; the steady-state battery 0.09–0.20% desktop / 0.09–0.17% mobile — the long-carried accepted bands explained by the optimizer re-encodes and eliminated; the two data-only residuals documented: the live's sixth chat message, the account-email glyph row).
 
 ## Appendix B — The Live-Site Validation Method
 
