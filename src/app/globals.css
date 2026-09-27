@@ -189,6 +189,22 @@
   * {
     @apply border-border;
   }
+  /*
+   * r29 viewport-band parity: the live's global overflow clip. Its CSSOM
+   * carries `html, body, #root { overflow-x: hidden }` (found by rule-sweep
+   * on the live login). The clip keeps the login layout's exactly-480
+   * track overflow (the card's right edge lands at x496 against the 480
+   * viewport — the live's own fixed-480-from-480 card) off the scrollbar:
+   * documentElement.scrollWidth stays at the viewport width. The clone has
+   * no #root mount (Next.js app router attaches to body), so html + body
+   * carry the rule. Vertical scrolling is untouched — the live's own
+   * uncapped desktop shell scrolls the same clipped document (r21's
+   * wheel-verified 982px page). Pinned by viewport-fidelity.test.ts.
+   */
+  html,
+  body {
+    overflow-x: hidden;
+  }
   body {
     @apply bg-background text-foreground;
     -webkit-font-smoothing: antialiased;

@@ -336,7 +336,7 @@ export function LoginScreen() {
            * the live's own content-driven card width (see the fidelity
            * pin for the 0.5px-centering measurement record). */}
           <div
-            className={`mx-auto max-w-[357px] md:max-w-[480px] border border-[#5B3FD3] bg-[#120724] shadow-[0_2px_6px_rgba(13,26,38,0.15)] pb-3 ${
+            className={`mx-auto max-w-[357px] min-[480px]:min-w-[480px] min-[480px]:max-w-[480px] border border-[#5B3FD3] bg-[#120724] shadow-[0_2px_6px_rgba(13,26,38,0.15)] pb-3 ${
               mode === "reset" ? "w-fit md:w-full" : "w-full"
             }`}
           >

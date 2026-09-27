@@ -261,18 +261,28 @@ describe("reset password view (live Amplify forgot flow)", () => {
   });
 
   it("caps the mobile card at the live's content-driven 357px (r27: the 0.5px centering)", () => {
-    // Measured on the live: below md the auth card is CONTENT-SIZED at
+    // Measured on the live: below 480 the auth card is CONTENT-SIZED at
     // 357px (its own max-content), so at 390 the 358px column centers it
     // with 0.5px margins each side (card x16.5, form x17.5, inputs
     // x49.5 — the clone's w-full card rendered x16/49 and shifted every
     // 1px border and glyph edge by a half pixel, a measurable AA residual
     // concentrated in the input rows). At viewports where the column is
     // NARROWER than the intrinsic (375 -> 343) the live's card fills the
-    // column — replicated by the max-w cap over w-full. At md+ the cap
-    // lifts to the desktop copy's measured 480px (both sides render
-    // 480.00 @ x174.00 y323.50 byte-exact). The 357 held across the
-    // sign-in, sign-up, and confirmation views (form 355 + 2px border).
-    expect(login).toMatch(/mx-auto max-w-\[357px\] md:max-w-\[480px\]/);
+    // column — replicated by the max-w cap over w-full. The 357 held across
+    // the sign-in, sign-up, and confirmation views (form 355 + 2px border).
+    //
+    // r29 re-measure: from viewport 480 up the live's card is FIXED at
+    // 480 (measured 480 @ x16.5/28.5/16/40/80/120 at
+    // 390/414/480/560/640/720 and 480 @ x16 y346 at 768 where the 1fr
+    // track expands to the card's min-content) — the r27 `md:max-w`
+    // handoff was correct only at the two pinned viewports (390, 1280);
+    // the 480-767 band and exactly-768 diverged (38.93% at 768). The
+    // min-[480px] pair pins the whole band; see
+    // viewport-fidelity.test.ts for the full measurement record.
+    expect(login).toMatch(
+      /mx-auto max-w-\[357px\] min-\[480px\]:min-w-\[480px\] min-\[480px\]:max-w-\[480px\]/,
+    );
+    expect(login).not.toMatch(/md:max-w-\[480px\]/);
     expect(login).not.toMatch(/w-full max-w-\[480px\]/);
   });
 
