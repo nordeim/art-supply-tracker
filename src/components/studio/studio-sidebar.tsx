@@ -268,7 +268,7 @@ function SidebarContent({
                 <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ast-lavender">
                   Partners
                 </p>
-                <p className="text-xs font-semibold leading-snug text-[#8D5CFF]">
+                <p className="text-xs font-semibold text-[#8D5CFF]">
                   {partners.title}
                 </p>
                 <p className="mt-1 text-[10px] leading-snug text-ast-body/55">{partners.body}</p>

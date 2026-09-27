@@ -8,6 +8,10 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: false,
   },
   reactStrictMode: true,
+  // r28: the dev-tools indicator badge (36x36, fixed bottom-left) renders
+  // into every dev-mode capture and pixel-diffs against the live, which
+  // carries no badge. The dev overlay still works on runtime errors.
+  devIndicators: false,
 };
 
 export default nextConfig;

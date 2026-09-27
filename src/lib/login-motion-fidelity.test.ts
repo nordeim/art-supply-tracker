@@ -96,8 +96,11 @@ describe("login chrome transition spec (r20-F2a — the live's all 0.25s ease)",
   });
 
   it("the link buttons (Forgot / Back to Sign In / Resend Code) carry the Amplify spec", () => {
+    // r28: the link chrome now carries the live's own padding + line pair
+    // (py-1.5 6px, leading-normal 21px — the h-[35px] cap centered a 20px
+    // line at a half-pixel and rasterized the label 1px low).
     const links = login.match(
-      /flex h-\[35px\] items-center justify-center border border-transparent px-3 text-sm font-bold text-\[#047d95\][^"]*/g,
+      /inline-flex items-center justify-center border border-transparent px-3 py-1\.5 text-sm font-bold leading-normal text-\[#047d95\][^"]*/g,
     ) ?? [];
     expect(links.length).toBeGreaterThanOrEqual(3);
     for (const cls of links) {

@@ -196,8 +196,15 @@ describe("login card chrome (live Amplify geometry)", () => {
   it("renders the forgot link at the live's 35px content-width teal block", () => {
     // Measured post-hydration on the live: 182x35 at (643,797), centered —
     // the r8 pin (51px full-width) was a pre-hydration artifact.
+    // r28: the 35px height now emerges from the live's own Amplify link
+    // chrome (py-1.5 + leading-normal's 21px line + 2px borders = 35) —
+    // the h-[35px] cap kept the box right but centered a 20px line at a
+    // HALF-pixel offset (843.5 vs the live's integer 843), rasterizing
+    // the label one pixel lower on every link button.
     expect(login).not.toContain("h-[51px]");
-    expect(login).toMatch(/h-\[35px\][^>]*text-\[#047d95\]/);
+    expect(login).not.toContain("h-[35px]");
+    expect(login).toMatch(/py-1\.5[^>]*text-\[#047d95\]/);
+    expect(login).toMatch(/leading-normal[^>]*text-\[#047d95\]/);
   });
 });
 
@@ -400,16 +407,34 @@ describe("reset-password confirmation flow (live Amplify, r9)", () => {
   });
 });
 
-describe("link buttons are content-width and centered (live 35px, r9)", () => {
-  it("renders Forgot as a 35px content-width centered link", () => {
+describe("link buttons are content-width and centered (live 35px, r9; chrome r28)", () => {
+  it("renders Forgot as a 35px content-width centered link with the live's Amplify chrome", () => {
+    // r28: the box stays 182x35 but the height now EMERGES from the live's
+    // own chrome (py-1.5 6px + leading-normal 21px line + 2px borders) —
+    // see the r28 note on the forgot-link pin above.
     expect(login).not.toContain("h-[51px]");
-    expect(login).toMatch(/h-\[35px\][^>]*text-\[#047d95\]/);
+    expect(login).not.toContain("h-[35px]");
+    expect(login).toMatch(/py-1\.5[^>]*text-\[#047d95\]/);
     expect(login).toMatch(/justify-center[\s\S]{0,300}?Forgot your password\?/);
   });
 
   it("centers Back to Sign In and Resend Code as content-width links", () => {
     expect(login).toMatch(/justify-center[\s\S]{0,400}?Back to Sign In/);
     expect(login).toMatch(/justify-center[\s\S]{0,400}?Resend Code/);
+  });
+
+  it("gives every link button the live's 21px line (leading-normal)", () => {
+    // Measured on the live: every amplify-button--link computes
+    // line-height 21px (1.5 x the 14px label) — the text raster depends
+    // on it (a 20px line centers at a half-pixel and drops 1px).
+    const links = login.match(
+      /inline-flex items-center justify-center border border-transparent px-3 py-1\.5 text-sm font-bold leading-normal text-\[#047d95\][^"]*/g,
+    ) ?? [];
+    expect(links.length).toBeGreaterThanOrEqual(3);
+    for (const cls of links) {
+      expect(cls).toContain("leading-normal");
+      expect(cls).toContain("py-1.5");
+    }
   });
 });
 

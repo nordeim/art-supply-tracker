@@ -231,7 +231,7 @@ export function InspirationView({
                     {partner.title}
                   </p>
                   {partner.body && (
-                    <p className="mt-1 text-[10px] leading-snug text-ast-body/55">
+                    <p className="mt-1 text-[11px] leading-snug text-ast-body/55">
                       {partner.body}
                     </p>
                   )}

@@ -428,6 +428,7 @@ function StudioHeader({
             width={1068}
             height={269}
             priority
+            unoptimized
             className="h-10 md:h-12 lg:h-14 w-auto max-w-[320px] object-contain"
           />
         </div>

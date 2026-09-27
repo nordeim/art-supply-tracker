@@ -317,6 +317,7 @@ export function LoginScreen() {
               alt="Listed with ArtDeadline.Com"
               width={280}
               height={80}
+              unoptimized
               className="h-auto max-h-20 w-auto"
             />
           </a>
@@ -491,7 +492,7 @@ export function LoginScreen() {
                           clearValidation();
                           setMode("reset");
                         }}
-                        className="flex h-[35px] items-center justify-center border border-transparent px-3 text-sm font-bold text-[#047d95] ast-amplify-button transition-all duration-[250ms] ease-[ease]"
+                        className="inline-flex items-center justify-center border border-transparent px-3 py-1.5 text-sm font-bold leading-normal text-[#047d95] ast-amplify-button transition-all duration-[250ms] ease-[ease]"
                       >
                         Forgot your password?
                       </button>
@@ -538,7 +539,7 @@ export function LoginScreen() {
                       clearValidation();
                       setMode("signin");
                     }}
-                    className="flex h-[35px] items-center justify-center border border-transparent px-3 text-sm font-bold text-[#047d95] ast-amplify-button transition-all duration-[250ms] ease-[ease]"
+                    className="inline-flex items-center justify-center border border-transparent px-3 py-1.5 text-sm font-bold leading-normal text-[#047d95] ast-amplify-button transition-all duration-[250ms] ease-[ease]"
                   >
                     Back to Sign In
                   </button>
@@ -643,7 +644,7 @@ export function LoginScreen() {
                   <button
                     type="button"
                     onClick={() => {}}
-                    className="flex h-[35px] items-center justify-center border border-transparent px-3 text-sm font-bold text-[#047d95] ast-amplify-button transition-all duration-[250ms] ease-[ease]"
+                    className="inline-flex items-center justify-center border border-transparent px-3 py-1.5 text-sm font-bold leading-normal text-[#047d95] ast-amplify-button transition-all duration-[250ms] ease-[ease]"
                   >
                     Resend Code
                   </button>
