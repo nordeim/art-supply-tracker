@@ -329,7 +329,9 @@ describe("importPayloadSchema", () => {
 
 describe("normalizedImportPayloadSchema", () => {
   // A representative normalized payload (what normalizeImportPayload emits for
-  // a live-app export after the dialect fold).
+  // a live-app export after the dialect fold). r32: the normalizer ALWAYS
+  // emits createdAt/updatedAt/isNew on every item — the fixture carries them
+  // so the gate pins the full stored contract.
   const normalized = {
     projects: [
       {
@@ -338,6 +340,9 @@ describe("normalizedImportPayloadSchema", () => {
         budget: 100,
         notes: null,
         photos: ["data:image/jpeg;base64,QUJD"],
+        createdAt: "2026-09-29T03:09:00.000Z",
+        updatedAt: "2026-09-29T03:10:00.000Z",
+        isNew: true,
       },
     ],
     supplies: [
@@ -352,6 +357,9 @@ describe("normalizedImportPayloadSchema", () => {
         barcode: null,
         photo: null,
         assignedProjectId: "__imported__0",
+        createdAt: "2026-09-29T03:09:00.000Z",
+        updatedAt: "2026-09-29T03:10:00.000Z",
+        isNew: false,
       },
     ],
   };
@@ -405,6 +413,33 @@ describe("normalizedImportPayloadSchema", () => {
       projects: [{ ...normalized.projects[0], photos }],
     });
     expect(parsed.success).toBe(false);
+  });
+
+  it("retains the r32 timestamp and isNew fields and types them (r32)", () => {
+    // The gate must DECLARE the three fields the normalizer now always
+    // emits (an undeclared field would be stripped from parsed.data, so
+    // the stored contract and the gate contract would drift apart), and
+    // it must refuse mistyped values instead of silently passing them.
+    const parsed = normalizedImportPayloadSchema.safeParse(normalized);
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.data.projects[0].createdAt).toBe("2026-09-29T03:09:00.000Z");
+    expect(parsed.data.projects[0].updatedAt).toBe("2026-09-29T03:10:00.000Z");
+    expect(parsed.data.projects[0].isNew).toBe(true);
+    expect(parsed.data.supplies[0].createdAt).toBe("2026-09-29T03:09:00.000Z");
+    expect(parsed.data.supplies[0].isNew).toBe(false);
+
+    // Mistyped values are refused, not stripped.
+    const badNew = normalizedImportPayloadSchema.safeParse({
+      ...normalized,
+      projects: [{ ...normalized.projects[0], isNew: "yes" }],
+    });
+    expect(badNew.success).toBe(false);
+    const badStamp = normalizedImportPayloadSchema.safeParse({
+      ...normalized,
+      supplies: [{ ...normalized.supplies[0], createdAt: 12345 }],
+    });
+    expect(badStamp.success).toBe(false);
   });
 });
 

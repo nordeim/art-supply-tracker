@@ -435,7 +435,16 @@ export async function sendChatMessage(
 
 export async function importStudioData(
   input: unknown,
-): Promise<ActionResult<{ projects: number; supplies: number }>> {
+): Promise<
+  ActionResult<{
+    projects: number;
+    supplies: number;
+    /** r32: each created row's id + the payload's isNew flag — the client
+     * marks its session-badge registry from exactly these. */
+    createdProjects: Array<{ id: string; isNew: boolean }>;
+    createdSupplies: Array<{ id: string; isNew: boolean }>;
+  }>
+> {
   const user = await requireUser();
   if (!user) return unauthorized();
 
@@ -464,6 +473,11 @@ export async function importStudioData(
     // merging would duplicate every re-imported row. Delete + re-create run
     // inside ONE transaction: a mid-import failure rolls back, so a failed
     // restore never leaves the studio empty.
+    // r32: each create PRESERVES the payload's createdAt/updatedAt (the
+    // live's import keeps the payload's stamps — a crafted stamp round-trips
+    // verbatim); absent/bogus stamps fall back to the DB's now() default.
+    const createdProjects: Array<{ id: string; isNew: boolean }> = [];
+    const createdSupplies: Array<{ id: string; isNew: boolean }> = [];
     await db.$transaction(async (tx) => {
       await tx.supply.deleteMany({ where: { userId: user.id } });
       await tx.project.deleteMany({ where: { userId: user.id } });
@@ -478,15 +492,18 @@ export async function importStudioData(
             budget: project.budget,
             notes: project.notes,
             photos: project.photos.length ? JSON.stringify(project.photos) : null,
+            ...(project.createdAt !== null ? { createdAt: new Date(project.createdAt) } : {}),
+            ...(project.updatedAt !== null ? { updatedAt: new Date(project.updatedAt) } : {}),
           },
         });
         createdProjectIds.push(row.id);
+        createdProjects.push({ id: row.id, isNew: project.isNew });
       }
 
       resolveImportedAssignments(normalized, createdProjectIds);
 
       for (const supply of normalized.supplies) {
-        await tx.supply.create({
+        const row = await tx.supply.create({
           data: {
             userId: user.id,
             name: supply.name,
@@ -499,14 +516,22 @@ export async function importStudioData(
             barcode: supply.barcode,
             photo: supply.photo,
             assignedProjectId: supply.assignedProjectId,
+            ...(supply.createdAt !== null ? { createdAt: new Date(supply.createdAt) } : {}),
+            ...(supply.updatedAt !== null ? { updatedAt: new Date(supply.updatedAt) } : {}),
           },
         });
+        createdSupplies.push({ id: row.id, isNew: supply.isNew });
       }
     });
 
     return {
       ok: true,
-      data: { projects: normalized.projects.length, supplies: normalized.supplies.length },
+      data: {
+        projects: normalized.projects.length,
+        supplies: normalized.supplies.length,
+        createdProjects,
+        createdSupplies,
+      },
     };
   } catch (error) {
     console.error("[import] failed", { userId: user.id, error });

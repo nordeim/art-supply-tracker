@@ -186,6 +186,16 @@ export function StudioApp({
             window.alert(result.error.message);
             return;
           }
+          // r32: the live's import honors the payload's isNew for badge
+          // rendering — items the payload flags as new badge in-session
+          // (isNew:false items never badge). The action returns each created
+          // id with its flag; the session registry marks exactly those.
+          for (const project of result.data.createdProjects) {
+            if (project.isNew) markCreatedThisSession(project.id);
+          }
+          for (const supply of result.data.createdSupplies) {
+            if (supply.isNew) markCreatedThisSession(supply.id);
+          }
           // Re-read both lists so the UI reflects exactly what was stored.
           const [projectsResult, suppliesResult] = await Promise.all([
             (await import("@/actions/studio")).listProjects(),

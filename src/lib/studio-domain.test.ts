@@ -395,10 +395,12 @@ describe("supply detail condition icon (live detail header)", () => {
 });
 
 describe("budget edit-panel value mapping (live edit form)", () => {
-  it("renders an unset budget as 0 in the edit input", () => {
-    // The live edit panel mounts its budget number input with value="0"
-    // when the project has no budget (verified against the deployed app).
-    expect(budgetEditValue(null)).toBe("0");
+  it("renders an unset budget as an empty edit input (r32 re-measure)", () => {
+    // The live edit panel mounts its budget number input EMPTY when the
+    // project has no budget — measured 2026-09-29 against the deployed app
+    // for both imported and UI-created budget-less projects (value="").
+    // (An early-round reading had pinned "0"; the re-measure corrected it.)
+    expect(budgetEditValue(null)).toBe("");
   });
 
   it("renders a set budget verbatim", () => {

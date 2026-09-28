@@ -164,6 +164,16 @@ describe("buildExportPayload", () => {
     expect(payload.supplies[0].barcode).toBe("");
   });
 
+  it("emits an empty string for an absent subcategory (r32)", () => {
+    // Measured on live exports 2026-09-29: a UI-created supply with no
+    // subcategory exports `subcategory: ""` — the live's in-memory model
+    // defaults the picker to "" exactly like budget and barcode, and an
+    // imported bare supply (payload subcategory "") re-exports "" as well.
+    // The clone previously exported null for the absent case.
+    const payload = buildExportPayload([], [supply({ subcategory: null })], NOW);
+    expect(payload.supplies[0].subcategory).toBe("");
+  });
+
   it("emits the live supply field order including imageUrl", () => {
     // Live exports carry `imageUrl: null` between imageKey and createdAt;
     // the clone omits storage-backed owner (no equivalent — privacy) but
@@ -335,6 +345,73 @@ describe("normalizeImportPayload", () => {
       quantity: "0.5",
       condition: null,
     });
+  });
+
+  it("normalizes the payload's timestamps and isNew onto every project (r32)", () => {
+    // Measured on the live 2026-09-29: the live's import PRESERVES the
+    // payload's createdAt/updatedAt (a crafted timestamp came back verbatim
+    // on re-export) and honors the payload's isNew for badge rendering.
+    // The normalizer must therefore always emit the three fields — a valid
+    // ISO string passes through, a bogus one degrades to null (the create
+    // then falls back to the DB default), and a non-boolean isNew is false.
+    const live = {
+      app: "AST Studio",
+      version: 1,
+      projects: [
+        {
+          id: "t1",
+          title: "Timestamped",
+          status: "planned",
+          createdAt: "2026-09-29T03:09:00.000Z",
+          updatedAt: "2026-09-29T03:10:00.000Z",
+          isNew: true,
+        },
+        {
+          id: "t2",
+          title: "Bogus stamps",
+          status: "planned",
+          createdAt: "not-a-date",
+          isNew: "yes",
+        },
+      ],
+      supplies: [],
+    };
+    const normalized = normalizeImportPayload(live, NOW);
+    expect(normalized).not.toBeNull();
+    if (!normalized) return;
+
+    expect(normalized.projects[0].createdAt).toBe("2026-09-29T03:09:00.000Z");
+    expect(normalized.projects[0].updatedAt).toBe("2026-09-29T03:10:00.000Z");
+    expect(normalized.projects[0].isNew).toBe(true);
+    expect(normalized.projects[1].createdAt).toBeNull();
+    expect(normalized.projects[1].updatedAt).toBeNull();
+    expect(normalized.projects[1].isNew).toBe(false);
+  });
+
+  it("normalizes the payload's timestamps and isNew onto every supply (r32)", () => {
+    const live = {
+      app: "AST Studio",
+      version: 1,
+      projects: [],
+      supplies: [
+        {
+          id: "s1",
+          name: "Stamped supply",
+          category: "Paint",
+          quantity: 2,
+          createdAt: "2026-09-29T03:09:00.000Z",
+          updatedAt: "2026-09-29T03:11:00.000Z",
+          isNew: true,
+        },
+      ],
+    };
+    const normalized = normalizeImportPayload(live, NOW);
+    expect(normalized).not.toBeNull();
+    if (!normalized) return;
+
+    expect(normalized.supplies[0].createdAt).toBe("2026-09-29T03:09:00.000Z");
+    expect(normalized.supplies[0].updatedAt).toBe("2026-09-29T03:11:00.000Z");
+    expect(normalized.supplies[0].isNew).toBe(true);
   });
 
   it("accepts live exports whose project ids reference supplies by supplyIds", () => {

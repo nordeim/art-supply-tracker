@@ -383,7 +383,17 @@ describe("import action", () => {
     const result = await studio.importStudioData(livePayload);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.data).toEqual({ projects: 1, supplies: 1 });
+    // r32: the return carries the created ids + the payload's isNew flags
+    // (the client marks the session-badge registry from them) alongside
+    // the counts.
+    expect(result.data.projects).toBe(1);
+    expect(result.data.supplies).toBe(1);
+    expect(result.data.createdProjects).toHaveLength(1);
+    expect(result.data.createdProjects[0].isNew).toBe(false);
+    expect(result.data.createdSupplies).toHaveLength(1);
+    expect(result.data.createdSupplies[0].isNew).toBe(false);
+    expect(result.data.createdProjects[0].id).toMatch(/\S+/);
+    expect(result.data.createdSupplies[0].id).toMatch(/\S+/);
 
     const supplies = await db.supply.findMany({ where: { userId: TEST_USER.id } });
     const liveSupply = supplies.find((s) => name_of(s) === "Live supply");
@@ -456,6 +466,74 @@ describe("import action", () => {
     const frac = supplies.find((s) => s.name === "FracQty");
     expect(frac?.quantity).toBe("0.5");
     expect(frac?.condition).toBeNull();
+  });
+
+  it("preserves the payload's timestamps and honors isNew (r32)", async () => {
+    // Measured on the live 2026-09-29: its import stores the payload's
+    // createdAt/updatedAt (a crafted 03:09 stamp came back verbatim on
+    // re-export) and its in-session badges honor the payload's isNew —
+    // isNew:true items badge immediately after import, isNew:false items
+    // never badge. The clone previously stamped now() on every imported
+    // row (which also inverted the chip order for identical-timestamp
+    // payloads) and ignored isNew entirely.
+    const payload = {
+      app: "AST Studio",
+      version: 1,
+      projects: [
+        {
+          id: "stamp-p",
+          title: "Stamped project",
+          status: "planned",
+          createdAt: "2026-09-29T03:09:00.000Z",
+          updatedAt: "2026-09-29T03:10:00.000Z",
+          isNew: true,
+        },
+        {
+          id: "nostamp-p",
+          title: "Unstamped project",
+          status: "planned",
+          isNew: false,
+        },
+      ],
+      supplies: [
+        {
+          id: "stamp-s",
+          name: "Stamped supply",
+          category: "Paint",
+          quantity: 2,
+          createdAt: "2026-09-29T03:09:00.000Z",
+          updatedAt: "2026-09-29T03:11:00.000Z",
+          isNew: true,
+        },
+      ],
+    };
+
+    const result = await studio.importStudioData(payload);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    // The created rows carry the payload's stamps verbatim.
+    const projects = await db.project.findMany({ where: { userId: TEST_USER.id } });
+    const stamped = projects.find((p) => p.name === "Stamped project");
+    expect(stamped?.createdAt.toISOString()).toBe("2026-09-29T03:09:00.000Z");
+    expect(stamped?.updatedAt.toISOString()).toBe("2026-09-29T03:10:00.000Z");
+    // Absent/bogus stamps fall back to the DB default (now()) — not null.
+    const unstamped = projects.find((p) => p.name === "Unstamped project");
+    expect(unstamped?.createdAt).toBeInstanceOf(Date);
+    expect(Number.isFinite(unstamped?.createdAt.getTime())).toBe(true);
+
+    const supplies = await db.supply.findMany({ where: { userId: TEST_USER.id } });
+    const stampedSupply = supplies.find((s) => s.name === "Stamped supply");
+    expect(stampedSupply?.createdAt.toISOString()).toBe("2026-09-29T03:09:00.000Z");
+    expect(stampedSupply?.updatedAt.toISOString()).toBe("2026-09-29T03:11:00.000Z");
+
+    // The return reports each created id with the payload's isNew flag —
+    // the client's badge marking keys off exactly these.
+    expect(result.data.createdProjects.map((p) => p.isNew)).toEqual([true, false]);
+    expect(result.data.createdSupplies.map((s) => s.isNew)).toEqual([true]);
+    const stampedId = result.data.createdProjects.find((p) => p.isNew)?.id;
+    expect(stampedId).toBe(stamped?.id);
+    expect(result.data.createdSupplies[0].id).toBe(stampedSupply?.id);
   });
 
   it("rejects payloads from other apps", async () => {

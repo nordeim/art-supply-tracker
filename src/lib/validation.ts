@@ -231,6 +231,13 @@ export const normalizedImportPayloadSchema = z.object({
         budget: z.number().min(0).max(1_000_000).nullable(),
         notes: z.string().max(4000).nullable(),
         photos: z.array(z.string().max(MAX_PHOTO_DATA_URL_LENGTH)).max(MAX_PROJECT_PHOTOS),
+        // r32: the normalizer ALWAYS emits the payload's stamps and badge
+        // flag — the gate declares them so the stored contract and the
+        // gate contract cannot drift apart (an undeclared field would be
+        // silently stripped from parsed.data).
+        createdAt: z.string().max(64).nullable(),
+        updatedAt: z.string().max(64).nullable(),
+        isNew: z.boolean(),
       }),
     )
     .max(500),
@@ -249,6 +256,10 @@ export const normalizedImportPayloadSchema = z.object({
         barcode: z.string().max(120).nullable(),
         photo: z.string().max(MAX_PHOTO_DATA_URL_LENGTH).nullable(),
         assignedProjectId: z.string().max(60).nullable(),
+        // r32: same three fields on the supply side.
+        createdAt: z.string().max(64).nullable(),
+        updatedAt: z.string().max(64).nullable(),
+        isNew: z.boolean(),
       }),
     )
     .max(1000),

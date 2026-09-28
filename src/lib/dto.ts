@@ -103,7 +103,8 @@ export interface ExportedSupply {
   id: string;
   name: string;
   category: string;
-  subcategory: string | null;
+  /** Value when set; "" when unset — the live app's picker default (r32). */
+  subcategory: string | "";
   itemType: string | null;
   unit: string | null;
   /** Value when set; "" when unset — the live app's in-memory default. */

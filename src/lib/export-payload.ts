@@ -48,6 +48,11 @@ export interface NormalizedImportProject {
   budget: number | null;
   notes: string | null;
   photos: string[];
+  /** r32: the payload's stamps, preserved verbatim (null → DB default). */
+  createdAt: string | null;
+  updatedAt: string | null;
+  /** r32: the payload's badge flag — honored by the client's session registry. */
+  isNew: boolean;
 }
 
 export interface NormalizedImportSupply {
@@ -61,6 +66,11 @@ export interface NormalizedImportSupply {
   barcode: string | null;
   photo: string | null;
   assignedProjectId: string | null;
+  /** r32: the payload's stamps, preserved verbatim (null → DB default). */
+  createdAt: string | null;
+  updatedAt: string | null;
+  /** r32: the payload's badge flag — honored by the client's session registry. */
+  isNew: boolean;
 }
 
 export interface NormalizedImportPayload {
@@ -109,7 +119,11 @@ function toExportedSupply(supply: SupplyDto, now: number) {
     id: supply.id,
     name: supply.name,
     category: supply.category,
-    subcategory: supply.subcategory,
+    // r32: the live's in-memory model defaults the subcategory picker to
+    // "" (same as budget/barcode) — a UI-created supply with no subcategory
+    // exports `subcategory: ""` (measured 2026-09-29), and an imported bare
+    // supply re-exports "" as well.
+    subcategory: supply.subcategory ?? ("" as const),
     itemType: null,
     unit: null,
     barcode: supply.barcode ?? "",
@@ -225,6 +239,35 @@ function normalizeText(raw: unknown): string | null {
   return trimmed === "" ? null : trimmed;
 }
 
+/**
+ * r32: the payload's timestamps are PRESERVED through import (measured on
+ * the live 2026-09-29 — a crafted stamp came back verbatim on re-export).
+ * Accepts an ISO-ish date string or a finite epoch number; anything else
+ * degrades to null so the create falls back to the DB's now() default.
+ */
+function normalizeTimestamp(raw: unknown): string | null {
+  let ms: number;
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    ms = raw;
+  } else if (typeof raw === "string" && raw.trim() !== "") {
+    const parsed = Date.parse(raw);
+    if (!Number.isFinite(parsed)) return null;
+    ms = parsed;
+  } else {
+    return null;
+  }
+  return new Date(ms).toISOString();
+}
+
+/**
+ * r32: the payload's `isNew` flag is honored by the live's import for
+ * badge rendering — items with `isNew: true` badge in-session after the
+ * import, `false` items never badge. Only an explicit true is true.
+ */
+function normalizeIsNew(raw: unknown): boolean {
+  return raw === true;
+}
+
 function normalizePhotos(raw: unknown): string[] {
   if (!Array.isArray(raw)) return [];
   return raw.filter((p): p is string => typeof p === "string" && p.startsWith("data:"));
@@ -242,6 +285,9 @@ function normalizeImportProject(raw: Record<string, unknown>): NormalizedImportP
     budget,
     notes: normalizeText(raw.notes) ?? normalizeText(raw.description),
     photos,
+    createdAt: normalizeTimestamp(raw.createdAt),
+    updatedAt: normalizeTimestamp(raw.updatedAt),
+    isNew: normalizeIsNew(raw.isNew),
   };
 }
 
@@ -260,6 +306,9 @@ function normalizeImportSupply(raw: Record<string, unknown>): NormalizedImportSu
     barcode: normalizeText(raw.barcode),
     photo,
     assignedProjectId: null, // resolved after projects are keyed (below)
+    createdAt: normalizeTimestamp(raw.createdAt),
+    updatedAt: normalizeTimestamp(raw.updatedAt),
+    isNew: normalizeIsNew(raw.isNew),
   };
 }
 
@@ -285,9 +334,10 @@ export function normalizeImportPayload(
   // Resolve the live app's project→supplyIds relation into our internal
   // supply→assignedProjectId. Imported rows get fresh ids at write time, so
   // old ids are mapped positionally: the live payload's id fields reference
-  // each other, not our new rows. `isNew`, `createdAt`, and `updatedAt` are
-  // intentionally ignored — imported items are re-created fresh (the live
-  // app behaves the same way).
+  // each other, not our new rows. `createdAt`/`updatedAt` are preserved
+  // verbatim (r32 — the live's import keeps the payload's stamps), and
+  // `isNew` rides along for the client's session-badge marking (r32 — the
+  // live's import honors the payload's flag).
   const idToIndex = new Map<string, number>();
   rawSupplies.forEach((s, index) => {
     if (typeof s === "object" && s !== null) {

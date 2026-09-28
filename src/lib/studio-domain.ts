@@ -112,11 +112,13 @@ export const UNASSIGNED_OPTION_EDIT = "— Studio inventory (unassigned) —";
 
 /**
  * Budget value for the edit panel's number input. The live edit form mounts
- * with value="0" when the project has no budget (its state model uses 0 for
- * unset), so the clone renders the same default rather than an empty field.
+ * EMPTY when the project has no budget (measured 2026-09-29 against the
+ * deployed app for both imported and UI-created budget-less projects —
+ * value=""); an early-round reading had pinned "0" and the r32 re-measure
+ * corrected it.
  */
 export function budgetEditValue(budget: number | null): string {
-  return budget === null ? "0" : String(budget);
+  return budget === null ? "" : String(budget);
 }
 
 /**
