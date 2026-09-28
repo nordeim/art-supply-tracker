@@ -144,3 +144,65 @@ Work Log:
 
 Stage Summary:
 - r29 complete in code and docs; 374 tests, all gates green; the live left pristine (0/0/15)
+
+---
+Task ID: 9
+Agent: main (Super Z, r30 session)
+Task: git clone refresh + docs review + baseline gates
+
+Work Log:
+- Cloned https://github.com/nordeim/art-supply-tracker.git @ 9c85541 (main, clean; r29-complete + session log)
+- Cloned https://github.com/nordeim/scandihaven.git (shallow) for tech-stack pattern reference
+- Reviewed AGENTS.md (full 590 lines), CLAUDE.md (full), README.md, PAD §1/§10/revisions R28-R29, SKILL.md metadata + Appendix A baselines, session_51.md (r29 record), session_52.md (r29 narration), repo worklog.md (tasks 1-8)
+- Codebase validation: single route + 15 studio components + 2 action files + 24 lib domain files + 26 test files — matches documented architecture exactly
+- Setup: bun install (862 pkgs), .env from .env.example, db:push + db:seed (1 user, 5 chat, 15 inspo)
+- Baseline gates: lint ✓, typecheck ✓, vitest 374/374 ✓, build ✓
+- Dev server started (setsid daemon, :3000, serving); agent-browser 0.38.1 on PATH
+
+Stage Summary:
+- Project at r29-complete; all gates green on the pulled tree
+- r30 candidates from session_51: sub-390 viewport audit of the studio views (not measured vs live since r11), the twin-copy state split (accepted divergence, out of scope), prod-mode spot-check
+- Next: live-site survey (login + paired sub-390 captures + canonical regression checks)
+
+---
+Task ID: 10
+Agent: main (Super Z, r30 session)
+Task: r30 survey — sub-320px viewport audit + photo-surface probing (live left pristine)
+
+Work Log:
+- Built the paired-capture battery (scripts outside the repo: r30-capture-battery.sh + r30-pdiff.py) with the r27 pointer-parking rule — first-pass captures caught a hover artifact on the ☰ toggle (methodology re-learned: pointer MUST be parked; the toggle is byte-identical in isolation)
+- 320x844 paired captures (login/dash/projects/supplies/inspiration + both drawers): projects 0.016% / supplies 0.016% / inspiration 0.017% (the header email-glyph data-only residual only); sidebar-drawer 0.014%; chat-drawer 0.000% byte-identical
+- Both drawers are 256px at 320 (80vw — matches the clone; no finding)
+- F1 FOUND (HIGH): the live's login tab strip WRAPS at <=330px — Amplify tabs are display:block, text-align:center, padding 12px 16px with EMERGENT height (74px two-line at 320-330, 50px single-line at >=335, threshold measured); the clone's flex h-[50px] never wraps -> 24px page-height divergence at 320 (live 1069 vs clone 1045)
+- F2 FOUND (HIGH): the dashboard Studio Spotlight portrait lacks shrink-0 — the flex row squeezes it 56 -> 49.59px at 320 (55 at 340, restored 56 at 360+); the live's carries shrink-0 and stays 56 always (~3700 hot px on the dash-320 pair)
+- Probed the photo surfaces (modal uploads; live rows created+deleted through the UI, returned to 0/0/15 verified):
+  - F3 (MEDIUM): supply modal photo preview — the live REPLACES the add-photo tile with a w-16 h-16 (64px) preview + x button (absolute -top-1 -right-1 w-5 h-5 rounded-full bg-black/60 text-white text-xs, glyph x); the clone keeps the tile and appends a 56px preview below with a coral x
+  - F4 (HIGH): project modal + edit panel photo area — the live renders a "Photos (N/30)" counter LABEL, relabels the tile "Add more", hides it at 30/30, renders thumbs as div.grid.grid-cols-5.gap-2.mb-3 with div.relative.group wrappers, img w-full aspect-square rounded-lg border-ast_turquoise/20, x INSIDE (top-0.5 right-0.5 bg-black/60), a "cover" badge on the first thumb, and silently drops overflow; the clone renders a static "Photos" span, keeps "Add photos", a flex-wrap ul with fixed 64px /30 thumbs, coral outside-x, no cover badge
+  - F5 (MEDIUM): photo cap — the live displays (N/30); the clone caps at 10 (validation.ts 2 schemas + slice(0,10-...) in both panels)
+  - F6 (MEDIUM): project chip photo — the live renders img h-10 w-10 shrink-0 rounded-lg object-cover opacity-85 in the chip's flex min-w-0 items-start gap-2 mb-2 header; the clone renders none
+- Verified MATCHING (no action): the detail panels (project w-24 h-24 well + grid-cols-5 /20 purple thumbs + Images(N) only when >1; supply w-32 h-32 + "Photo" label), the supply chip's w-full h-16 rounded-xl mb-2 banner, the fresh modals' geometry (byte-equal at 320), the "Add photos"/tile classes fresh (cursor-pointer inline-flex ... px-3 py-2 text-sm), the file inputs (multiple, accept image/*), the post-create navigation (stays on current view both sides)
+- Live left pristine: temp project (2 photos -> 1 via edit) + temp supply deleted through the UI with confirm override; tiles verified Projects 0 / Supplies 0 / Inspo 15, no ZZR30 rows
+
+Stage Summary:
+- SIX findings (F1-F6); F1/F2 sub-390px render divergences, F3-F6 the never-measured photo-surface family
+- Remediation plan: TDD-first fixes in login-screen.tsx (F1 block tabs), dashboard-view.tsx (F2 shrink-0), supply-modal.tsx (F3 tile-swap), project-modal.tsx + project-edit-panel.tsx (F4 live thumb contract), studio-domain.ts + validation.ts (F5 cap 30), projects-view.tsx (F6 chip thumb) + the login-fidelity tab pin re-measured + new photo-surface-fidelity.test.ts
+
+---
+Task ID: 11
+Agent: main (Super Z, r30 session)
+Task: r30 TDD remediation (F1-F6) + full verification battery
+
+Work Log:
+- RED: 10 pins across 4 files — new photo-surface-fidelity.test.ts (6 pins), viewport-fidelity.test.ts (+2: the tab chrome + the runtime-constructed fixed-height negative), login-fidelity.test.ts (the tab pin re-measured), validation.test.ts (the two 10-photo caps re-measured to 30 with an exact-30 acceptance) — exactly the 10 intended failures on the first run
+- GREEN: 8 source edits — login-screen.tsx both tabs flex h-[50px] items-center justify-center -> block flex-1 px-4 py-3 text-center; dashboard-view.tsx portrait + shrink-0; supply-modal.tsx the tile-swap preview (w-16 h-16, x at -top-1 -right-1 bg-black/60); project-modal.tsx + project-edit-panel.tsx the live's photo area (counter label, 5-col grid, aspect-square /20 thumbs, inside-x, cover badge, Add-more relabel, tile gone at cap); studio-domain.ts MAX_PROJECT_PHOTOS = 30 + validation.ts 3 schemas + both panels' slices; projects-view.tsx the chip thumb AFTER the name (the live's [name, img] order, re-measured mid-round)
+- F6 order correction: the first fix placed the img FIRST — a re-measure on the live (temp project created + deleted, pristine restored) showed the live's row is [name P x58, img x106]; swapped and verified byte-exact (name x58 w40 h19, img x106 w37 h40 both sides)
+- F5 transport bug found through the real UI: the 30-photo submit answered "Body exceeded 1 MB limit" (Next's default Server Action cap) — a latent bug (10 large photos could hit it too); fixed with experimental.serverActions.bodySizeLimit "12mb" in next.config.ts (30 x 400k chars + JSON slack) + pinned; the 30-photo submit then succeeded end-to-end
+- Runtime-constructed negative pins for the dead tokens (the coral bg, the fixed tab height) per the r20 css-hygiene lesson
+- Gates: vitest 383/383 (374 + 9 net-new), lint/typecheck/build clean; production CSS 151,532 bytes (r29's 151,432 + 100), 0 forced-colors / 0 selection
+- E2E 28/28 + smoke 23/23 on a clean re-seeded db
+- Browser verification: login-320 tab strip 74px + docH 1069 (byte-equal the live; was 50/1045); the band 320/330=74, 335+=50 matches the live's measured threshold; login-320 capture 0.001% (was SIZE MISMATCH); dash-320 0.008% (was 0.643% — only the header email band); the portrait 56px constant; the supply preview at the live's exact slot (x215 y117 64px, tile gone); the project thumbs byte-exact (grid mb-3 grid-cols-5 gap-2, thumb x41 y566.89 41.19px, inside-x, cover badge, Add more); the cap behavior 30/30 tile-gone overflow-dropped; the chip thumb [name, img] byte-exact
+- Canonical regression: login-390 0.001% / login-1280 0.000% / dash-390 0.089% / dash-1280 0.195% (all residuals = the documented data-only header band: the email glyphs + the memory button's 2px email-width cascade)
+- All 9 reference screenshots re-shot with state checks (the two drawer shots re-shot after the first pass captured a stuck-open sidebar drawer — closed via the in-drawer Close button, not the covered page toggle)
+
+Stage Summary:
+- r30 complete in code: 6 findings fixed TDD-first, 9 net-new pins, 2 re-measures, 1 latent transport bug fixed, all gates green, live left pristine (0/0/15)

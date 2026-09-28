@@ -1,9 +1,9 @@
 ---
 name: art-supply-tracker
-description: "AST Studio — a pixel-perfect, behavior-exact clone of studiobeta.artsupplytracker.com: Next.js 16 + React 19 + Tailwind v4 CSS-first + Prisma/SQLite + Server Actions + scrypt cookie auth, verified by 374 vitest + 28 Playwright E2E specs and 29 rounds of live-site parity audits"
+description: "AST Studio — a pixel-perfect, behavior-exact clone of studiobeta.artsupplytracker.com: Next.js 16 + React 19 + Tailwind v4 CSS-first + Prisma/SQLite + Server Actions + scrypt cookie auth, verified by 383 vitest + 28 Playwright E2E specs and 30 rounds of live-site parity audits"
 version: 1.0.0
-last_updated: 2026-09-27
-project_state: "r29 viewport-band + prod-mode pass verified (374 vitest + 28 E2E green); visual + functional parity with the live site re-confirmed across the previously-unmeasured 480-768 viewport band (paired captures 0.002-0.003%, was 10.17-38.93%) and at the canonical viewports (login 0.001%/0.012%); the login card's fixed-480-from-480 handoff (min-[480px]:min-w/max-w — the min-content holds the 1fr track open at 768) and the live's html/body overflow-x: hidden clip pinned in the new viewport-fidelity.test.ts; the prod-mode battery verified dev/prod render equivalence at 0.000% on all four probes — the r28 badge fix was the only dev/prod gap"
+last_updated: 2026-09-28
+project_state: "r30 sub-390 + photo-surface pass verified (383 vitest + 28 E2E green); the sub-390 viewport audit closed the last unmeasured band (the login tabs' label wrap at <=330px — the live's Amplify tabs are block+padding with emergent height, now replicated; login-320 0.001% was a 24px page-height mismatch) and the never-measured photo family is now pinned to the live's measured contracts (the supply modal's tile-swap preview, the project modal/edit panel's Photos (N/30) counter + 5-col thumb grid + cover badge, the 30-photo cap, the project chip's thumb, and the 12mb Server Action body cap that carries 30 data-URL photos — the default 1mb rejected many-photo submits)"
 audience: "engineers + AI agents extending, debugging, onboarding, or replicating the Art Supply Tracker clone"
 tags: [nextjs16, react19, tailwind-v4, prisma, sqlite, server-actions, playwright, vitest, parity-clone, aws-amplify-ui]
 ---
@@ -43,7 +43,7 @@ tags: [nextjs16, react19, tailwind-v4, prisma, sqlite, server-actions, playwrigh
 18. [§18 Z-Index Layer Map](#18-z-index-layer-map)
 19. [§19 Color Reference (Complete)](#19-color-reference-complete)
 20. [§20 The Complete TypeScript Interface Reference](#20-the-complete-typescript-interface-reference)
-- [Appendix A — Parity Audit History (r1–r29)](#appendix-a--parity-audit-history-r1r29)
+- [Appendix A — Parity Audit History (r1–r30)](#appendix-a--parity-audit-history-r1r30)
 - [Appendix B — The Live-Site Validation Method](#appendix-b--the-live-site-validation-method)
 - [Quick Reference Card](#quick-reference-card)
 
@@ -468,7 +468,7 @@ StockFilter: all | low | out      // Low = low OR critical; Out = critical only
 
 ---
 
-## Appendix A — Parity Audit History (r1–r29)
+## Appendix A — Parity Audit History (r1–r30)
 
 Every round: fresh live recon → findings → TDD remediation → all gates → docs aligned. The full narrative lives in `docs/session_*.md`; the one-line ledger:
 
@@ -499,8 +499,9 @@ Every round: fresh live recon → findings → TDD remediation → all gates →
 - **r27** the login-chrome pass (the inputs' 16px/24px-on-8/16 metrics, the eye's constant name + sr-only aria-live announcement, the reset email view's content-sized card, the reset forms' p-8, the 357px below-md card cap) + the paired-capture state-verification rule (scrim DOM presence, drawer translate-x, scrollY, visible h1 — offsetParent is null for fixed elements).
 - **r28** the asset-fidelity + rail-type-scale pass (three straggler next/image usages still serving the optimizer's q75 re-encode → unoptimized — byte-identity with the live's CDN assets is the contract; the inspiration-view Partners body at text-[11px]; the drawer's Partners title without leading-snug — the live's own Quote/Art-History counter-examples kept; the link buttons' emergent lh-21px chrome; devIndicators: false) — login-desktop 0.00% / login-mobile 0.01%.
 - **r29** the viewport-band + prod-mode pass (the login card fixed at 480 from viewport 480 — the min-content that holds the 1fr track open at 768: the 480-767 band was 10.17-17.42% off and exactly-768 38.93% off; the live's html/body overflow-x: hidden clip) — the band at 0.002-0.003%, dev/prod equivalence verified at 0.000% on all four probes.
+- **r30** the sub-390 + photo-surface pass (the login tabs' label wrap at ≤330px — the live's Amplify tabs are block+padding with emergent height, a 74px two-line strip at 320 where the clone's fixed h-[50px] rendered the page 24px short; the Spotlight portrait's shrink-0 guard; the never-measured photo family measured with real uploads — the supply modal's tile-swap 64px preview, the project modal/edit panel's "Photos (N/30)" counter + 5-col aspect-square thumb grid with the inside-× and cover badge, the 30-photo cap (was 10), the project chip's 40px thumb AFTER the name; plus the latent 1MB Server Action body cap that rejected many-photo submits — now 12mb) — login-320 0.001% (was a 24px height mismatch), dash-320 0.008%, every photo surface byte-exact.
 
-Current baselines: pixel diffs 0.148–1.144% per pair on Chromium (the documented accepted set), fresh WebKit baselines 0.87–3.15% (symmetric engine noise), error/reset views 0.125–0.352% Chromium / 1.56–2.19% WebKit, 374 vitest + 28 E2E, 23/23 smoke (the r29 records: the 480-768 login band 0.002-0.003% at every viewport; the canonical pairs login 0.001%/0.012% and dashboard 0.307%/0.168% — the two data-only residual bands; dev/prod render equivalence 0.000% on all four probes).
+Current baselines: pixel diffs 0.148–1.144% per pair on Chromium (the documented accepted set), fresh WebKit baselines 0.87–3.15% (symmetric engine noise), error/reset views 0.125–0.352% Chromium / 1.56–2.19% WebKit, 383 vitest + 28 E2E, 23/23 smoke (the r30 records: login-320 0.001% and dash-320 0.008% — the sub-390 band closed, page heights byte-equal at 1069; the canonical pairs login 0.001%/0.000% and dashboard 0.089%/0.195% — the documented data-only header band; every photo surface byte-exact against the live's measured geometry).
 
 ## Appendix B — The Live-Site Validation Method
 

@@ -171,7 +171,7 @@ not secret — rotate before any public deployment).
 ### Testing Strategy
 
 Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
-`src/**/*.test.ts`). The suite (374 tests) pins:
+`src/**/*.test.ts`). The suite (383 tests) pins:
 
 - **The SQLite path contract** (`src/lib/db-path.test.ts`) — relative
   `file:` URLs resolve against `prisma/schema.prisma` (so
@@ -291,6 +291,24 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
   backdrop blur (the page dims, never blurs), z-40 below the z-50
   drawers, and instant mount/unmount (the live's scrim unmounts at
   click-time while the drawer still animates out — no opacity fade).
+- **Photo-surface fidelity** (`photo-surface-fidelity.test.ts`, r30) —
+  file-content pins on the live's measured photo contracts (the family
+  was unmeasured until r30 — the live account ships an empty studio,
+  so the surfaces were probed with real uploads, temp rows deleted
+  through the UI): the supply modal's tile-swap preview (`w-16 h-16`
+  with the × at `-top-1 -right-1` in `bg-black/60` — the tile is
+  REPLACED, not kept), the project modal + edit panel's
+  "Photos (N/30)" counter label + 5-col `aspect-square` `/20` thumb
+  grid with the inside-× and the first thumb's "cover" badge + the
+  "Add photos" → "Add more" tile that disappears at the 30/30 cap
+  (overflow silently dropped), the project chip's 40px `opacity-85`
+  thumb AFTER the name, the single-source `MAX_PROJECT_PHOTOS = 30`
+  (studio-domain.ts — the live's own counter displays (N/30)), and
+  the 12mb Server Action body cap (the default 1mb rejected
+  many-photo submits — the live uploads to S3 outside the form save
+  and never hits a transport limit). The login tabs' sub-335 label
+  wrap (block + padding + text-center, emergent height) is pinned in
+  `viewport-fidelity.test.ts` alongside the r29 band pins.
 - **Sidebar stat-tile fidelity** (`sidebar-tile-fidelity.test.ts`) —
   file-content pins on the live's measured tile contract (r12): the
   ACTIVE view's tile highlights with its OWN accent pair — electric
