@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   MAX_PHOTO_DATA_URL_LENGTH,
-  NEW_BADGE_WINDOW_MS,
   PROJECT_STATUSES,
   SUPPLY_CATEGORIES,
   SUPPLY_CONDITIONS,
@@ -11,7 +10,6 @@ import {
   UNASSIGNED_OPTION_EDIT,
   budgetEditValue,
   budgetFromEditInput,
-  isNewItem,
   isValidQuantityInput,
   matchesStockFilter,
   parseQuantityValue,
@@ -190,19 +188,10 @@ describe("photo data-URL cap", () => {
   });
 });
 
-describe("NEW badge window", () => {
-  it("flags items created within the window", () => {
-    const now = Date.now();
-    expect(isNewItem(new Date(now - 60_000).toISOString(), now)).toBe(true);
-    expect(isNewItem(new Date(now - NEW_BADGE_WINDOW_MS + 1).toISOString(), now)).toBe(true);
-  });
-
-  it("does not flag items older than the window", () => {
-    const now = Date.now();
-    expect(isNewItem(new Date(now - NEW_BADGE_WINDOW_MS - 1).toISOString(), now)).toBe(false);
-    expect(isNewItem(new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString(), now)).toBe(false);
-  });
-});
+// r31: the window-based badge helper is GONE — the live's NEW badges
+// are session-scoped (created-this-session ids in an in-memory
+// registry; a reload drops them). The registry's contract is pinned
+// in new-badge.test.ts and the wiring in its fidelity block.
 
 describe("parseQuantityValue", () => {
   it("parses integers and decimals like the live app", () => {

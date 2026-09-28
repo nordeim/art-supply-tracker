@@ -18,9 +18,9 @@
 import { useMemo, useState } from "react";
 
 import type { ProjectDto, SupplyDto } from "@/lib/dto";
+import { isNewSessionItem } from "@/lib/new-badge";
 import {
   SUPPLY_CATEGORIES,
-  isNewItem,
   matchesStockFilter,
   supplyConditionPill,
   supplyTypeListFor,
@@ -452,7 +452,7 @@ function SupplyChip({
   onOpen: () => void;
 }) {
   const pill = supplyConditionPill(supply.condition);
-  const isNew = isNewItem(supply.createdAt);
+  const isNew = isNewSessionItem(supply.id);
   return (
     <button
       type="button"

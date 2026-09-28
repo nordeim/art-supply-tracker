@@ -209,7 +209,7 @@ export function ProjectModal({ onClose, onSaved }: ProjectModalProps) {
                       type="button"
                       onClick={() => setPhotos((list) => list.filter((_, i) => i !== index))}
                       aria-label={`Remove photo ${index + 1}`}
-                      className="absolute top-0.5 right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white text-xs"
+                      className="absolute top-0.5 right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white text-xs opacity-0 group-hover:opacity-100 transition hover:bg-ast-pink"
                     >
                       ×
                     </button>

@@ -343,7 +343,7 @@ export function SupplyEditPanel({ supply, projects, onCancel, onSaved }: SupplyE
             placeholder="e.g., 012345678901"
             value={barcode}
             onChange={(e) => setBarcode(e.target.value)}
-            className="w-full rounded-lg border border-blue-500/40 bg-black/30 px-3 py-2 text-white transition placeholder:text-white/40 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+            className={inputClass}
           />
         </div>
 

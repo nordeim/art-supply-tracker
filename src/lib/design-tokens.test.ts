@@ -193,11 +193,18 @@ describe("default-palette usage sites (class-string parity, r14)", () => {
     expect(studioChat).toContain('className="mb-2 text-xs text-pink-300"');
   });
 
-  it("barcode fields use the pinned blue families (modal + edit panel)", () => {
+  it("barcode fields: the CREATE modal keeps the blue scanner family (r31: the edit panel is pink)", () => {
+    // r31 re-measure: the live's CREATE modal barcode input is
+    // blue-styled (the scanner look) but its EDIT panel barcode input
+    // uses the panel's standard pink input class — the edit-panel half
+    // of this r14 pin was an unmeasured generalization (the r31 paired
+    // edit captures caught it: 10584 hot px, the largest divergence of
+    // the round). The edit panel's class is pinned in
+    // photo-surface-fidelity.test.ts.
     const barcodeClasses =
       "border-blue-500/40 bg-black/30 px-3 py-2 text-white transition placeholder:text-white/40 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30";
     expect(supplyModal).toContain(barcodeClasses);
-    expect(supplyEditPanel).toContain(barcodeClasses);
+    expect(supplyEditPanel).not.toContain(barcodeClasses);
   });
 });
 

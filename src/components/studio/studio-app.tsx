@@ -21,6 +21,7 @@ import Image from "next/image";
 import { signOutAction } from "@/actions/auth";
 import { importStudioData } from "@/actions/studio";
 import { buildExportPayload } from "@/lib/export-payload";
+import { markCreatedThisSession } from "@/lib/new-badge";
 import type {
   ChatMessageDto,
   InspirationEntryDto,
@@ -205,6 +206,9 @@ export function StudioApp({
   }
 
   function handleSupplyCreated(supply: SupplyDto) {
+    // r31: the live's NEW badges are session-scoped — the created id
+    // enters the in-memory registry here (a reload drops it).
+    markCreatedThisSession(supply.id);
     setSupplyList((list) => [supply, ...list]);
     setSupplyModal(false);
     // The live app navigates to the supplies list after creating one.
@@ -394,6 +398,9 @@ export function StudioApp({
         <ProjectModal
           onClose={() => setProjectModal(false)}
           onSaved={(saved) => {
+            // r31: the session badge registry — the created id badges
+            // (chip + detail h2) until the page session ends.
+            markCreatedThisSession(saved.id);
             setProjectList((list) => [saved, ...list]);
             setProjectModal(false);
           }}

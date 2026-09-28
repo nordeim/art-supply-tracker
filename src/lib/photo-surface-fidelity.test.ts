@@ -95,6 +95,10 @@ const projectsView = readFileSync(
   join(libDir, "../components/studio/projects-view.tsx"),
   "utf8",
 );
+const supplyEditPanel = readFileSync(
+  join(libDir, "../components/studio/supply-edit-panel.tsx"),
+  "utf8",
+);
 const studioDomain = readFileSync(join(libDir, "studio-domain.ts"), "utf8");
 const validation = readFileSync(join(libDir, "validation.ts"), "utf8");
 const nextConfig = readFileSync(
@@ -152,7 +156,7 @@ describe("photo-surface pins (r30: the never-measured photo family)", () => {
       '"aspect-square w-full rounded-lg border border-ast-turquoise/20 object-cover"',
     );
     expect(projectModal).toContain(
-      '"absolute top-0.5 right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white text-xs"',
+      '"absolute top-0.5 right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white text-xs opacity-0 group-hover:opacity-100 transition hover:bg-ast-pink"',
     );
     // the first thumb's "cover" badge.
     expect(projectModal).toContain(
@@ -177,7 +181,7 @@ describe("photo-surface pins (r30: the never-measured photo family)", () => {
       '"aspect-square w-full rounded-lg border border-ast-turquoise/20 object-cover"',
     );
     expect(projectEdit).toContain(
-      '"absolute top-0.5 right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white text-xs"',
+      '"absolute top-0.5 right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white text-xs opacity-0 group-hover:opacity-100 transition hover:bg-ast-pink"',
     );
   });
 
@@ -192,8 +196,10 @@ describe("photo-surface pins (r30: the never-measured photo family)", () => {
     );
     // the ORDER: the row renders the name first, then the thumb (the
     // img is the row's SECOND child — name x58, img x106 on the live).
+    // (r31: the name's class grew the conditional pr-10 slot — the
+    // window widened from 120 to 260 chars, the ORDER claim unchanged.)
     expect(projectsView).toMatch(
-      /leading-snug \$\{[\s\S]{0,120}?\{project\.name\}[\s\S]{0,600}?h-10 w-10 shrink-0 rounded-lg object-cover opacity-85/,
+      /leading-snug \$\{[\s\S]{0,260}?\{project\.name\}[\s\S]{0,600}?h-10 w-10 shrink-0 rounded-lg object-cover opacity-85/,
     );
   });
 
@@ -221,5 +227,45 @@ describe("photo-surface pins (r30: the never-measured photo family)", () => {
     // must cover the full pinned contract: 30 x MAX_PHOTO_DATA_URL_
     // LENGTH (400k chars) + JSON slack -> 12mb.
     expect(nextConfig).toContain('bodySizeLimit: "12mb"');
+  });
+
+  it("hover-gates the thumb x buttons (r31: the live's x is invisible until the thumb is hovered)", () => {
+    // The r30 element-isolation measurement captured the x's chrome but
+    // missed its INTERACTION GATING — isolated element shots bypass the
+    // hover state. The r31 full-view paired captures caught it: the
+    // live's thumb x computes opacity 0 (invisible) until the thumb's
+    // group is hovered, and the x's own hover turns it pink. Measured
+    // on the live 2026-09-28 (computed opacity: "0"): the full class is
+    // ...text-xs opacity-0 group-hover:opacity-100 transition
+    // hover:bg-ast_pink. The clone rendered it always-visible.
+    expect(projectModal).toContain("opacity-0 group-hover:opacity-100");
+    expect(projectEdit).toContain("opacity-0 group-hover:opacity-100");
+    // the always-visible variant is negative-pinned (runtime-assembled
+    // per the r20 css-hygiene lesson — a literal would resurrect the
+    // dead utilities in TW4's content scan).
+    const bareX = [
+      "absolute top-0.5 right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white text-xs",
+    ].join("");
+    expect(projectModal).not.toContain(`"${bareX}"`);
+    expect(projectEdit).not.toContain(`"${bareX}"`);
+  });
+
+  it("uses the panel's pink input class for the supply edit barcode (r31: the blue scanner style is create-modal-only)", () => {
+    // The live's CREATE modal barcode input is blue-styled (the scanner
+    // look: border-blue-500/40 bg-black/30) and the clone's create modal
+    // matches it. But the live's EDIT panel barcode input uses the
+    // panel's STANDARD pink input class (measured: w-full rounded-lg
+    // border border-ast_pink/30 bg-ast_bg_dark/70 ... focus:border-
+    // ast_pink) — the clone's edit panel wrongly reused the blue create
+    // style (a scaffold leftover; 10584 hot px on the paired edit
+    // capture, the largest r31 divergence).
+    expect(supplyEditPanel).toMatch(
+      /id="edit-supply-barcode"[\s\S]{0,400}?className=\{inputClass\}/,
+    );
+    // the blue tokens are negative-pinned in the edit panel (they stay
+    // pinned IN the create modal — different surface).
+    expect(supplyEditPanel).not.toContain("border-blue-500/40");
+    expect(supplyEditPanel).not.toContain("bg-black/30");
+    expect(supplyModal).toContain("border-blue-500/40");
   });
 });

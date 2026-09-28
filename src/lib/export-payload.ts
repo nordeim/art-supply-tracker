@@ -22,7 +22,24 @@
  */
 import type { ProjectDto, SupplyDto } from "@/lib/dto";
 import type { ExportPayload } from "@/lib/dto";
-import { isNewItem, parseQuantityValue } from "@/lib/studio-domain";
+import { parseQuantityValue } from "@/lib/studio-domain";
+
+/**
+ * The export wire format's freshness flag (r31: PRIVATE to the export —
+ * a separate measured surface from the NEW badges). Freshly created
+ * items export `isNew: true` (measured on live exports 2026-09-17:
+ * a just-created project exported with isNew: true); the threshold
+ * for old items is not observable without waiting days out, so the
+ * seven-day window remains the documented assumption. The UI badges
+ * are session-scoped instead (src/lib/new-badge.ts).
+ */
+const EXPORT_NEW_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
+function isNewForExport(createdAt: string | Date, now: number = Date.now()): boolean {
+  const created = typeof createdAt === "string" ? Date.parse(createdAt) : createdAt.getTime();
+  if (!Number.isFinite(created)) return false;
+  return now - created < EXPORT_NEW_WINDOW_MS;
+}
 
 /** What the import action actually stores after normalization. */
 export interface NormalizedImportProject {
@@ -73,7 +90,7 @@ function toExportedProject(project: ProjectDto, supplyIds: string[], now: number
     // path does `budget: e.budget ?? ''`); a fresh live export captured
     // 2026-09-17 shows `"budget": ""` for unset budgets.
     budget: project.budget ?? ("" as const),
-    isNew: isNewItem(project.createdAt, now),
+    isNew: isNewForExport(project.createdAt, now),
   };
 }
 
@@ -115,7 +132,7 @@ function toExportedSupply(supply: SupplyDto, now: number) {
     // (null, the create modal's inert-select result) is omitted
     // (measured on live exports 2026-09-19).
     ...(supply.condition !== null ? { status: supply.condition } : {}),
-    isNew: isNewItem(supply.createdAt, now),
+    isNew: isNewForExport(supply.createdAt, now),
   };
 }
 

@@ -16,7 +16,8 @@ import { useState, useTransition } from "react";
 
 import { deleteSupply } from "@/actions/studio";
 import type { ProjectDto, SupplyDto } from "@/lib/dto";
-import { isNewItem, supplyDetailConditionIcon } from "@/lib/studio-domain";
+import { isNewSessionItem } from "@/lib/new-badge";
+import { supplyDetailConditionIcon } from "@/lib/studio-domain";
 
 interface SupplyDetailPanelProps {
   supply: SupplyDto;
@@ -65,7 +66,7 @@ export function SupplyDetailPanel({
           <p className="mb-1 text-xs uppercase tracking-wider text-ast-pink">Supply</p>
           <h2 className="text-lg font-bold text-ast-cyan">
             {supply.name}
-            {isNewItem(supply.createdAt) && (
+            {isNewSessionItem(supply.id) && (
               <span className="ml-2 rounded-full bg-ast-pink/40 px-2 py-0.5 align-middle text-xs font-semibold text-ast-pink">
                 NEW
               </span>

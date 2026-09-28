@@ -147,19 +147,10 @@ export const MAX_PHOTO_DATA_URL_LENGTH = 400_000;
  */
 export const MAX_PROJECT_PHOTOS = 30;
 
-/**
- * Items created within this window render the "NEW" badge (live-app
- * behavior: fresh items are badged and exported with `isNew: true`).
- * The live threshold is not observable without waiting days out; seven
- * days is the documented assumption.
- */
-export const NEW_BADGE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
-
-export function isNewItem(createdAt: string | Date, now: number = Date.now()): boolean {
-  const created = typeof createdAt === "string" ? Date.parse(createdAt) : createdAt.getTime();
-  if (!Number.isFinite(created)) return false;
-  return now - created < NEW_BADGE_WINDOW_MS;
-}
+// r31: the NEW badge is session-scoped, not window-scoped — the live
+// badges items created during the current SPA session and drops every
+// badge on reload. The registry lives in src/lib/new-badge.ts (the
+// window-based isNewItem helper this file used to export was removed).
 
 /**
  * Parse a quantity string the way the live app treats quantities: plain

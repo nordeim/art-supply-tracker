@@ -16,7 +16,8 @@ import Image from "next/image";
 
 import { deleteProject, setSupplyAssignment } from "@/actions/studio";
 import type { ProjectDto, SupplyDto } from "@/lib/dto";
-import { isNewItem, projectStatusPillClasses, projectStatusLabel } from "@/lib/studio-domain";
+import { isNewSessionItem } from "@/lib/new-badge";
+import { projectStatusPillClasses, projectStatusLabel } from "@/lib/studio-domain";
 
 interface ProjectDetailPanelProps {
   project: ProjectDto;
@@ -93,7 +94,7 @@ export function ProjectDetailPanel({
           <p className="mb-1 text-xs uppercase tracking-wider text-ast-turquoise">Project</p>
           <h2 className="text-lg font-bold text-ast-cyan">
             {project.name}
-            {isNewItem(project.createdAt) && (
+            {isNewSessionItem(project.id) && (
               <span className="ml-2 rounded-full bg-ast-turquoise/40 px-2 py-0.5 align-middle text-xs font-semibold text-ast-turquoise">
                 NEW
               </span>

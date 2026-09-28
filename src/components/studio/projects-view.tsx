@@ -14,9 +14,9 @@ import { useMemo, useState } from "react";
 import Image from "next/image";
 
 import type { ProjectDto, SupplyDto } from "@/lib/dto";
+import { isNewSessionItem } from "@/lib/new-badge";
 import {
   PROJECT_STATUSES,
-  isNewItem,
   projectChipStatusClasses,
   projectStatusLabel,
   projectStatusPillClasses,
@@ -497,16 +497,16 @@ function ProjectChip({
         open,
       )}`}
     >
-      {isNewItem(project.createdAt) && (
+      {isNewSessionItem(project.id) && (
         <span className="absolute right-2 top-2 rounded-full bg-ast-turquoise/40 px-2 py-0.5 text-xs font-semibold text-ast-turquoise">
           NEW
         </span>
       )}
       <div className="mb-2 flex min-w-0 items-start gap-2">
         <p
-          className={`min-w-0 flex-1 truncate pr-10 text-sm font-semibold leading-snug ${
-            open ? "text-ast-cyan" : "text-ast-body"
-          }`}
+          className={`min-w-0 flex-1 truncate text-sm font-semibold leading-snug ${
+            isNewSessionItem(project.id) ? "pr-10 " : ""
+          }${open ? "text-ast-cyan" : "text-ast-body"}`}
         >
           {project.name}
         </p>

@@ -125,3 +125,28 @@ describe("supply detail heading pins (r26: the live's plain-block H2)", () => {
     expect(badge).not.toContain("flex");
   });
 });
+
+describe("supplies-view navigation pins (r31: the category tile always opens the type tiles)", () => {
+  const view = read("src/components/studio/supplies-view.tsx");
+
+  it("keeps the category tile on the type-tiles destination (the r31 F5 revert)", () => {
+    // r31 correction (measured 2026-09-28, three clean runs): the live's
+    // category tile opens the TYPE TILES view ("Art Supplies › <Category>"
+    // crumb + the All <Category>/type tiles) regardless of whether
+    // supplies exist — 0 supplies and 1 supply both verified from a
+    // genuine tiles state.
+    //
+    // An earlier reading this round ("with data the tile opens the flat
+    // list") was a measurement artifact: agent-browser's `open` on the
+    // SAME URL as the live SPA's current route is a no-op, so the
+    // "reloaded" view silently preserved the post-create flat-list state
+    // (the live pushes /supplies for the view; the flat list shares that
+    // URL). The battery's supply-list captures caught that persisted
+    // state, not the category click's destination. The trap is recorded
+    // here so no future round re-derives the data-dependent rule from
+    // same-URL captures: navigate via the ROOT first, then the drawer.
+    expect(view).toContain(
+      'onClick={() => navigate({ kind: "category", category: category.value })}',
+    );
+  });
+});
