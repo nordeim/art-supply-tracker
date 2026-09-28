@@ -206,3 +206,48 @@ Work Log:
 
 Stage Summary:
 - r30 complete in code: 6 findings fixed TDD-first, 9 net-new pins, 2 re-measures, 1 latent transport bug fixed, all gates green, live left pristine (0/0/15)
+
+---
+Task ID: 13
+Agent: main (Super Z, r31 session)
+Task: r31 survey — the photo-state capture battery + the 320 sub-view audit + the live-site drift check
+
+Work Log:
+- Pulled 928a385 (the user's session_54.md log commit); docs re-verified (only session_54 changed; all r30 records intact); baseline gates green (383/383, lint, typecheck, dev server live)
+- Built the r31 paired-capture battery (16 photo states): project create modal w/ 2 photos -> post-create tiles -> list + chip -> detail -> edit panel; supply modal w/ 1 photo -> post-create flat list -> detail -> edit panel; both lists + details at 1280; both details at 320. Strict per-state assertions; both studios returned to pristine 0/0/15 after each side
+- Battery tooling lessons (4 debug iterations): (a) the live's drill-down model — the projects view's "All Projects" tile is a BUTTON that opens the chip list (chips are cards in 3-col rows, detail renders below the chip's row); the supplies need Paint -> All Paint; (b) case-sensitive regex bug in click_label (/^all projects/ never matched "All Projects...") — fixed with the i flag; (c) the clone's chip button text is prefixed by the NEW badge ("NEWr31 probe...") — the chip click now anchors on the exact name leaf and walks up to the button; (d) reloads wipe window.confirm overrides — cleanup re-sets it post-reload; the live has real /projects /supplies routes, the clone is single-route (per-side reload_view)
+- Pixel-diff battery: CLEAN pairs — supply modal w/ photo 0.007%, both post-create states (header band only), proj-modal 0.225% explained by F1. DIVERGENT families: the project chip region (y360-431 @390), the project detail h2 region, the supply chip + detail h2 regions, the supply edit panel y1128-1223 (2.097% — the biggest), the project modal photo area y552-599, the 1280/320 mirrors
+- F1 FOUND (HIGH): the project modal + edit panel thumb x buttons are HOVER-GATED on the live — computed opacity 0, full class "...text-xs opacity-0 group-hover:opacity-100 transition hover:bg-ast_pink"; the clone renders them always-visible (opacity 1). The r30 element-isolation measurement missed the gating (isolated element shots bypass the interaction state — full-view captures are the ground truth)
+- F2 FOUND (HIGH): the supply EDIT panel's barcode input — the live uses the panel's standard pink input class (border-ast_pink/30 bg-ast_bg_dark/70); the clone reuses the CREATE modal's blue scanner style (border-blue-500/40 bg-black/30) — a scaffold leftover at supply-edit-panel.tsx:346. (The live's CREATE modal barcode IS blue — the clone's create modal matches ✓; only the edit panel diverges)
+- F3 FOUND (HIGH — live-site behavior): the NEW badge is SESSION-SCOPED on the live — badge present on all four surfaces (project chip, project detail h2, supply chip, supply detail h2) for items created in the current SPA session, DROPPED after a full page reload (decisive test: create -> badge true at t+6s in-session; reload -> badge false; the 7-day-window hypothesis eliminated — the badge dies with the session, not with time). The clone's isNewItem uses a 7-day createdAt window (NEW_BADGE_WINDOW_MS) — badges persist across reloads, diverging on every post-reload capture
+- F4 FOUND (MEDIUM): the project chip name's pr-10 is conditional on the badge on the live — in-session (badge): "min-w-0 flex-1 truncate text-sm font-semibold leading-snug pr-10 text-ast_body"; post-reload (no badge): the same class with an EMPTY slot where pr-10 was (the supply chip's established pr-12/pr-2 pattern). The clone's pr-10 is unconditional
+- Resolved as NON-findings: (a) the with-photo chip name "text-[10px]" reading — twin-copy pollution; the on-screen chip name is text-sm+pr-10 in-session (the 10px class belongs to the RAIL's name, which the clone already matches exactly); (b) the live's post-create view-count staleness — a refetch-on-focus timing artifact (the paired post-create captures diff clean; steady-state converges); (c) ast-img-safe on the live's imgs — an Amplify CSSOM artifact (lightningcss vars + forced-color-adjust) with no standard-rendering effect — accepted divergence, documented; (d) the live's edit-panel "Photo" label — present in the clone as a span (my label-tag dump missed it); the photo row renders identically
+- All 16 diff bands accounted for by F1-F4; the live left pristine (0/0/15 verified); measurement scripts persisted under /home/z/my-project/scripts/r31-*.sh|py
+
+Stage Summary:
+- FOUR findings: F1 (x hover-gating, 2 edit sites), F2 (edit barcode blue leftover, 1 site), F3 (session-scoped NEW badge — the semantic change, 4 badge surfaces + the create-flow marking + the studio-domain window removal), F4 (conditional pr-10, 1 site)
+- Plan: new src/lib/new-badge.ts (in-memory session registry: markCreatedThisSession/isNewSessionItem/resetSessionNewBadges), the four badge surfaces switch from isNewItem(createdAt) to isNewSessionItem(id), the create paths (studio-app.tsx onSaved handlers) mark the created ids, remove NEW_BADGE_WINDOW_MS/isNewItem from studio-domain, re-measure the r30 x-class pins + the isNewItem window tests, new pins for the barcode class + the conditional pr-10 + the registry semantics
+
+---
+Task ID: 14
+Agent: main (Super Z, r31 session)
+Task: r31 TDD remediation (F1-F4 + the F5 revert) + full verification battery
+
+Work Log:
+- RED: 4 photo-surface pins (the two r30 x-class re-measures with the gating tokens + the new hover-gate pin + the edit-barcode pin) + the new new-badge.test.ts (module missing) — exactly the intended failures
+- GREEN F1: project-modal.tsx + project-edit-panel.tsx — the thumb x class += "opacity-0 group-hover:opacity-100 transition hover:bg-ast-pink" (the live's exact measured class)
+- GREEN F2: supply-edit-panel.tsx — the barcode input className={inputClass} (the panel's shared pink class); the blue tokens negative-pinned in the edit panel, kept pinned in the create modal (the live's create barcode IS blue)
+- GREEN F3: new src/lib/new-badge.ts (the in-memory session registry: markCreatedThisSession/isNewSessionItem/resetSessionNewBadges); the four badge surfaces (projects-view chip, supplies-view chip, both detail h2s) switched from isNewItem(createdAt) to isNewSessionItem(id); studio-app.tsx marks the created ids in both create paths; NEW_BADGE_WINDOW_MS + isNewItem removed from studio-domain; the EXPORT wire format's isNew kept its window as a private isNewForExport in export-payload.ts (a separate measured surface — fresh items export true)
+- GREEN F4: the project chip name's pr-10 -> conditional (isNewSessionItem(project.id) ? "pr-10 " : "")
+- F5 FOUND->FIXED->REVERTED: the "data-dependent category tile" (supplies.length > 0 -> the flat list) landed with its pin; a later clean test (genuine tiles state, 1 supply) proved the category click ALWAYS opens the type tiles — the "flat list" captures were agent-browser same-URL no-op artifacts (the live pushes /supplies per view; opening the same URL preserves the SPA sub-view state). Reverted the fix; replaced the pin with the corrected contract + the trap documentation; the battery's reload_view now navigates via the ROOT first on both sides
+- Battery hardening: click_chip = direct on-screen button click (x>=0, y>0, w>0, h>0 — excludes the off-screen rail copy and the display:none twins) with the name-leaf anchor as fallback; the 320 drill-down flake eliminated
+- Gates: vitest 394/394 (383 + 11 net-new - 2 removed window tests + 2 r31 photo-surface pins), lint/typecheck/build clean, production CSS 151,532 bytes (UNCHANGED — opacity-0/group-hover:opacity-100/hover:bg-ast-pink were already compiled), 0 forced-colors / 0 ::selection
+- Browser verification: the clone's badge semantics byte-match the live's in-session state (badge true, nameCls with pr-10, chip img x106) AND post-reload state (badge false, nameCls pr-less, img x78.66); the modal x computes opacity 0; the edit barcode computes the pink border
+- The 16-pair battery re-run (fixed navigation, both sides, both pristine after): all pairs converged — pre-fix 0.007-2.097% -> 0.007-0.243%, every band beyond the header accounted for (the supply-edit barcode residual = TW3-rgba vs TW4-oklab color-space rounding, VLM-verified invisible; 1-2px noise elsewhere)
+- Canonical regression: login-390 0.001% / login-1280 0.000% / dash-390 0.089% / dash-1280 0.188% (the r30 baselines hold)
+- Prod-mode spot-check (standalone on :3001, the r29 method): all four probes identical to dev — dev/prod equivalence holds at r31
+- E2E 28/28, smoke 23/23; the 9 reference screenshots re-shot with state checks (8 byte-identical to HEAD — the r31 fixes touch data-dependent surfaces absent from the empty-studio shots; 1 pixel-identical re-encode)
+- Docs: session_55.md (the full round record incl. the F5 lesson), AGENTS.md (394 count, 4 quirk entries + the F5-revert entry, the session_55 pointer), CLAUDE.md (the count + the new-badge ledger entry), README.md (the count + the r31 row), PAD (the R31 revision entry), SKILL.md (metadata, Appendix A r31, baselines); .env.example re-verified unchanged
+
+Stage Summary:
+- r31 complete: 4 findings fixed TDD-first + 1 misreading caught and reverted with its trap pinned; 394 tests, all gates green; all 16 photo-state pairs + the canonical pairs + prod-mode probes clean; the live left pristine (0/0/15)

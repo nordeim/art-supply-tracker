@@ -171,7 +171,7 @@ not secret — rotate before any public deployment).
 ### Testing Strategy
 
 Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
-`src/**/*.test.ts`). The suite (383 tests) pins:
+`src/**/*.test.ts`). The suite (394 tests) pins:
 
 - **The SQLite path contract** (`src/lib/db-path.test.ts`) — relative
   `file:` URLs resolve against `prisma/schema.prisma` (so
@@ -306,9 +306,29 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
   (studio-domain.ts — the live's own counter displays (N/30)), and
   the 12mb Server Action body cap (the default 1mb rejected
   many-photo submits — the live uploads to S3 outside the form save
-  and never hits a transport limit). The login tabs' sub-335 label
+  and never hits a transport limit). r31 added the × buttons'
+  hover-gating (`opacity-0 group-hover:opacity-100 transition
+  hover:bg-ast-pink` — invisible in captures until hovered; the
+  supply modal's preview × is NOT gated) and the supply EDIT panel's
+  barcode using the panel's pink input class (the blue scanner style
+  is create-modal-only). The login tabs' sub-335 label
   wrap (block + padding + text-center, emergent height) is pinned in
   `viewport-fidelity.test.ts` alongside the r29 band pins.
+- **Session-scoped NEW badges** (`new-badge.test.ts`, r31) — the
+  live's NEW badges live and die with the SPA session: items created
+  this session badge (project chip, project detail h2, supply chip,
+  supply detail h2); a page reload drops every badge. The registry is
+  the in-memory `src/lib/new-badge.ts` (`markCreatedThisSession` in
+  both create flows, `isNewSessionItem(id)` at the four surfaces);
+  the window-based `isNewItem`/`NEW_BADGE_WINDOW_MS` are removed
+  from studio-domain (the EXPORT wire format's `isNew` keeps its
+  window as a private helper in export-payload.ts — a separate
+  measured surface). The suite also pins the project chip name's
+  conditional `pr-10` (present only while the badge shows) and, in
+  `supply-fidelity.test.ts`, the category tile's ALWAYS-type-tiles
+  destination (the r31 F5 revert — the "data-dependent" reading was
+  an agent-browser same-URL no-op artifact; the trap is documented in
+  the pin so it cannot be re-derived from same-URL captures).
 - **Sidebar stat-tile fidelity** (`sidebar-tile-fidelity.test.ts`) —
   file-content pins on the live's measured tile contract (r12): the
   ACTIVE view's tile highlights with its OWN accent pair — electric

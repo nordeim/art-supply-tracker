@@ -886,7 +886,8 @@ Nothing is here "because it's popular."
   full-cap submit verified end-to-end. All fixed TDD-first (10 RED
   pins -> GREEN: the new `photo-surface-fidelity.test.ts` (7 pins)
   + 2 new viewport-fidelity tab-wrap pins + 2 re-measures — the r9
-  tab pin and the two 10-photo validation caps, 383 vitest).
+  tab pin and the two 10-photo validation caps, 383 vitest; r31
+  re-measured two of the photo-surface pins — see R31).
   Post-fix: login-320 0.001% (was SIZE MISMATCH — the page heights
   byte-equal at 1069; the threshold matches across the band), 
   dash-320 0.008% (was 0.643%), every photo surface byte-exact
@@ -895,6 +896,73 @@ Nothing is here "because it's popular."
   data-only header band: the account-email glyphs + the memory
   button's 2px email-width cascade). E2E 28/28, smoke 23/23. The
   live left pristine (0/0/15).
+
+- `[R31]` Session-55 photo-state battery + session-badge pass
+  (2026-09-28): the 16-state paired-capture battery session_53
+  queued (both sides driven through identical photo flows — the
+  modals with staged photos, the post-create views, the drill-down
+  lists with photo'd chips, the detail panels, the edit panels; at
+  390/1280/320, strict per-state assertions, both studios returned
+  to the 0/0/15 pristine contract). FOUR findings: (F1, HIGH) the
+  project modal + edit panel thumb × buttons are HOVER-GATED on the
+  live — computed opacity 0, full class `...text-xs opacity-0
+  group-hover:opacity-100 transition hover:bg-ast_pink`; the clone
+  rendered them always-visible (the r30 element-isolation
+  measurement caught the chrome but not the interaction gating —
+  isolated element shots bypass hover state; full-view paired
+  captures are the ground truth). (F2, HIGH) the supply EDIT panel's
+  barcode input uses the panel's standard pink input class on the
+  live; the clone reused the CREATE modal's blue scanner style
+  (border-blue-500/40 bg-black/30 — a scaffold leftover, 10584 hot
+  px, the round's largest divergence; the live's CREATE modal
+  barcode IS blue and the clone's create modal matches and stays).
+  (F3, HIGH) the NEW badges are SESSION-scoped on the live: items
+  created during the current SPA session badge on all four surfaces
+  (project chip, project detail h2, supply chip, supply detail h2)
+  and a full page reload drops every badge (a 6-second-old item
+  unbadges on reload while an 8-second-old item still badges
+  without one — the time-window hypothesis eliminated by
+  construction); the clone's isNewItem used a 7-day createdAt
+  window. Replicated with the in-memory registry src/lib/new-badge.ts
+  (markCreatedThisSession in both create flows, isNewSessionItem(id)
+  at the four surfaces); NEW_BADGE_WINDOW_MS/isNewItem removed from
+  studio-domain; the EXPORT wire format's isNew keeps its window as
+  a private helper in export-payload.ts (a separate measured
+  surface — fresh items export isNew: true). (F4, MEDIUM) the
+  project chip name's pr-10 is conditional on the badge (in-session
+  `...leading-snug pr-10 text-ast_body`, post-reload the same class
+  with an empty slot — the supply chip's established pr-12/pr-2
+  pattern); the clone's pr-10 was unconditional. One finding FIXED
+  THEN REVERTED (F5, the round's methodology lesson): the
+  supply-list captures showed the live's crumb bare where the
+  clone's read "Art Supplies › Paint"; a controlled test suggested a
+  data-dependent category tile and the fix landed — then a clean
+  test from a GENUINE tiles state (1 supply existing) showed the
+  category click opening the TYPE TILES, and the whole "flat list"
+  reading collapsed: agent-browser's `open` on the SAME URL as the
+  live SPA's current route is a no-op, so the battery's
+  "reload" at /supplies had silently preserved the post-create
+  flat-list state (the category/All-Paint clicks were no-ops on it).
+  The canonical behavior — the category tile ALWAYS opens the type
+  tiles — re-measured cleanly three times (0 supplies, 1 supply, the
+  flip test); F5 reverted and the trap pinned (navigate via the ROOT
+  first, then the drawer) so the data-dependent rule cannot be
+  re-derived from same-URL captures. All fixed TDD-first (11
+  net-new pins + 4 re-measures: the new new-badge.test.ts (10 pins
+  — 4 registry semantics + 6 wiring), the photo-surface hover-gate
+  + barcode pins, the supply-fidelity F5-revert pin, the r14
+  barcode pin re-measure, the two r30 × class re-measures, the
+  studio-domain window tests removed, 394 vitest). Post-fix: all 16
+  pairs converged (the pre-fix range 0.007-2.097% collapsed to
+  0.007-0.243%, every band beyond the header accounted for as the
+  documented data-only/sub-perceptual classes — the supply-edit
+  barcode residual is TW3-rgba vs TW4-oklab color-space rounding,
+  VLM-verified invisible), canonical regression holds (login
+  0.001%/0.000%, dashboard 0.089%/0.188%), the prod-mode
+  spot-check clean (the standalone build identical to dev on all
+  four probes — the r29 equivalence holds). E2E 28/28, smoke 23/23,
+  production CSS 151,532 bytes (unchanged — the new utilities were
+  already compiled). The live left pristine (0/0/15).
 
 ---
 
