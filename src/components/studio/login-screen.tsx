@@ -355,7 +355,7 @@ export function LoginScreen() {
                       setMode("signin");
                       clearValidation();
                     }}
-                    className={`flex h-[50px] flex-1 items-center justify-center border-t-2 text-base font-bold ${
+                    className={`block flex-1 px-4 py-3 text-center border-t-2 text-base font-bold ${
                       mode === "signin"
                         ? "border-[#2ec4b6] text-[#047d95] transition-none duration-[250ms] ease-[ease]"
                         : "border-[#dcdee0] text-[#304050] hover:text-[#3f5266] transition-all duration-[250ms] ease-[ease]"
@@ -371,7 +371,7 @@ export function LoginScreen() {
                       setMode("signup");
                       clearValidation();
                     }}
-                    className={`flex h-[50px] flex-1 items-center justify-center border-t-2 text-base font-bold ${
+                    className={`block flex-1 px-4 py-3 text-center border-t-2 text-base font-bold ${
                       mode === "signup"
                         ? "border-[#2ec4b6] text-[#047d95] transition-none duration-[250ms] ease-[ease]"
                         : "border-[#dcdee0] text-[#304050] hover:text-[#3f5266] transition-all duration-[250ms] ease-[ease]"

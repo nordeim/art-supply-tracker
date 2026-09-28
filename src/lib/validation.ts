@@ -7,6 +7,7 @@ import { z } from "zod";
 
 import {
   MAX_PHOTO_DATA_URL_LENGTH,
+  MAX_PROJECT_PHOTOS,
   PROJECT_STATUS_VALUES,
   SUBCATEGORY_NONE,
   SUBCATEGORY_OTHER,
@@ -119,7 +120,7 @@ export const projectInputSchema = z.object({
     .optional()
     .transform((v) => (Number.isFinite(v) ? v : undefined)),
   notes: optionalText(4000),
-  photos: z.array(photoSchema).max(10).optional(),
+  photos: z.array(photoSchema).max(MAX_PROJECT_PHOTOS).optional(),
 });
 
 /**
@@ -190,7 +191,7 @@ export const importPayloadSchema = z.object({
         status: z.enum(PROJECT_STATUS_VALUES as [string, ...string[]]).default("planned"),
         budget: z.number().min(0).max(1_000_000).nullable().optional(),
         notes: z.string().max(4000).nullable().optional(),
-        images: z.array(z.string().max(MAX_PHOTO_DATA_URL_LENGTH)).max(10).optional(),
+        images: z.array(z.string().max(MAX_PHOTO_DATA_URL_LENGTH)).max(MAX_PROJECT_PHOTOS).optional(),
       }),
     )
     .max(500),
@@ -229,7 +230,7 @@ export const normalizedImportPayloadSchema = z.object({
         status: z.enum(PROJECT_STATUS_VALUES as [string, ...string[]]),
         budget: z.number().min(0).max(1_000_000).nullable(),
         notes: z.string().max(4000).nullable(),
-        photos: z.array(z.string().max(MAX_PHOTO_DATA_URL_LENGTH)).max(10),
+        photos: z.array(z.string().max(MAX_PHOTO_DATA_URL_LENGTH)).max(MAX_PROJECT_PHOTOS),
       }),
     )
     .max(500),

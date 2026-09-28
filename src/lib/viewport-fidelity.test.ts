@@ -59,6 +59,9 @@ const login = readFileSync(
 );
 const globals = readFileSync(join(libDir, "../app/globals.css"), "utf8");
 
+/** The old fixed-height tab token, assembled at runtime (see docblock). */
+const fixedTabHeight = ["h", "[50px]"].join("-");
+
 describe("viewport-band pins (r29: the 480-768 handoff)", () => {
   it("fixes the login card at 480px from viewport 480 up (the live's min-content handoff)", () => {
     // The pair replicates the live's fixed-480-from-480 card: below 480
@@ -96,5 +99,42 @@ describe("viewport-band pins (r29: the 480-768 handoff)", () => {
     // body carry the rule. Vertical scrolling is unaffected (the
     // live's own desktop shell scrolls the same document).
     expect(globals).toMatch(/html,\s*body\s*\{[^}]*overflow-x:\s*hidden/);
+  });
+});
+
+describe("viewport-band pins (r30: the sub-335 login tab wrap)", () => {
+  /**
+   * r30 measured the sub-390 band the r29 record queued: at viewport
+   * <=330 the live's tab strip is 74px tall because the Amplify tab
+   * (`amplify-tabs__item`) is a BLOCK element with `text-align: center`
+   * and `padding: 12px 16px` whose height EMERGES from its content —
+   * the "Create Account" label (16px bold, ~118px wide) no longer fits
+   * the padded tab (tab 143px - 32px padding = 111px content at 320)
+   * and wraps to two 24px lines: 2 (border-t-2) + 12 + 24 + 24 + 12 =
+   * 74px. From viewport 335 up the label fits (measured threshold:
+   * 74px at 320/330, 50px at 335) and the strip computes the single-
+   * line 50px. The clone's `flex h-[50px] items-center justify-center`
+   * tab had NO padding to overcome and a FIXED height — the label
+   * never wrapped and the whole login page rendered 24px short at 320
+   * (live 1069px vs clone 1045px).
+   *
+   * The fix replicates the live's chrome: `block flex-1 px-4 py-3
+   * text-center` — the height emergent (50px single-line: 2+12+24+12;
+   * 74px wrapped), the label's y-offset at one line IDENTICAL to the
+   * old flex centering (top 2+12 = 14px on both), the equal widths
+   * kept by flex-1 (the tablist is the flex container, like the
+   * live's `amplify-tabs__list--equal`).
+   */
+  it("renders the login tabs with the live's emergent-height chrome (block + padding + text-center)", () => {
+    expect(login).toMatch(
+      /block flex-1 px-4 py-3 text-center border-t-2 text-base font-bold/,
+    );
+  });
+
+  it("has no fixed-height tab token left (the wrap must stay possible)", () => {
+    // Constructed at runtime — TW4 scans test sources, and the literal
+    // dead token would compile the utility straight back into the CSS
+    // (the r20 css-hygiene lesson).
+    expect(login).not.toContain(fixedTabHeight);
   });
 });

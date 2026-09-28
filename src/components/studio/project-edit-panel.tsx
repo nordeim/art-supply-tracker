@@ -15,7 +15,7 @@ import Image from "next/image";
 
 import { updateProject } from "@/actions/studio";
 import type { ProjectDto } from "@/lib/dto";
-import { PROJECT_STATUSES, budgetEditValue, budgetFromEditInput } from "@/lib/studio-domain";
+import { PROJECT_STATUSES, budgetEditValue, budgetFromEditInput, MAX_PROJECT_PHOTOS } from "@/lib/studio-domain";
 import { fileToDataUrl } from "@/components/studio/photo-data-url";
 
 interface ProjectEditPanelProps {
@@ -37,7 +37,7 @@ export function ProjectEditPanel({ project, onCancel, onSaved }: ProjectEditPane
     if (!files) return;
     setError(null);
     Array.from(files)
-      .slice(0, 10 - photos.length)
+      .slice(0, MAX_PROJECT_PHOTOS - photos.length)
       .forEach((file) => {
         if (!file.type.startsWith("image/")) return;
         fileToDataUrl(file)
@@ -152,43 +152,56 @@ export function ProjectEditPanel({ project, onCancel, onSaved }: ProjectEditPane
           />
         </div>
         <div>
-          <span className={labelClass}>Photos</span>
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-ast-turquoise/30 bg-ast-bg-dark/70 px-3 py-2 text-sm text-ast-muted transition hover:border-ast-turquoise/60 hover:text-ast-body">
-            Add photos
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={(e) => {
-                onAddPhotos(e.target.files);
-                e.target.value = "";
-              }}
-            />
-          </label>
+          {/* r30: the live's edit panel renders the identical photo area
+           * to its modal (measured with 2 photos on the live): the
+           * "Photos (N/30)" counter label, the 5-col thumb grid with the
+           * inside-x thumbs, and the "Add more" tile. */}
+          <span className={labelClass}>
+            Photos ({photos.length}/{MAX_PROJECT_PHOTOS})
+          </span>
           {photos.length > 0 && (
-            <ul className="mt-3 flex flex-wrap gap-2">
+            <div className="mb-3 grid grid-cols-5 gap-2">
               {photos.map((photo, index) => (
-                <li key={index} className="relative">
+                <div key={index} className="group relative">
                   <Image
                     src={photo}
                     alt={`Project photo ${index + 1}`}
                     width={64}
                     height={64}
                     unoptimized
-                    className="h-16 w-16 rounded-lg border border-ast-turquoise/30 object-cover"
+                    className="aspect-square w-full rounded-lg border border-ast-turquoise/20 object-cover"
                   />
                   <button
                     type="button"
                     onClick={() => setPhotos((list) => list.filter((_, i) => i !== index))}
                     aria-label={`Remove photo ${index + 1}`}
-                    className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-ast-coral text-[10px] font-bold text-white"
+                    className="absolute top-0.5 right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white text-xs"
                   >
-                    ✕
+                    ×
                   </button>
-                </li>
+                  {index === 0 && (
+                    <span className="absolute bottom-0.5 left-0.5 rounded bg-black/60 px-1 text-[9px] leading-tight text-ast-turquoise">
+                      cover
+                    </span>
+                  )}
+                </div>
               ))}
-            </ul>
+            </div>
+          )}
+          {photos.length < MAX_PROJECT_PHOTOS && (
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-ast-turquoise/30 bg-ast-bg-dark/70 px-3 py-2 text-sm text-ast-muted transition hover:border-ast-turquoise/60 hover:text-ast-body">
+              {photos.length === 0 ? "Add photos" : "Add more"}
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  onAddPhotos(e.target.files);
+                  e.target.value = "";
+                }}
+              />
+            </label>
           )}
         </div>
         {error && (

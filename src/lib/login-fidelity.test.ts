@@ -100,8 +100,14 @@ describe("login card chrome (live Amplify geometry)", () => {
     expect(login).toMatch(/pb-3 (\$\{|")/); // the card tail (r27: the className is now a template literal on the reset-email view)
   });
 
-  it("renders equal-width 50px text-base tabs", () => {
-    expect(login).toMatch(/h-\[50px\] flex-1/);
+  it("renders equal-width text-base tabs with the live's emergent height (r30 re-measure)", () => {
+    // r30: the live's amplify-tabs__item is display:block, text-align
+    // center, padding 12px 16px — the height EMERGES (50px single-line,
+    // 74px when "Create Account" wraps at viewport <=330). The old
+    // h-[50px] pin measured only the single-line viewports (390/1280);
+    // the fixed cap rendered the whole login 24px short at 320. The
+    // wrap chrome is pinned in viewport-fidelity.test.ts.
+    expect(login).toMatch(/block flex-1 px-4 py-3 text-center/);
     expect(login).toMatch(/role="tab"[\s\S]{0,400}?text-base font-bold/);
   });
 
@@ -184,7 +190,9 @@ describe("login card chrome (live Amplify geometry)", () => {
     // stack with the card's purple border — not 4px stacked). Each tab
     // therefore owns a border-t-2; the list itself carries none.
     expect(login).not.toMatch(/role="tablist"[\s\S]{0,120}?border-t-2/);
-    expect(login).toMatch(/justify-center border-t-2 text-base/);
+    // r30 re-measure: the tabs are now block+padding (the wrap contract);
+    // the border-t-2 text-base pair survives in the new class order.
+    expect(login).toMatch(/text-center border-t-2 text-base/);
     expect(login).toMatch(/mode === "signin"[\s\S]{0,300}?"border-\[#2ec4b6\]/);
     expect(login).toMatch(/"border-\[#dcdee0\] text-\[#304050\]/);
   });

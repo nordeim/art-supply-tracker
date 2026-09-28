@@ -143,7 +143,7 @@ function StudioSpotlightCard({ onClick }: { onClick: () => void }) {
           width={56}
           height={56}
           unoptimized
-          className="h-14 w-14 rounded-full border border-ast-pink/30 object-cover"
+          className="h-14 w-14 shrink-0 rounded-full border border-ast-pink/30 object-cover"
         />
         <div>
           <h2 className="text-lg font-bold text-[#FF2FB3]">Kevin Lewis</h2>

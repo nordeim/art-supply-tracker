@@ -178,40 +178,47 @@ export function SupplyModal({ projects, onClose, onSaved }: SupplyModalProps) {
             </div>
             <div className="shrink-0">
               <span className={labelClass}>Photo</span>
-              <label className="flex h-16 w-16 cursor-pointer flex-col items-center justify-center rounded-xl border border-ast-pink/30 bg-ast-bg-dark/70 text-ast-muted transition hover:border-ast-pink/60 hover:text-ast-body">
-                <span aria-hidden="true" className="text-lg leading-none">
-                  📷
-                </span>
-                <span className="mt-1 text-[9px]">Add photo</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    onAddPhoto(e.target.files?.[0]);
-                    e.target.value = "";
-                  }}
-                />
-              </label>
-              {photo && (
-                <div className="relative mt-2">
+              {/* r30: the live REPLACES the add-photo tile with the preview
+               * in the same slot (measured on the live at 320: the tile
+               * vanishes, the 64px preview renders at the tile's x/y with
+               * the x button floating at -top-1 -right-1 in bg-black/60).
+               * The old chrome — the tile kept + a 56px preview appended
+               * below with a coral corner x — was an unmeasured guess. */}
+              {photo ? (
+                <div className="relative">
                   <Image
                     src={photo}
                     alt="Supply photo"
-                    width={56}
-                    height={56}
+                    width={64}
+                    height={64}
                     unoptimized
-                    className="h-14 w-14 rounded-xl border border-ast-pink/30 object-cover"
+                    className="w-16 h-16 rounded-xl border border-ast-pink/30 object-cover"
                   />
                   <button
                     type="button"
                     onClick={() => setPhoto(null)}
                     aria-label="Remove photo"
-                    className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-ast-coral text-[10px] font-bold text-white"
+                    className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white text-xs"
                   >
-                    ✕
+                    ×
                   </button>
                 </div>
+              ) : (
+                <label className="flex h-16 w-16 cursor-pointer flex-col items-center justify-center rounded-xl border border-ast-pink/30 bg-ast-bg-dark/70 text-ast-muted transition hover:border-ast-pink/60 hover:text-ast-body">
+                  <span aria-hidden="true" className="text-lg leading-none">
+                    📷
+                  </span>
+                  <span className="mt-1 text-[9px]">Add photo</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      onAddPhoto(e.target.files?.[0]);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
               )}
             </div>
           </div>

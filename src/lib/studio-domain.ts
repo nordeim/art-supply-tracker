@@ -138,6 +138,16 @@ export function budgetFromEditInput(raw: string): number | null {
 export const MAX_PHOTO_DATA_URL_LENGTH = 400_000;
 
 /**
+ * The per-project photo cap. Measured on the live (r30): the project
+ * modal's own counter label displays "Photos (N/30)" and its Add-more
+ * tile disappears at 30/30 (overflow uploads are silently dropped) —
+ * the cap is 30, not the 10 the clone's schemas originally guessed.
+ * Every consumer (both Zod photo schemas, both panels' upload slice)
+ * reads this constant.
+ */
+export const MAX_PROJECT_PHOTOS = 30;
+
+/**
  * Items created within this window render the "NEW" badge (live-app
  * behavior: fresh items are badged and exported with `isNew: true`).
  * The live threshold is not observable without waiting days out; seven

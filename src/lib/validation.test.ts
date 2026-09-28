@@ -49,12 +49,20 @@ describe("projectInputSchema", () => {
     expect(parsed.success).toBe(false);
   });
 
-  it("rejects more than 10 photos", () => {
+  it("rejects more than 30 photos (the live's (N/30) cap — r30 re-measure)", () => {
+    // r30: the live's own modal counter displays (N/30) and its tile
+    // disappears at 30/30 — the clone's 10 was an unmeasured guess.
     const parsed = projectInputSchema.safeParse({
       name: "Too many",
-      photos: Array.from({ length: 11 }, () => smallDataUrl),
+      photos: Array.from({ length: 31 }, () => smallDataUrl),
     });
     expect(parsed.success).toBe(false);
+    // 30 is the live's cap: exactly 30 must still pass.
+    const exact = projectInputSchema.safeParse({
+      name: "Exactly at cap",
+      photos: Array.from({ length: 30 }, () => smallDataUrl),
+    });
+    expect(exact.success).toBe(true);
   });
 
   it("defaults status to planned and trims the name", () => {
@@ -390,8 +398,8 @@ describe("normalizedImportPayloadSchema", () => {
     expect(parsed.success).toBe(false);
   });
 
-  it("rejects more than 10 photos on a normalized project", () => {
-    const photos = Array.from({ length: 11 }, () => "data:image/jpeg;base64,QUJD");
+  it("rejects more than 30 photos on a normalized project (r30 re-measure)", () => {
+    const photos = Array.from({ length: 31 }, () => "data:image/jpeg;base64,QUJD");
     const parsed = normalizedImportPayloadSchema.safeParse({
       ...normalized,
       projects: [{ ...normalized.projects[0], photos }],

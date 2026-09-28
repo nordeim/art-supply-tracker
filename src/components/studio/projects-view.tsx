@@ -11,6 +11,7 @@
  * the chip's 3-column row — matching the live app's interaction model.
  */
 import { useMemo, useState } from "react";
+import Image from "next/image";
 
 import type { ProjectDto, SupplyDto } from "@/lib/dto";
 import {
@@ -509,6 +510,20 @@ function ProjectChip({
         >
           {project.name}
         </p>
+        {/* r30: the live's chip renders the project's first photo as a
+         * rounded thumb at 85% opacity AFTER the name in the header row
+         * (measured on the live: name x58, img x106 — the thumb is the
+         * row's SECOND child). */}
+        {project.photos[0] ? (
+          <Image
+            src={project.photos[0]}
+            alt=""
+            width={40}
+            height={40}
+            unoptimized
+            className="h-10 w-10 shrink-0 rounded-lg object-cover opacity-85"
+          />
+        ) : null}
       </div>
       <span
         className={`rounded-full px-2 py-0.5 text-xs font-medium ${projectStatusPillClasses(
