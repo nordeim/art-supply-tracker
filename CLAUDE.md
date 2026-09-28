@@ -171,7 +171,7 @@ not secret — rotate before any public deployment).
 ### Testing Strategy
 
 Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
-`src/**/*.test.ts`). The suite (394 tests) pins:
+`src/**/*.test.ts`). The suite (399 tests) pins:
 
 - **The SQLite path contract** (`src/lib/db-path.test.ts`) — relative
   `file:` URLs resolve against `prisma/schema.prisma` (so
@@ -187,8 +187,9 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
   picker option order, the NEW-badge window, quantity parsing (integers,
   decimals, a/b fractions) and the live's quantity FORMAT gate
   (`isValidQuantityInput`: empty is valid; unparseable text is not), the
-  edit-panel budget mapping (unset → "0" in the form, blank → null on
-  submit), and the two live unassigned-option strings (create vs edit
+  edit-panel budget mapping (unset → "" in the form, blank → null on
+  submit — the r32 re-measure: the live mounts the field EMPTY, not
+  "0"), and the two live unassigned-option strings (create vs edit
   surfaces).
 - **Design tokens** (`design-tokens.test.ts`) — the `@theme` literal hex
   values, pinned to the live app's *compiled utility classes* (the rendered
@@ -234,16 +235,25 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
   field set (`title`, `subcategory`, `supplyIds`, the three-slot quantity
   semantics — `qty:""` when empty, `quantity:null` for fractions, the
   fraction-aware `quantityValue` — `isNew`, status omitted when ABSENT
-  but emitted when explicit, unset `budget`/`barcode` as `""`,
-  `imageUrl: null`) and the import normalizer's handling of both live and
-  legacy clone shapes, including relation remapping and the empty-qty /
-  explicit-ok round-trip verified against the live's own import.
+  but emitted when explicit, unset `budget`/`barcode`/`subcategory` as
+  `""` (the r32 subcategory re-measure), `imageUrl: null`) and the
+  import normalizer's handling of both live and legacy clone shapes,
+  including relation remapping and the empty-qty / explicit-ok
+  round-trip verified against the live's own import. The r32 pins add
+  the normalizer's always-emitted `createdAt`/`updatedAt`/`isNew` per
+  item — the live's import PRESERVES the payload's stamps (a crafted
+  stamp round-trips verbatim) and HONORS its `isNew` for badges.
 - **Import gate** (`validation.test.ts` + `studio.test.ts`) —
   `normalizedImportPayloadSchema` rejects out-of-vocabulary categories and
   statuses, oversized arrays (500 projects / 1000 supplies), over-length
   strings, and oversized photo payloads; the action layer refuses to store
   them and rolls the studio back when a row fails mid-import (the whole
-  restore is one interactive transaction). The delete path follows the
+  restore is one interactive transaction). r32: the gate DECLARES the
+  normalizer's `createdAt`/`updatedAt`/`isNew` fields (an undeclared field
+  would be stripped from parsed.data — the gate and stored contracts
+  cannot drift), and the action returns the created ids with their payload
+  isNew flags (`createdProjects`/`createdSupplies`) — studio-app marks the
+  session-badge registry from exactly these. The delete path follows the
   same atomicity discipline — a mid-delete failure must not strand
   supplies on a still-existing project (pinned by a failure-injection
   test).
@@ -319,7 +329,9 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
   this session badge (project chip, project detail h2, supply chip,
   supply detail h2); a page reload drops every badge. The registry is
   the in-memory `src/lib/new-badge.ts` (`markCreatedThisSession` in
-  both create flows, `isNewSessionItem(id)` at the four surfaces);
+  both create flows AND in the import handler — keyed off the
+  payload's `isNew` flag per created id, the r32 contract;
+  `isNewSessionItem(id)` at the four surfaces);
   the window-based `isNewItem`/`NEW_BADGE_WINDOW_MS` are removed
   from studio-domain (the EXPORT wire format's `isNew` keeps its
   window as a private helper in export-payload.ts — a separate

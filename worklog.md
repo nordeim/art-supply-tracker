@@ -251,3 +251,36 @@ Work Log:
 
 Stage Summary:
 - r31 complete: 4 findings fixed TDD-first + 1 misreading caught and reverted with its trap pinned; 394 tests, all gates green; all 16 photo-state pairs + the canonical pairs + prod-mode probes clean; the live left pristine (0/0/15)
+
+---
+Task ID: 15
+Agent: main (Super Z, r32 session)
+Task: Workspace restoration + baseline re-verification (after the interrupted r32 session)
+
+Work Log:
+- The prior r32 session (survey + RED/GREEN + post-fix battery) was interrupted BEFORE the commit; the workspace was reset — all uncommitted work lost
+- Cloned https://github.com/nordeim/art-supply-tracker.git @ 053776e (main, clean; r31-complete + the user's session_56 log commit)
+- Reviewed AGENTS.md, CLAUDE.md, README.md, PAD (R31 entry + test matrix), SKILL.md (metadata + Appendix A baselines), session_55.md (r31 record), session_56.md (the user's r31 narration with the r32 candidates: deeper data states, the 320 modal-photos audit, the drift re-check)
+- Codebase validation: the import action (studio.ts:436 — returns counts only, creates without timestamps), the normalizer (drops createdAt/updatedAt/isNew), the export's subcategory: null emission, budgetEditValue's "0" — all four r32 bug surfaces confirmed present
+- Setup: bun install (862 pkgs), .env from .env.example, db:push + db:seed (1 user, 5 chat, 15 inspo)
+- Baseline gates: lint ✓, typecheck ✓, vitest 394/394 ✓ (the r31 state intact)
+
+Stage Summary:
+- Repo restored at r31-complete; the r32 fix set fully specced from the interrupted session's findings (F-A timestamps, F-B subcategory "", F-C payload isNew badges, F-D budget edit empty)
+
+---
+Task ID: 16
+Agent: main (Super Z, r32 session)
+Task: r32 TDD re-implementation (F-A/F-B/F-C/F-D) + full verification battery
+
+Work Log:
+- RED: 7 intended failures across 4 files — studio-domain.test.ts (the budgetEditValue null pin re-measured to ""), export-payload.test.ts (the absent-subcategory "" pin + the project/supply normalizer three-fields pins), validation.test.ts (the gate's declared-fields + type-rejection pin, fixture updated to the normalizer's new output shape), studio.test.ts (the return-shape pin re-measured + the timestamp/isNew import pin) — exactly 7 failures on the first run
+- GREEN: 6 source edits — export-payload.ts (the normalizer's always-emitted createdAt/updatedAt/isNew via normalizeTimestamp/normalizeIsNew; toExportedSupply's subcategory ?? ""; the doc comment updated), dto.ts (ExportedSupply.subcategory: string | ""), validation.ts (the gate declares the three fields on both item types), studio.ts (the creates carry the stamps; the return gains createdProjects/createdSupplies {id, isNew}), studio-app.tsx (the import handler marks the session registry from the return), studio-domain.ts (budgetEditValue(null) → "")
+- Gates: vitest 399/399 (394 + 5 net-new), lint/typecheck/build clean; production CSS 151,532 bytes (UNCHANGED — the fixes are logic-only), 0 forced-colors / 0 ::selection
+- E2E 28/28 + smoke 23/23 (dev server via the double-fork daemon — plain setsid is reaped at call boundaries)
+- Browser verification through the real UI (agent-browser, 17/17): the flagged items badge on the drilled-down chip lists while the unflagged do not; the identical-stamp payload order preserves insertion order (New > Old > Crit); the budget-less edit input mounts EMPTY; the export blob carries subcategory "" + the payload's stamps; both studios restored to pristine after the empty re-import
+- All 9 reference screenshots re-shot with state checks (7 changed, 2 byte-identical to HEAD — the fixes touch data-dependent surfaces absent from the empty-studio shots); the screenshot methodology hardened (agent-browser's viewport is `set viewport`, the sidebar drawer is a <nav> not an <aside>, the login state requires an explicit sign-out first)
+- Docs: session_57.md (new), AGENTS.md (399 count + 3 r32 quirk entries + the session_57 pointer), CLAUDE.md (399 + the wire-format/import-gate/new-badge ledger updates), README.md (399 + the r32 status row), PAD (the R32 revision entry + the test matrix 370 unit + 29 action), SKILL.md (metadata, Appendix A r32 entry, baselines); .env.example re-verified (no new variables)
+
+Stage Summary:
+- r32 complete in code and docs: 4 findings fixed TDD-first (5 net-new pins + 2 re-measures), 399 tests, all gates green, browser-verified 17/17, both studios pristine
