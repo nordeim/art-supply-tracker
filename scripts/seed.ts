@@ -94,6 +94,7 @@ const INSPIRATION_ENTRIES: SeedEntry[] = [
       artwork: "Blanco y Verde (1959) · Carmen Herrera",
       citation:
         "Whitney Museum of American Art — Carmen Herrera: Lines of Sight, 2016",
+      citationUrl: "https://whitney.org/exhibitions/carmen-herrera",
       rights:
         "Carmen Herrera died February 12, 2022. Works are under copyright administered by the Carmen Herrera Estate / Lisson Gallery. Image URL withheld.",
       tags: ["GEOMETRIC ABSTRACTION", "HERRERA", "CUBAN-AMERICAN ART", "20TH CENTURY"],
@@ -110,6 +111,8 @@ const INSPIRATION_ENTRIES: SeedEntry[] = [
         "In June 1889, Vincent van Gogh completed The Starry Night while voluntarily committed at the Saint-Paul-de-Mausole asylum in Saint-Rémy-de-Provence. Painted from memory rather than direct observation — van Gogh rarely painted at night — it depicts a swirling nocturnal sky over a village, with a luminous crescent moon and a cypress tree dominating the foreground. Van Gogh himself was ambivalent about the work, calling it an 'exaggeration' in a letter to his brother Theo. He sent it to Theo in Paris, where it passed through several hands before entering the collection of the Museum of Modern Art in New York in 1941. It is now one of the most recognized paintings in Western art.",
       artwork: "The Starry Night (1889) · Vincent van Gogh",
       citation: "Vincent van Gogh, Public domain, via Wikimedia Commons",
+      citationUrl:
+        "https://commons.wikimedia.org/wiki/File:Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg",
       rights:
         "Vincent van Gogh died July 29, 1890. The Starry Night (1889) is in the public domain. Image sourced from Wikimedia Commons via the Google Art Project.",
       tags: ["POST-IMPRESSIONISM", "VAN GOGH", "DUTCH ART", "19TH CENTURY"],
@@ -126,6 +129,8 @@ const INSPIRATION_ENTRIES: SeedEntry[] = [
         "On June 10, 1819, Gustave Courbet was born in Ornans, France. Rejecting the Romantic idealization of his contemporaries, Courbet insisted on painting only what he could see and know directly. His monumental canvas 'The Stone Breakers' (1849) depicted common laborers with a gravity previously reserved for mythological heroes, scandalizing the Paris Salon. Courbet later organized a private 'Pavilion of Realism' in 1855 to exhibit his rejected works on his own terms—an act of artistic defiance that prefigured the independent exhibition movements that followed.",
       artwork: "The Stone Breakers (1849) · Gustave Courbet",
       citation: "Wikimedia Commons",
+      citationUrl:
+        "https://commons.wikimedia.org/wiki/File:Courbet_-_les-casseurs-de-cailloux.jpg",
       rights:
         "Public domain. Gustave Courbet died December 31, 1877; work created 1849. Image sourced from Wikimedia Commons.",
       tags: ["REALISM", "COURBET", "FRENCH ART", "19TH CENTURY"],
@@ -142,6 +147,8 @@ const INSPIRATION_ENTRIES: SeedEntry[] = [
         "On April 15, 1874, a group of French artists including Claude Monet, Edgar Degas, Camille Pissarro, Berthe Morisot, and Pierre-Auguste Renoir opened an independent exhibition at the studio of photographer Nadar in Paris. Dismissed by critics—one derided Monet's 'Impression, Sunrise' (1872) as a mere 'impression'—the show nonetheless changed art history permanently. The eight Impressionist exhibitions held between 1874 and 1886 dismantled the stranglehold of the Paris Salon and established the model of the independent artist-organized show.",
       artwork: "Impression, Sunrise (1872) · Claude Monet",
       citation: "Musée Marmottan Monet / Wikimedia Commons",
+      citationUrl:
+        "https://www.marmottan.fr/oeuvre/impression-soleil-levant-4014/",
       rights:
         "Public domain. Claude Monet died December 5, 1926; work created 1872. Image sourced from Wikimedia Commons.",
       tags: ["IMPRESSIONISM", "MONET", "FRENCH ART", "19TH CENTURY"],
@@ -158,6 +165,7 @@ const INSPIRATION_ENTRIES: SeedEntry[] = [
         "Edward Hopper was born on July 22, 1882, in Nyack, New York. Trained under Robert Henri in New York, Hopper developed a uniquely American visual language built on sharp light, geometric architecture, and human figures caught in moments of quiet isolation. His 1942 painting 'Nighthawks'—depicting three customers and a counter attendant in a late-night diner—became an enduring icon of urban loneliness and the alienation of modern life. Hopper once said the diner was 'unconsciously a painting of loneliness,' though he disputed that interpretation publicly.",
       artwork: "Nighthawks (1942) · Edward Hopper",
       citation: "Art Institute of Chicago",
+      citationUrl: "https://www.artic.edu/artworks/111628/nighthawks",
       rights:
         "Public domain in the United States. Edward Hopper died May 15, 1967; 'Nighthawks' (1942) was published before 1978 without copyright renewal. Open access image courtesy of the Art Institute of Chicago via Wikimedia Commons.",
       tags: ["AMERICAN ART", "HOPPER", "REALISM", "20TH CENTURY"],
@@ -174,6 +182,7 @@ const INSPIRATION_ENTRIES: SeedEntry[] = [
         "Founded in New York City in 1985, the Guerrilla Girls emerged in direct response to the Museum of Modern Art's exhibition 'An International Survey of Recent Painting and Sculpture,' which featured only 13 women among 169 artists. The anonymous collective — whose members adopt the names of deceased female artists and wear oversized gorilla masks in public — began postering Manhattan with stark, fact-driven indictments of the gallery and museum system. Their 1989 billboard poster posed the now-iconic question: 'Do women have to be naked to get into the Met. Museum?' It documented that fewer than 5% of the artists in the Metropolitan Museum's modern art sections were women, while 85% of the nudes were female. The collective expanded their critique to Hollywood, publishing, and politics, building a body of activist work that remains a foundational reference for any discussion of representation, equity, and power in the arts. Still active today, they have exhibited at the Tate Modern, the Whitney, and the Venice Biennale.",
       artwork: "Do Women Have to Be Naked to Get into the Met. Museum? (1989) · Guerrilla Girls",
       citation: "Guerrilla Girls official website; MoMA Collection record",
+      citationUrl: "https://www.guerrillagirls.com",
       rights:
         "The Guerrilla Girls are an active collective; all poster and print works are under copyright. Image URL withheld — no public domain or open-license reproduction available. See guerrillagirls.com or MoMA Collection (moma.org/collection/works/133975) for authorized reference.",
       tags: ["POLITICAL ART", "FEMINISM", "ACTIVISM", "GUERRILLA GIRLS"],
@@ -190,6 +199,7 @@ const INSPIRATION_ENTRIES: SeedEntry[] = [
         "Käthe Kollwitz was born on July 8, 1867, in Königsberg, Prussia (now Kaliningrad, Russia). A master printmaker, draftsman, and sculptor, Kollwitz devoted her career to bearing witness to poverty, hunger, war, and grief — the lived reality of Germany's working class in the late 19th and early 20th centuries. Her series 'A Weavers' Revolt' (1893–97) and 'The Peasants' War' (1902–08) brought monumental moral weight to the suffering of ordinary people. The death of her son Peter on the Western Front in 1914 transformed her work irrevocably. Her subsequent prints, drawings, and sculptures — most powerfully the granite figures of 'The Grieving Parents' (1932), installed at the German military cemetery in Vladslo, Belgium, where Peter is buried — stand among the most profound anti-war monuments ever created. Kollwitz was the first woman elected to the Prussian Academy of Arts in 1919, and in 1936 the Nazi regime forced her resignation and banned public exhibition of her work.",
       artwork: "A Weavers' Revolt — The March of the Weavers (1897) · Käthe Kollwitz",
       citation: "Wikimedia Commons; Käthe Kollwitz Museum Köln",
+      citationUrl: "https://www.kollwitz.de/en/",
       rights:
         "Käthe Kollwitz died April 22, 1945. Works created before 1928 are in the public domain in the United States; all works entered the public domain in Germany in 2016 (70 years post-mortem). Portrait photograph is in the public domain. Image sourced from Wikimedia Commons.",
       tags: ["EXPRESSIONISM", "KOLLWITZ", "GERMAN ART", "PRINTMAKING"],
@@ -206,6 +216,7 @@ const INSPIRATION_ENTRIES: SeedEntry[] = [
         "Rembrandt Harmenszoon van Rijn was born on July 15, 1606, in Leiden, in the Dutch Republic. The preeminent master of the Dutch Golden Age, Rembrandt transformed portraiture through his unmatched command of chiaroscuro, his penetrating psychological insight, and a lifelong fascination with the human face — above all his own. Over four decades he produced nearly 100 self-portraits in oil, etching, and drawing, creating the most sustained visual autobiography in Western art. His monumental civic group portrait 'The Night Watch' (1642), with its radical use of dramatic illumination and its sense of arrested movement, broke every convention of the genre. His late works — characterized by loose, impastoed paint and unflinching confrontation with mortality and time — were undervalued in his own day but proved deeply influential on Impressionism, Expressionism, and virtually every tradition of painterly realism that followed.",
       artwork: "The Night Watch (1642) · Rembrandt van Rijn",
       citation: "Rijksmuseum, Amsterdam / Wikimedia Commons",
+      citationUrl: "https://www.rijksmuseum.nl/en/collection/SK-C-5",
       rights:
         "Public domain. Rembrandt van Rijn died October 4, 1669; work created 1642. High-resolution image sourced from Wikimedia Commons, courtesy of the Rijksmuseum open-access program.",
       tags: ["DUTCH GOLDEN AGE", "REMBRANDT", "BAROQUE", "17TH CENTURY"],
@@ -224,6 +235,7 @@ const INSPIRATION_ENTRIES: SeedEntry[] = [
       artwork: "The Child's Bath (1893) · Mary Cassatt",
       citation:
         "Letter from Mary Cassatt to Louisine Havemeyer, c. 1911; cited in Mathews, Nancy Mowll. 'Mary Cassatt: A Life.' Yale University Press, 1994.",
+      citationUrl: "https://www.artic.edu/artworks/111442/the-child-s-bath",
       rights:
         "Public domain. Mary Cassatt died June 14, 1926; 'The Child's Bath' created 1893. Open-access image courtesy of the Art Institute of Chicago via Wikimedia Commons.",
       tags: ["IMPRESSIONISM", "CASSATT", "AMERICAN ART", "WOMEN ARTISTS"],
@@ -240,6 +252,7 @@ const INSPIRATION_ENTRIES: SeedEntry[] = [
       artwork: "The Dance Class (1874) · Edgar Degas",
       citation:
         "Widely attributed to Edgar Degas; cited in Musée d'Orsay exhibition scholarship and multiple academic monographs on Impressionism",
+      citationUrl: "https://www.musee-orsay.fr/en/artworks/la-classe-de-danse-1656",
       rights:
         "Public domain. Edgar Degas died September 27, 1917; 'The Dance Class' created 1874. Image sourced from Wikimedia Commons via Google Art Project.",
       tags: ["IMPRESSIONISM", "DEGAS", "FRENCH ART", "BALLET"],
@@ -256,6 +269,8 @@ const INSPIRATION_ENTRIES: SeedEntry[] = [
       artwork: "Woman with Dead Child (1903) · Käthe Kollwitz",
       citation:
         "Kollwitz, Käthe. 'The Diary and Letters of Kaethe Kollwitz.' Edited by Hans Kollwitz, translated by Richard and Clara Winston. Northwestern University Press, 1988.",
+      citationUrl:
+        "https://nupress.northwestern.edu/9780810108202/the-diary-and-letters-of-kaethe-kollwitz/",
       rights:
         "Käthe Kollwitz died April 22, 1945. 'Woman with Dead Child' (1903) is in the public domain in the United States and Germany. Image sourced from Wikimedia Commons.",
       tags: ["EXPRESSIONISM", "KOLLWITZ", "GERMAN ART", "PRINTMAKING"],
@@ -272,6 +287,7 @@ const INSPIRATION_ENTRIES: SeedEntry[] = [
       artwork: "Twittering Machine (1922) · Paul Klee",
       citation:
         "Paul Klee, 'Pedagogical Sketchbook' (Pädagogisches Skizzenbuch), Bauhaus Books Vol. 2, 1925",
+      citationUrl: "https://www.moma.org/collection/works/37347",
       rights:
         "Paul Klee died June 29, 1940. Works by Paul Klee are under copyright administered by the Paul Klee Estate / VG Bild-Kunst. Image reproduced for educational reference only under fair use. Full rights reserved.",
       tags: ["BAUHAUS", "KLEE", "GERMAN ART", "DRAWING"],
@@ -287,6 +303,9 @@ const INSPIRATION_ENTRIES: SeedEntry[] = [
     sortOrder: 14,
     detail: {
       subtitle: "@kims_studio_labs · Kim Wyatt Studio Art Labs",
+      gallery: [
+        "https://static.wixstatic.com/media/0669c1_26396aee2e914839814b379e8efd0070~mv2.jpg/v1/fill/w_460,h_800,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/Liberty With Mask by Kim Wyatt.jpg",
+      ],
       body:
         "Artist and founder behind AST Studio. Kim Wyatt Studio Art Labs is the real-world studio practice this app was built to support.",
       tags: ["Founder", "Studio Artist", "Beta"],
@@ -304,6 +323,13 @@ const INSPIRATION_ENTRIES: SeedEntry[] = [
     sortOrder: 13,
     detail: {
       subtitle: "@kevinlewisart · Kevin Lewis Studio",
+      gallery: [
+        "/assets/artwork-01.jpg",
+        "/assets/artwork-02.jpg",
+        "/assets/artwork-03.jpg",
+        "/assets/artwork-04.jpg",
+        "/assets/studio-01.jpeg",
+      ],
       body:
         "Kevin Lewis is a San Diego artist whose work is vivid, intense, and sometimes frightening. His imagery carries forward the ideas, moods, and theatrical instincts he developed while working in makeup and costume design on horror movie sets.",
       tags: ["Mixed Media", "Textile", "Spotlight"],

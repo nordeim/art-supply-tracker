@@ -21,23 +21,44 @@ describe("inspirationDetailSchema", () => {
       quote: "I am independent! I can live alone and I love to work.",
       artwork: "The Child's Bath (1893) · Mary Cassatt",
       citation: "Letter from Mary Cassatt to Louisine Havemeyer, c. 1911.",
+      citationUrl: "https://www.artic.edu/artworks/111442/the-child-s-bath",
       rights: "Public domain.",
       tags: ["IMPRESSIONISM", "CASSATT"],
     });
     expect(parsed.success).toBe(true);
   });
 
-  it("accepts a spotlight detail with handle and link", () => {
+  it("accepts a spotlight detail with handle, link, and the r35 artwork gallery", () => {
     const parsed = inspirationDetailSchema.safeParse({
       subtitle: "@kevinlewisart · Kevin Lewis Studio",
       body: "Kevin Lewis is a San Diego artist whose work is vivid and intense.",
       tags: ["Mixed Media", "Textile", "Spotlight"],
       attribution: "Artwork by Kevin Lewis. Used with artist permission.",
+      gallery: [
+        "/assets/artwork-01.jpg",
+        "/assets/artwork-02.jpg",
+        "https://static.wixstatic.com/media/example.jpg",
+      ],
     });
     expect(parsed.success).toBe(true);
     if (parsed.success) {
       expect(parsed.data.subtitle).toContain("@kevinlewisart");
+      expect(parsed.data.gallery).toHaveLength(3);
     }
+  });
+
+  it("rejects a non-array gallery", () => {
+    const parsed = inspirationDetailSchema.safeParse({
+      gallery: "/assets/artwork-01.jpg",
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("caps the gallery count (the live's panel renders at most a dozen thumbs)", () => {
+    const parsed = inspirationDetailSchema.safeParse({
+      gallery: Array.from({ length: 13 }, (_, i) => `/a-${i}.jpg`),
+    });
+    expect(parsed.success).toBe(false);
   });
 
   it("rejects non-array tags", () => {

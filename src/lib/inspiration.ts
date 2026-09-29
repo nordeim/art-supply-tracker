@@ -23,6 +23,10 @@ export const inspirationDetailSchema = z.object({
   artwork: detailText(300),
   /** Provenance line for the artwork citation. */
   citation: detailText(600),
+  /** r35: the citation's external href (the live renders the citation as
+   * an underlined target=_blank link — e.g. artic.edu for the Cassatt
+   * quote, rijksmuseum.nl for the Rembrandt history entry). */
+  citationUrl: detailText(600),
   /** Rights / public-domain notice. */
   rights: detailText(600),
   /** Uppercase tag chips rendered under the panel body. */
@@ -33,6 +37,12 @@ export const inspirationDetailSchema = z.object({
   linkLabel: detailText(120),
   /** External link target (https or bare host). */
   linkUrl: detailText(300),
+  /** r35: the spotlight panel's artwork gallery — the live renders a
+   * full-width main image plus a thumbnail selector whenever the entry
+   * carries more than one artwork (Kevin Lewis's five app-CDN pieces;
+   * Kim Wyatt's single external wixstatic image renders without the
+   * thumb strip). */
+  gallery: z.array(z.string().max(600)).max(12).optional(),
 });
 
 export type InspirationDetail = z.infer<typeof inspirationDetailSchema>;

@@ -77,3 +77,39 @@ describe("seed fidelity — community chat history (live ground truth)", () => {
     expect(seed).toMatch(/typo/i);
   });
 });
+
+describe("seed fidelity — the r35 inspiration gallery + citation links", () => {
+  it("seeds Kevin Lewis's five-artwork gallery (the live's thumb strip)", () => {
+    // Measured on the live 2026-09-29: the spotlight panel renders five
+    // artwork thumbs (artwork-01..04 + studio-01), byte-identical to the
+    // repo's public/assets copies (md5-verified against the live CDN).
+    expect(seed).toContain('gallery: [');
+    expect(seed).toContain('"/assets/artwork-01.jpg"');
+    expect(seed).toContain('"/assets/artwork-02.jpg"');
+    expect(seed).toContain('"/assets/artwork-03.jpg"');
+    expect(seed).toContain('"/assets/artwork-04.jpg"');
+    expect(seed).toContain('"/assets/studio-01.jpeg"');
+  });
+
+  it("seeds Kim Wyatt's single-artwork gallery (the live's external wixstatic image)", () => {
+    expect(seed).toContain("static.wixstatic.com");
+  });
+
+  it("seeds the live's citation links (the underlined external hrefs)", () => {
+    expect(seed).toContain(
+      "citationUrl: \"https://www.artic.edu/artworks/111442/the-child-s-bath\"",
+    );
+    expect(seed).toContain(
+      "citationUrl: \"https://www.rijksmuseum.nl/en/collection/SK-C-5\"",
+    );
+    expect(seed).toContain(
+      "citationUrl: \"https://www.musee-orsay.fr/en/artworks/la-classe-de-danse-1656\"",
+    );
+    expect(seed).toContain(
+      "nupress.northwestern.edu/9780810108202/the-diary-and-letters-of-kaethe-kollwitz/",
+    );
+    expect(seed).toContain(
+      "citationUrl: \"https://www.moma.org/collection/works/37347\"",
+    );
+  });
+});

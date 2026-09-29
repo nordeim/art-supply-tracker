@@ -96,4 +96,29 @@ describe("StudioChat card (live bundle verbatim)", () => {
   it("renders send errors in the live's text-pink-300", () => {
     expect(chat).toContain("text-pink-300");
   });
+
+  it("keeps the error alert's role=\"alert\" (the documented r35 a11y addition)", () => {
+    // The live's error element is a plain <p class="mb-2 text-xs
+    // text-pink-300"> (bundle source 2026-09-29); the clone's role="alert"
+    // announces the error to assistive tech — the aria-pressed class of
+    // kept addition, pinned so it cannot silently regress.
+    expect(chat).toContain('role="alert"');
+  });
+
+  it("carries NO maxLength on the composer input (r35 — the live has none)", () => {
+    // Measured on the live 2026-09-29: the composer input's maxLength is
+    // -1 (absent) and a 600-char message posts verbatim. The scaffold-era
+    // maxLength={500} (initial commit, never measured) was removed.
+    expect(chatCode).not.toContain("maxLength");
+  });
+
+  it("answers send failures with the live's exact error copy (r35)", () => {
+    // The live's catch sets "Could not send message." (bundle source);
+    // the action returns it on the failing path.
+    const actions = readFileSync(
+      join(libDir, "../actions/studio.ts"),
+      "utf8",
+    );
+    expect(actions).toContain('"Could not send message."');
+  });
 });

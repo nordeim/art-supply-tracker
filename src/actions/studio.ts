@@ -434,7 +434,10 @@ export async function sendChatMessage(
     return { ok: true, data: toChatDto(row) };
   } catch (error) {
     console.error("[chat:send] failed", { userId: user.id, error });
-    return internalError();
+    // r35: the live's composer catch renders "Could not send message."
+    // (bundle source, verified 2026-09-29) — the customer-safe copy for
+    // the chat send path, replacing the generic INTERNAL flattening.
+    return { ok: false, error: { code: "INTERNAL", message: "Could not send message." } };
   }
 }
 

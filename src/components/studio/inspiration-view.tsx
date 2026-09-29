@@ -4,12 +4,26 @@
  * Inspiration view — "INSPIRATION / Feed": the three feed tabs (Today,
  * Art History, Inspire Me). The Today tab mirrors the live app's interactive
  * rails: a grid of quote gradient tiles (each opens the QUOTE OF THE DAY
- * panel with artwork, citation, rights, and tags), gradient-framed Studio
- * Spotlight portrait tiles (bio, handle, tags, attribution, link), the
- * Today-in-Art-History card with its gradient thumb, and the Partners
- * card. Art History lists the dated timeline in a 2-column grid; Inspire
- * Me renders the live "Discovery Mode" placeholder. Panels render inline
- * directly below their section, exactly like the beta.
+ * panel with artwork, citation link, rights, and tags), gradient-framed
+ * Studio Spotlight portrait tiles (bio, handle, tags, attribution, link —
+ * and, when the entry carries an artwork gallery, the full-width main
+ * image with its thumbnail selector), the Today-in-Art-History card with
+ * its gradient thumb, and the Partners card. Art History lists the dated
+ * timeline in a 2-column grid; Inspire Me renders the live "Discovery
+ * Mode" placeholder. Panels render inline below their section, exactly
+ * like the beta.
+ *
+ * r35: the four detail panels were re-measured live (2026-09-29) and
+ * rebuilt to the live's per-type contracts — each family carries its own
+ * border/padding chrome (turquoise/40 p-5, purple/50 p-4, lavender/40,
+ * blue/40), its own mount point (the quote panel nests inside the Artist
+ * Quotes section with NO gap; the spotlight panel mounts after the whole
+ * spotlight section with mt-3 and scrolls into view; the history/partner
+ * panels mount as children of the feed container after their grids), and
+ * its own inner layout (the quote's flex row + citation stack, the
+ * spotlight's gallery + flat text column, the history's notice + essay,
+ * the partner's flat title+body card). See inspiration-view-fidelity.test.ts
+ * for the pinned class strings.
  */
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
@@ -21,7 +35,7 @@ type FeedTab = "today" | "history" | "inspire";
 
 interface InspirationViewProps {
   inspiration: InspirationEntryDto[];
-  /** The rail navigation section (the live app's location state): 
+  /** The rail navigation section (the live app's location state):
    * "art-history-today" / "partner" auto-expand their detail panels;
    * "quote" and "spotlight-*" are the live's inert sections (the quote
    * section is never consumed; the hardcoded "spotlight-kevin-lewis" id
@@ -93,11 +107,12 @@ export function InspirationView({
             { value: "inspire", label: "Inspire Me" },
           ] as const
         ).map((item) => (
+          // r35: the live's feed tabs are PLAIN buttons — no tab role, no
+          // selected-state attribute (the clone's scaffold-era orphan tab
+          // semantics had no tablist parent and were invalid ARIA; removed).
           <button
             key={item.value}
             type="button"
-            role="tab"
-            aria-selected={tab === item.value}
             onClick={() => {
               setTab(item.value);
               setActiveId(null);
@@ -126,8 +141,17 @@ export function InspirationView({
                     key={quote.id}
                     type="button"
                     onClick={() => setActiveId(activeId === quote.id ? null : quote.id)}
+                    // Kept a11y addition (r35, the aria-pressed class): the
+                    // live's gradient tiles carry no text, so this label is
+                    // the button's only accessible name.
                     aria-label={`Quote by ${quote.author ?? quote.title}`}
-                    className="aspect-square w-full overflow-hidden rounded-2xl border-2 border-transparent transition hover:border-ast-turquoise/25"
+                    // r35: the live marks the tile whose panel is open with
+                    // the turquoise/60 border (measured 2026-09-29).
+                    className={`aspect-square w-full overflow-hidden rounded-2xl border-2 transition ${
+                      activeId === quote.id
+                        ? "border-ast-turquoise/60"
+                        : "border-transparent hover:border-ast-turquoise/25"
+                    }`}
                   >
                     <div className="h-full w-full bg-gradient-to-br from-ast-turquoise/25 via-ast-lavender/20 to-ast-purple/25" />
                   </button>
@@ -135,6 +159,7 @@ export function InspirationView({
               </div>
               {activeEntry?.type === "artist_quote" && (
                 <InspirationDetailPanel
+                  key={activeEntry.id}
                   entry={activeEntry}
                   onClose={() => setActiveId(null)}
                 />
@@ -149,12 +174,20 @@ export function InspirationView({
                 {spotlights.map((spotlight) => (
                   <div
                     key={spotlight.id}
-                    className="rounded-2xl bg-gradient-to-br from-ast-electric-blue/70 via-ast-purple/70 to-ast-pink/60 p-1 transition hover:from-ast-electric-blue/90 hover:via-ast-purple/90 hover:to-ast-pink/80"
+                    // r35: the selected spotlight's gradient frame goes
+                    // full-opacity and drops its hover tokens (measured).
+                    className={`rounded-2xl bg-gradient-to-br p-1 transition ${
+                      activeId === spotlight.id
+                        ? "from-ast-electric-blue via-ast-purple to-ast-pink"
+                        : "from-ast-electric-blue/70 via-ast-purple/70 to-ast-pink/60 hover:from-ast-electric-blue/90 hover:via-ast-purple/90 hover:to-ast-pink/80"
+                    }`}
                   >
+                    {/* r35: no aria-label — the tile's visible name label
+                        already provides the accessible name (the live's
+                        tile carries none either; the label was redundant). */}
                     <button
                       type="button"
                       onClick={() => setActiveId(activeId === spotlight.id ? null : spotlight.id)}
-                      aria-label={spotlight.title}
                       className="relative block aspect-square w-full overflow-hidden rounded-[12px] bg-[#120724]"
                     >
                       {spotlight.imageUrl ? (
@@ -179,13 +212,19 @@ export function InspirationView({
                   </div>
                 ))}
               </div>
-              {activeEntry?.type === "studio_spotlight" && (
-                <InspirationDetailPanel
-                  entry={activeEntry}
-                  onClose={() => setActiveId(null)}
-                />
-              )}
             </div>
+
+            {/* r35: the live's spotlight panel mounts as its own child of
+                the feed container AFTER the whole spotlight section (the
+                section's header + tiles stay visible), carrying its own
+                mt-3 — and the document scrolls it into view. */}
+            {activeEntry?.type === "studio_spotlight" && (
+              <InspirationDetailPanel
+                key={activeEntry.id}
+                entry={activeEntry}
+                onClose={() => setActiveId(null)}
+              />
+            )}
 
             <div />
 
@@ -194,7 +233,13 @@ export function InspirationView({
                 <button
                   type="button"
                   onClick={() => setActiveId(activeId === today.id ? null : today.id)}
-                  className="w-full rounded-2xl border border-ast-purple/40 bg-[#120724] p-4 text-left transition hover:brightness-110"
+                  // r35: the selected card carries the lavender/60 border +
+                  // a white/10 ring and drops its hover (measured).
+                  className={`w-full rounded-2xl border bg-[#120724] p-4 text-left transition ${
+                    activeId === today.id
+                      ? "border-ast-lavender/60 ring-1 ring-white/10"
+                      : "border-ast-purple/40 hover:brightness-110"
+                  }`}
                 >
                   <div className="flex items-start gap-3">
                     <div className="min-w-0 flex-1">
@@ -222,7 +267,12 @@ export function InspirationView({
                   key={partner.id}
                   type="button"
                   onClick={() => setActiveId(activeId === partner.id ? null : partner.id)}
-                  className="w-full rounded-2xl border border-ast-blue/20 bg-[#120724] p-4 text-left transition hover:brightness-110"
+                  // r35: the selected partner card carries blue/60 + ring.
+                  className={`w-full rounded-2xl border bg-[#120724] p-4 text-left transition ${
+                    activeId === partner.id
+                      ? "border-ast-blue/60 ring-1 ring-white/10"
+                      : "border-ast-blue/20 hover:brightness-110"
+                  }`}
                 >
                   <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-ast-lavender">
                     Partners
@@ -240,6 +290,7 @@ export function InspirationView({
             </div>
             {(activeEntry?.type === "art_history" || activeEntry?.type === "partner") && (
               <InspirationDetailPanel
+                key={activeEntry.id}
                 entry={activeEntry}
                 onClose={() => setActiveId(null)}
               />
@@ -248,49 +299,59 @@ export function InspirationView({
         )}
 
         {tab === "history" && (
-          <div className="grid grid-cols-2 gap-3">
-            {history.map((entry) => (
-              <button
-                key={entry.id}
-                type="button"
-                onClick={() => setActiveId(activeId === entry.id ? null : entry.id)}
-                className="w-full rounded-2xl border border-ast-purple/30 bg-[#120724] p-4 text-left transition hover:brightness-110"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-ast-lavender">
-                      {entry.date}
-                    </p>
-                    <p className="text-sm font-semibold leading-snug text-ast-body line-clamp-2">
-                      {entry.title}
-                    </p>
-                    {entry.author && (
-                      <p className="mt-1 text-[11px] leading-snug text-ast-body/55 line-clamp-1">
-                        {entry.author}
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              {history.map((entry) => (
+                <button
+                  key={entry.id}
+                  type="button"
+                  onClick={() => setActiveId(activeId === entry.id ? null : entry.id)}
+                  // r35: the selected timeline entry carries the lavender/60
+                  // border + ring, like the today card (measured).
+                  className={`w-full rounded-2xl border bg-[#120724] p-4 text-left transition ${
+                    activeId === entry.id
+                      ? "border-ast-lavender/60 ring-1 ring-white/10"
+                      : "border-ast-purple/30 hover:brightness-110"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-ast-lavender">
+                        {entry.date}
                       </p>
-                    )}
+                      <p className="text-sm font-semibold leading-snug text-ast-body line-clamp-2">
+                        {entry.title}
+                      </p>
+                      {entry.author && (
+                        <p className="mt-1 text-[11px] leading-snug text-ast-body/55 line-clamp-1">
+                          {entry.author}
+                        </p>
+                      )}
+                    </div>
+                    <div
+                      aria-hidden="true"
+                      className="h-14 w-14 shrink-0 rounded-xl bg-gradient-to-br from-ast-purple/20 via-ast-lavender/15 to-ast-blue/20"
+                    />
                   </div>
-                  <div
-                    aria-hidden="true"
-                    className="h-14 w-14 shrink-0 rounded-xl bg-gradient-to-br from-ast-purple/20 via-ast-lavender/15 to-ast-blue/20"
-                  />
-                </div>
-              </button>
-            ))}
-            {history.length === 0 && (
-              <p className="col-span-2 rounded-2xl border border-ast-purple/25 bg-[#120724] p-6 text-sm text-ast-faint">
-                The art history timeline is empty.
-              </p>
-            )}
+                </button>
+              ))}
+              {history.length === 0 && (
+                <p className="col-span-2 rounded-2xl border border-ast-purple/25 bg-[#120724] p-6 text-sm text-ast-faint">
+                  The art history timeline is empty.
+                </p>
+              )}
+            </div>
+            {/* r35: the live's history-tab panel mounts AFTER the timeline
+                grid as its own child of the feed container — not nested
+                inside the grid as a col-span-2 row. */}
             {activeEntry?.type === "art_history" && (
-              <div className="col-span-2">
-                <InspirationDetailPanel
-                  entry={activeEntry}
-                  onClose={() => setActiveId(null)}
-                />
-              </div>
+              <InspirationDetailPanel
+                key={activeEntry.id}
+                entry={activeEntry}
+                onClose={() => setActiveId(null)}
+              />
             )}
-          </div>
+          </>
         )}
 
         {tab === "inspire" && (
@@ -313,13 +374,51 @@ const PANEL_HEADER: Record<InspirationEntryDto["type"], string> = {
   partner: "Partners",
 };
 
-/** Section accent per entry type — mirrors the live panels' header colors. */
+/** r35: the live's per-type panel chrome — each family carries its own
+ * border color and padding (measured 2026-09-29; the clone previously
+ * rendered one shared turquoise/40 p-5 class on all four). The spotlight
+ * panel's mt-3 is explicit because it mounts outside any space-y flow. */
+const PANEL_CHROME: Record<InspirationEntryDto["type"], string> = {
+  artist_quote: "rounded-2xl border border-ast-turquoise/40 bg-[#0d0420] p-5",
+  studio_spotlight: "rounded-2xl border border-ast-purple/50 bg-[#0d0420] p-4 mt-3",
+  art_history: "rounded-2xl border border-ast-lavender/40 bg-[#0d0420] p-5",
+  partner: "rounded-2xl border border-ast-blue/40 bg-[#0d0420] p-5",
+};
+
+/** Section accent per entry type — the live's measured header colors: the
+ * quote header is turquoise, the spotlight header FAINT (not pink — r35
+ * re-measure), history and partner are lavender. */
 const PANEL_ACCENT: Record<InspirationEntryDto["type"], string> = {
   artist_quote: "text-ast-turquoise",
-  studio_spotlight: "text-ast-pink",
+  studio_spotlight: "text-ast-faint",
   art_history: "text-ast-lavender",
   partner: "text-ast-lavender",
 };
+
+/**
+ * Splits an artwork caption into the live's composed span trio —
+ * "The Child's Bath (1893) · Mary Cassatt" renders as a bold title span,
+ * a muted " (1893)" span, and a muted " · Mary Cassatt" span (measured on
+ * the live's quote and history panels 2026-09-29). Captions without the
+ * year/author separators render whole in the title span.
+ */
+function splitArtworkCaption(artwork: string): {
+  title: string;
+  year: string;
+  author: string;
+} {
+  const yearIdx = artwork.indexOf(" (");
+  if (yearIdx === -1) return { title: artwork, year: "", author: "" };
+  const dotIdx = artwork.indexOf(" · ");
+  if (dotIdx === -1 || dotIdx < yearIdx) {
+    return { title: artwork.slice(0, yearIdx), year: artwork.slice(yearIdx), author: "" };
+  }
+  return {
+    title: artwork.slice(0, yearIdx),
+    year: artwork.slice(yearIdx, dotIdx),
+    author: artwork.slice(dotIdx),
+  };
+}
 
 function InspirationDetailPanel({
   entry,
@@ -329,13 +428,35 @@ function InspirationDetailPanel({
   onClose: () => void;
 }) {
   const detail = entry.detail;
+  const gallery = detail?.gallery ?? [];
+  const [artworkIdx, setArtworkIdx] = useState(0);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+
+  // The live scrolls the spotlight panel into view when it opens (the
+  // document scroll measured 2026-09-29 — the panel's bottom aligns to
+  // the viewport's bottom, i.e. block "nearest"). Only that family
+  // scrolls; the quote/history/partner panels mount in place.
+  useEffect(() => {
+    if (entry.type !== "studio_spotlight") return;
+    panelRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [entry.type, entry.id]);
+
+  const caption = detail?.artwork ? splitArtworkCaption(detail.artwork) : null;
+  const linkHref = detail?.linkUrl
+    ? detail.linkUrl.startsWith("http")
+      ? detail.linkUrl
+      : `https://${detail.linkUrl}`
+    : null;
 
   return (
-    <section
-      aria-label={PANEL_HEADER[entry.type]}
-      className="mt-3 rounded-2xl border border-ast-turquoise/40 bg-[#0d0420] p-5"
-    >
-      <div className="mb-3 flex items-start justify-between">
+    <div ref={panelRef} className={PANEL_CHROME[entry.type]}>
+      <div
+        className={
+          entry.type === "partner"
+            ? "mb-2 flex items-start justify-between"
+            : "flex items-start justify-between mb-3"
+        }
+      >
         <p
           className={`text-[10px] font-bold uppercase tracking-wider ${
             PANEL_ACCENT[entry.type]
@@ -346,6 +467,8 @@ function InspirationDetailPanel({
         <button
           type="button"
           onClick={onClose}
+          // Kept a11y addition (r35): the live's ✕ glyph button is unnamed;
+          // this label is its only accessible name (the aria-pressed class).
           aria-label="Close detail panel"
           className="shrink-0 text-sm leading-none text-ast-faint transition hover:text-ast-body"
         >
@@ -353,100 +476,222 @@ function InspirationDetailPanel({
         </button>
       </div>
 
-      <div className="flex gap-4">
-        <div className="min-w-0 flex-1">
-          {entry.type === "artist_quote" && (
-            <>
+      {entry.type === "artist_quote" && (
+        <>
+          <div className="flex gap-4">
+            <div className="flex-1 min-w-0">
               {detail?.title && (
-                <h3 className="mb-2 text-sm font-semibold leading-snug text-ast-body/80">
+                <h3 className="text-sm font-semibold text-ast-body/80 mb-2 leading-snug">
                   {detail.title}
                 </h3>
               )}
-              <blockquote className="bg-gradient-to-r from-ast-lavender to-ast-turquoise bg-clip-text text-xl font-medium italic leading-relaxed text-transparent">
+              <blockquote className="text-xl font-medium italic leading-relaxed bg-gradient-to-r from-ast-lavender to-ast-turquoise bg-clip-text text-transparent">
                 &ldquo;{detail?.quote ?? entry.title}&rdquo;
               </blockquote>
               {entry.author && (
                 <p className="mt-2 text-xs text-ast-muted">— {entry.author}</p>
               )}
-            </>
+            </div>
+          </div>
+          {caption && (
+            <div className="mt-3">
+              <p className="text-xs text-ast-muted">
+                <span className="font-medium text-ast-body/80">{caption.title}</span>
+                <span className="text-ast-muted">{caption.year}</span>
+                <span className="text-ast-muted">{caption.author}</span>
+              </p>
+              {detail?.citation && (
+                <a
+                  href={detail.citationUrl ?? undefined}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-ast-turquoise/80 hover:text-ast-turquoise transition underline underline-offset-2"
+                >
+                  {detail.citation}
+                </a>
+              )}
+              {/* The live's rights line carries mt-1 — the ONLY
+                  effective spacing in its citation stack: the live's TW3
+                  space-y puts margin-top on the later children, which the
+                  inline citation link IGNORES, so the 4px renders solely
+                  on this block. The clone therefore drops the stack's
+                  space-y (TW4 would emit an effective margin-bottom on
+                  the artwork line, shifting the link 4px low) and keeps
+                  this token as the measured gap. */}
+              {detail?.rights && (
+                <p className="text-[10px] text-ast-muted/70 leading-snug mt-1">
+                  {detail.rights}
+                </p>
+              )}
+            </div>
           )}
-
-          {entry.type !== "artist_quote" && (
-            <h3 className="mb-2 text-sm font-semibold leading-snug text-ast-body/80">
-              {entry.title}
-            </h3>
-          )}
-
-          {entry.type === "studio_spotlight" && (detail?.subtitle ?? entry.body) && (
-            <p className="mb-2 text-xs text-ast-body/55">{detail?.subtitle ?? entry.body}</p>
-          )}
-
-          {entry.type !== "studio_spotlight" && detail?.body && (
-            <p className="mt-2 text-sm leading-relaxed text-ast-body/70">{detail.body}</p>
-          )}
-
-          {entry.type === "partner" && !detail?.body && entry.body && (
-            <p className="mt-2 text-sm leading-relaxed text-ast-body/70">{entry.body}</p>
-          )}
-
-          {detail?.artwork && (
-            <p className="mt-3 text-xs text-ast-muted">
-              <span className="font-medium text-ast-body/80">{detail.artwork}</span>
-            </p>
-          )}
-
-          {detail?.citation && (
-            <p className="mt-1 text-xs leading-relaxed text-ast-muted">
-              {detail.citation}
-            </p>
-          )}
-
-          {detail?.rights && (
-            <p className="mt-1 text-xs leading-relaxed text-ast-muted">{detail.rights}</p>
-          )}
-
           {detail?.tags && detail.tags.length > 0 && (
-            <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Tags">
+            <div className="flex flex-wrap gap-1.5 mt-3">
               {detail.tags.map((tag) => (
-                <li
+                <span
                   key={tag}
-                  className="rounded-full border border-ast-purple/40 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-ast-lavender"
+                  className="text-[10px] uppercase tracking-wide bg-ast-lavender/10 text-ast-muted px-2 py-0.5 rounded-full"
                 >
                   {tag}
-                </li>
+                </span>
               ))}
-            </ul>
+            </div>
           )}
+        </>
+      )}
 
-          {detail?.attribution && (
-            <p className="mt-3 text-[11px] text-ast-faint">{detail.attribution}</p>
+      {entry.type === "studio_spotlight" && (
+        <>
+          {gallery.length > 0 && (
+            <>
+              {/* The live's main artwork: a plain img, natural aspect,
+                  capped at 16rem, letterboxed by object-contain (measured
+                  2026-09-29). Plain <img> matches the live's DOM — no
+                  intrinsic-dimension attributes to drift the box. */}
+              <img
+                src={gallery[Math.min(artworkIdx, gallery.length - 1)] ?? gallery[0]}
+                alt={entry.title}
+                className="w-full rounded-xl object-contain object-center mb-3"
+                style={{ maxHeight: "16rem" }}
+              />
+              {gallery.length > 1 && (
+                <div className="flex gap-2 mb-3">
+                  {gallery.map((src, i) => (
+                    <button
+                      key={src}
+                      type="button"
+                      onClick={() => setArtworkIdx(i)}
+                      aria-label={`Artwork ${i + 1}`}
+                      className={`w-12 h-12 shrink-0 rounded-lg overflow-hidden border-2 transition ${
+                        i === artworkIdx
+                          ? "border-ast-turquoise/60"
+                          : "border-transparent hover:border-ast-turquoise/40"
+                      }`}
+                    >
+                      <img
+                        src={src}
+                        alt=""
+                        className="block w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
           )}
-
-          {detail?.linkLabel && detail.linkUrl && (
+          <h3 className="font-bold text-ast-turquoise text-base leading-snug">
+            {entry.title}
+          </h3>
+          {(detail?.subtitle ?? entry.body) && (
+            <p className="text-[10px] text-ast-muted mt-0.5 mb-2">
+              {detail?.subtitle ?? entry.body}
+            </p>
+          )}
+          {detail?.body && (
+            <p className="text-xs text-ast-body/65 mb-2 leading-relaxed">
+              {detail.body}
+            </p>
+          )}
+          {detail?.tags && detail.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {detail.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="text-[10px] uppercase tracking-wide bg-ast-lavender/10 text-ast-muted px-2 py-0.5 rounded-full"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+          {detail?.linkLabel && linkHref && (
             <a
-              href={
-                detail.linkUrl.startsWith("http") ? detail.linkUrl : `https://${detail.linkUrl}`
-              }
+              href={linkHref}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-3 inline-block text-xs text-ast-turquoise/80 underline underline-offset-2 transition hover:text-ast-turquoise"
+              className="text-xs text-ast-turquoise/70 hover:text-ast-turquoise transition"
             >
               {detail.linkLabel}
             </a>
           )}
-        </div>
+          {detail?.attribution && (
+            <p className="mt-2 text-[8px] text-ast-faint/50 leading-snug">
+              {detail.attribution}
+            </p>
+          )}
+        </>
+      )}
 
-        {entry.type === "studio_spotlight" && entry.imageUrl && (
-          <Image
-            src={entry.imageUrl}
-            alt={entry.title}
-            width={96}
-            height={96}
-            unoptimized
-            className="h-24 w-24 shrink-0 rounded-xl border border-ast-purple/40 object-cover"
-          />
-        )}
-      </div>
-    </section>
+      {entry.type === "art_history" && (
+        <>
+          {!entry.imageUrl && (
+            <p className="text-[10px] text-ast-faint/60 italic mb-3 leading-snug">
+              Image unavailable · rights protected — search the web to discover this artist's work.
+            </p>
+          )}
+          <h3 className="text-base font-bold text-ast-body mb-2 leading-snug">
+            {entry.title}
+          </h3>
+          {detail?.body && (
+            <p className="text-sm text-ast-body/75 leading-relaxed">{detail.body}</p>
+          )}
+          {caption && (
+            <div className="mt-3">
+              <p className="text-xs text-ast-muted">
+                <span className="font-medium text-ast-body/80">{caption.title}</span>
+                <span className="text-ast-muted">{caption.year}</span>
+                <span className="text-ast-muted">{caption.author}</span>
+              </p>
+              {detail?.citation && (
+                <a
+                  href={detail.citationUrl ?? undefined}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-ast-turquoise/80 hover:text-ast-turquoise transition underline underline-offset-2"
+                >
+                  {detail.citation}
+                </a>
+              )}
+              {/* The live's rights line carries mt-1 — the ONLY
+                  effective spacing in its citation stack: the live's TW3
+                  space-y puts margin-top on the later children, which the
+                  inline citation link IGNORES, so the 4px renders solely
+                  on this block. The clone therefore drops the stack's
+                  space-y (TW4 would emit an effective margin-bottom on
+                  the artwork line, shifting the link 4px low) and keeps
+                  this token as the measured gap. */}
+              {detail?.rights && (
+                <p className="text-[10px] text-ast-muted/70 leading-snug mt-1">
+                  {detail.rights}
+                </p>
+              )}
+            </div>
+          )}
+          {detail?.tags && detail.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-3">
+              {detail.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="text-[10px] uppercase tracking-wide bg-ast-lavender/10 text-ast-muted px-2 py-0.5 rounded-full"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {entry.type === "partner" && (
+        <>
+          <p className="text-sm font-semibold text-[#8D5CFF] mb-1">{entry.title}</p>
+          {(detail?.body ?? entry.body) && (
+            <p className="text-xs text-ast-body/55 leading-relaxed">
+              {detail?.body ?? entry.body}
+            </p>
+          )}
+        </>
+      )}
+    </div>
   );
 }

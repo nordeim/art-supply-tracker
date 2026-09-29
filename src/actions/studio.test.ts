@@ -1,4 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 /**
  * Action-layer tests — the mutation surface (PAD §10's "extend the Vitest
@@ -441,9 +444,24 @@ describe("chat actions", () => {
     }
   });
 
-  it("rejects empty and oversized messages", async () => {
+  it("rejects empty messages but ACCEPTS long ones (the live has no 500-char cap — r35)", async () => {
+    // Measured on the live 2026-09-29: the composer input carries NO
+    // maxLength attribute and a 600-character message posts verbatim
+    // (the wall now carries the probe). The scaffold-era 500-char cap
+    // (initial commit, never live-measured) was removed r35.
     expect((await studio.sendChatMessage({ message: "   " })).ok).toBe(false);
-    expect((await studio.sendChatMessage({ message: "x".repeat(501) })).ok).toBe(false);
+    expect((await studio.sendChatMessage({ message: "x".repeat(600) })).ok).toBe(true);
+  });
+
+  it("answers a failing send with the live's exact copy (r35)", async () => {
+    // The live's composer catch renders "Could not send message." (bundle
+    // source, verified 2026-09-29). The clone's generic INTERNAL copy
+    // diverged — the action's catch path now returns the live's copy.
+    // Driven here as a source pin (the failure itself needs a broken DB,
+    // which the test harness cannot arrange without leaking state).
+    const source = readFileSync(join(__dirname, "studio.ts"), "utf8");
+    expect(source).toContain('"Could not send message."');
+    expect(source).not.toContain('"Message is too long (500 characters max)."');
   });
 });
 

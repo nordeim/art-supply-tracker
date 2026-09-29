@@ -172,7 +172,12 @@ export const supplyInputSchema = z.object({
 });
 
 export const chatMessageSchema = z.object({
-  message: z.string().trim().min(1, "Message cannot be empty.").max(500, "Message is too long (500 characters max)."),
+  // r35: the live has NO message-length cap — its composer input carries no
+  // maxLength attribute and a 600-character message posts verbatim
+  // (measured 2026-09-29). The scaffold-era 500-char max (initial commit,
+  // never live-measured) was removed; the transport's own body cap is the
+  // bound, exactly like the live's WebSocket frame limits.
+  message: z.string().trim().min(1, "Message cannot be empty."),
 });
 
 /**
