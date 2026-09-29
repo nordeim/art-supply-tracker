@@ -322,3 +322,38 @@ Work Log:
 
 Stage Summary:
 - r33 complete in code and docs: 2 findings fixed TDD-first on both layers (9 net-new pins), 408 tests, all gates green, browser-verified 5/5, the paired battery converged, both studios pristine
+
+---
+Task ID: 19
+Agent: main (Super Z, r34 session)
+Task: r34 survey — the drift re-check + the import-with-photos paired battery + the chat data states
+
+Work Log:
+- Pulled 4062825 (the user's session_60 log commit); baseline gates green (408/408 vitest, lint, typecheck); dev server + agent-browser verified (clone logged in, pristine 0/0/15)
+- Drift re-check: dash pairs answered 5.702%/6.322% any-pixel with visible residue 0.258%/0.175% — the bands localize to EXACTLY the email band (y27-61 desktop / y57-71 mobile), nothing else; the live's asset URLs still carry the r33-redeploy hashes (portrait-01-BthGA3Kd.jpg). VERDICT: no drift, no new redeploy — the AA-noise floor drifted within its envelope
+- The import-with-photos battery (both sides, the real UI path — the app's own hidden JSON file input, alerts suppressed): the crafted payload = 1 project with 2 distinct data-URL photos + isNew:true + budget 250, 1 photo'd/assigned/isNew:true Paint supply (the payload's supplyIds link), 1 plain isNew:false Brush control; captured the projects chip list (40px thumb + NEW badge), the project detail (96px well + Images(2) 5-col grid + assigned list), the project edit panel (Photos (2/30) + cover badge), the Paint chip list (h-16 banner + NEW), the supply detail (128px photo + used-in pill), the supply edit panel (existing-photo area) — all at 1280 — plus pj-390/sv-390 (the corrected navigation: view tiles at 1280 BEFORE crossing down — at 390 they sit in the inert closed drawer, a trap re-learned when the first run's mobile drill failed)
+- ALL 8 import pairs converged at 0.258-0.260% visible (1280) / 0.175% (390) = the email band + the documented gradient family; every photo img at byte-equal geometry on both sides (the documented ast-img-safe/token-order families only). The r32 wire-format work renders pixel-identically. Cleanup: the empty re-import restored both studios to pristine (import is a wholesale restore — no delete pass needed)
+- The chat battery (read-only): desktop column top + scrolled, mobile drawer open + scrolled, with scroll-geometry probes. FINDING F1 (LOW, DOM-fidelity): the live wraps every message in <div class="flex gap-2"> — the clone rendered <article> (never measured — the r8 pins covered class strings only; role="log" IS documented, the wrapper tag was a scaffold leftover)
+- The chat scroll geometry: per-message heights [98, 242, 226, 82, 66]px IDENTICAL both sides, h2 20px, composer 34px, container cap 544; the live's scrollHeight is 94px taller (desktop) / 78px (drawer) = exactly the r27/r28-documented data-only 6th live message ("Hello from clone test", the test account's own Sep 16 send, no delete path)
+- Measurement artifacts documented: the fractional-scroll trap (same-fraction scroll positions land on different content when scrollHeights differ — the first scrolled pairs read 2.05%/17.96% visible, all data/scroll-position; the content-aligned absolute scrollTop re-take converged the desktop pair to the email band exactly; the drawer cannot be aligned at all — the clone's max drawer scroll is 6px vs the live's 84px, so its scroll contract is DOM-probe-verified instead); the VLM confirmed the two tiny header-text bands (y108-117/y135-154) on chat-1280 are visually identical (AA family)
+
+Stage Summary:
+- ONE finding (F1, the chat message wrapper tag) + no drift + the import-with-photos surfaces fully converged; both studios left pristine after every probe
+
+---
+Task ID: 20
+Agent: main (Super Z, r34 session)
+Task: r34 TDD remediation (F1) + the full verification battery + docs alignment
+
+Work Log:
+- RED: 2 intended failures in chat-fidelity.test.ts (the positive div pin — <div key={message.id} className="flex gap-2"> — and the negative no-<article pin), exactly 2 on the first run
+- GREEN: studio-chat.tsx's message wrapper <article> -> <div> (one tag swap + the measured-contract comment; the list's role="log" kept as the documented a11y addition)
+- Gates: vitest 410/410 (408 + 2 net-new), lint/typecheck/build clean; production CSS 151,532 bytes UNCHANGED (a tag swap — no class strings changed), 0 forced-colors / 0 ::selection
+- E2E 28/28 + smoke 23/23 (against the hot-reloaded dev server)
+- Browser verification: the clone's chat message wrappers render DIV x 5 (matching the live's DIV wrappers; the live's 6th wrapper is the data-only message)
+- The 9 reference screenshots re-shot with state checks: ALL 9 byte-identical to HEAD (the tag swap is pixel-invisible; the r31/r32/r33 precedent for DOM/logic-only rounds)
+- Docs: session_61.md (new), AGENTS.md (410 count + the chat-fidelity wrapper pin + the session_61 pointer), CLAUDE.md (410 + the wrapper-tag ledger entry), README.md (410 + the r34 status row), PAD (the R34 revision entry + the test matrix 378 unit + 32 action), SKILL.md (metadata, Appendix A r34, the re-confirmed baselines); .env.example re-verified (no new variables — DOM-tag-only round)
+- Post-doc gates re-run: all green, CSS unchanged
+
+Stage Summary:
+- r34 complete in code and docs: 1 finding fixed TDD-first (2 net-new pins), 410 tests, all gates green, the import-with-photos + chat data states pinned end-to-end, both studios pristine

@@ -171,7 +171,7 @@ not secret — rotate before any public deployment).
 ### Testing Strategy
 
 Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
-`src/**/*.test.ts`). The suite (408 tests) pins:
+`src/**/*.test.ts`). The suite (410 tests) pins:
 
 - **The SQLite path contract** (`src/lib/db-path.test.ts`) — relative
   `file:` URLs resolve against `prisma/schema.prisma` (so
@@ -356,6 +356,14 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
   `navigate(null)`); crossing back up preserves the mobile-drilled
   state, and the projects view keeps its sub-view across BOTH
   crossings (a live-measured asymmetry).
+- **The chat message wrapper tag** (r34, `chat-fidelity.test.ts`) —
+  the live renders every chat message as a plain `<div
+  class="flex gap-2">` (measured 2026-09-29 with populated data); the
+  clone's scaffold-era `<article>` wrapper was re-pinned to div (same
+  class string, same per-message geometry — the r34 battery measured
+  [98, 242, 226, 82, 66]px identical on both sides). The list's
+  `role="log"` stays as the documented a11y addition; the wrapper tag
+  was never a deliberate divergence.
 - **Sidebar stat-tile fidelity** (`sidebar-tile-fidelity.test.ts`) —
   file-content pins on the live's measured tile contract (r12): the
   ACTIVE view's tile highlights with its OWN accent pair — electric
