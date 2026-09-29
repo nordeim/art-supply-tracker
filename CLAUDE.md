@@ -171,7 +171,7 @@ not secret — rotate before any public deployment).
 ### Testing Strategy
 
 Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
-`src/**/*.test.ts`). The suite (410 tests) pins:
+`src/**/*.test.ts`). The suite (459 tests) pins:
 
 - **The SQLite path contract** (`src/lib/db-path.test.ts`) — relative
   `file:` URLs resolve against `prisma/schema.prisma` (so
@@ -364,6 +364,26 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
   [98, 242, 226, 82, 66]px identical on both sides). The list's
   `role="log"` stays as the documented a11y addition; the wrapper tag
   was never a deliberate divergence.
+- **The inspiration detail panel family** (r35,
+  `inspiration-view-fidelity.test.ts`) — the live's four overlay panels
+  are PER-TYPE contracts: quote `turquoise/40 p-5` (no top margin, gap 0
+  below the tiles), spotlight `purple/50 p-4 mt-3` (after the whole
+  spotlight section + scrollIntoView, with the artwork gallery — main
+  image capped at 16rem + the w-12 thumb selector), history
+  `lavender/40` (after the timeline grid, with the image-unavailable
+  notice), partner `blue/40` (flat, #8D5CFF title). Plain divs, soft
+  tag-pill spans, the underlined external citation link (citationUrl),
+  the three-span artwork caption, and the SELECTED-STATE family (the
+  open tile's turquoise border / full-opacity gradient / ringed cards).
+  The feed tabs are plain buttons (the orphan tab role removed); the
+  quote-tile + close-button aria-labels stay as the documented a11y
+  additions.
+- **The chat send contract** (r35) — no maxLength on the composer, no
+  schema cap (the live posts 600-char messages verbatim), and the
+  catch-path copy "Could not send message." (the live's composer,
+  bundle-verified) instead of the generic INTERNAL flattening. The
+  live's error state CANNOT be driven offline (DataStore queues the
+  mutation and pends) — the copy is bundle-pinned.
 - **Sidebar stat-tile fidelity** (`sidebar-tile-fidelity.test.ts`) —
   file-content pins on the live's measured tile contract (r12): the
   ACTIVE view's tile highlights with its OWN accent pair — electric
