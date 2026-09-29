@@ -214,6 +214,17 @@ byte-identical to HEAD.
   double-wraps JSON strings intermittently — the batteries' parsers
   now unwrap defensively (three iterations).
 
+## Push record
+
+The r37 commits (`fee0654` fix, `4d16ae8` docs) were pushed to
+`git@github.com:nordeim/art-supply-tracker.git` main via
+`docs/ssh_git_wrapper_v3.py` with the provided ed25519 key. The push
+landed during a tool-gateway crash (output lost, push confirmed
+afterward by `git ls-remote`: remote main == `4d16ae8`, the local
+HEAD, byte-exact; only `refs/heads/main` on the remote — no new
+branches). A final docs-only commit closes the push-verification
+record in `worklog.md` (Task ID 30).
+
 ## Suggested next steps
 
 The section contract is now pinned end-to-end (the raw-string keying,
