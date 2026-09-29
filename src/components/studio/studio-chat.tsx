@@ -92,7 +92,10 @@ export function StudioChat({ initialMessages }: { initialMessages: ChatMessageDt
           <p className="text-xs text-ast-body/50">No messages yet.</p>
         )}
         {messages.map((message) => (
-          <article key={message.id} className="flex gap-2">
+          // r34: the live's DOM wraps every message in a plain div — no
+          // article tags in its message list (measured 2026-09-29; the
+          // list's role="log" stays as the documented a11y addition).
+          <div key={message.id} className="flex gap-2">
             <div
               aria-hidden="true"
               className="h-6 w-6 shrink-0 rounded-full bg-ast-purple/30"
@@ -107,7 +110,7 @@ export function StudioChat({ initialMessages }: { initialMessages: ChatMessageDt
                 {formatTimestamp(message.createdAt)}
               </p>
             </div>
-          </article>
+          </div>
         ))}
       </div>
 

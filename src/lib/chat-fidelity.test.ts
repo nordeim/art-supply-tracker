@@ -71,6 +71,19 @@ describe("StudioChat card (live bundle verbatim)", () => {
     expect(chat).toContain('"flex-1 space-y-3 mb-4 overflow-y-auto"');
   });
 
+  it("renders each message as a plain div, exactly like the live DOM (r34)", () => {
+    // Measured on the live 2026-09-29: every chat message wrapper is a
+    // <div class="flex gap-2"> — no <article> anywhere in the live's
+    // message list. The clone's scaffold-era <article> was an unmeasured
+    // leftover (unlike the list's documented role="log" addition, the
+    // wrapper tag was never a deliberate divergence) — r34 re-pins it.
+    expect(chat).toContain('<div key={message.id} className="flex gap-2">');
+  });
+
+  it("does not wrap chat messages in article tags (r34)", () => {
+    expect(chatCode).not.toContain("<article");
+  });
+
   it("does not style the message list with the studio scrollbar", () => {
     expect(chatCode).not.toContain("scrollbar-studio");
   });
