@@ -284,3 +284,41 @@ Work Log:
 
 Stage Summary:
 - r32 complete in code and docs: 4 findings fixed TDD-first (5 net-new pins + 2 re-measures), 399 tests, all gates green, browser-verified 17/17, both studios pristine
+
+---
+Task ID: 17
+Agent: main (Super Z, r33 session)
+Task: r33 survey — the drift re-check + the stock-filter paired battery + the assignment flow with photos + the order/resize probes
+
+Work Log:
+- Pulled ae2a361 (the user's session_58 log commit); baseline gates green (394->399 vitest after the r32 records, lint, typecheck); dev server + agent-browser verified
+- Drift re-check: dash pairs answered 3.708%/2.835% (was 0.188%/0.089%) — both sides perfectly self-stable, the live's asset URLs re-hashed (portrait-01-BthGA3Kd.jpg), every downloaded asset byte-identical; the magnitude histogram: 100% of below-topbar change at AA level (<=10/765), zero small/medium/large deltas; VLM side-by-side: visually identical beyond the email band. VERDICT: a redeploy re-based the AA-noise floor — the new measurement baseline, not drift
+- The paired battery (both sides, the real UI paths, pristine restored after each): "R33 Assign Project" (1 photo) + three Paint supplies (Ok qty2 photo ASSIGNED via the create modal; Low qty1; Out qty0) + edit-panel statuses (ok/low/critical); captured the Paint list under All/Low/Out at 1280, the assigned supply detail, the project detail, and the mobile filter states; DOM probes for tabs/chips/details
+- F1 FOUND (HIGH, both layers): the live rendered Ok,Low,Out (creation order); the clone rendered Out,Low,Ok. Three probe families pinned the live's contract = INSERTION ORDER, NO timestamp sort: (a) edit probes — editing first/second/newest never floats or sinks (every updatedAt sort ruled out both directions); (b) import probes — a payload whose first row carries the NEWER stamp renders first (a 2010-stamped second row stays second — no createdAt sort), same on projects; (c) the sidebar's RECENT rail sorts updatedAt-DESC ("recently touched") — a separate correct contract. The clone broke the contract on TWO layers: listProjects/listSupplies carried orderBy updatedAt-desc AND the create handlers prepended ([item, ...list])
+- F2 FOUND (MEDIUM): the battery's mobile pair captured the live's category grid against the clone's drilled list — the live's supplies drill-down RESETS on the md-down crossing. Boundary bisected to exactly 768 (770 preserves, 760 resets); one-way (drilled-at-390 -> 1280 preserves); the projects sub-view survives BOTH crossings (data-verified with a live chip probe — the asymmetry). The clone preserved everything
+- Resolved as NON-findings: the detail-panel DOM contracts all match (h2/badge/fields/used-in pill/condition chip/photo — token order differs, computed styles identical; ast-img-safe = the r31-documented artifact); the Edit Project gradient = the r31-documented rounding family; the tabs' class tokens match (the clone's aria-pressed = an accepted a11y addition); the chip pills (OK/Low/Critical/?/NEW/1-project) all match
+- Measurement artifacts documented: the mobile paired-capture methodology (drill AFTER the viewport change — the live's md-down reset trap; the first mobile pairs read 36% apart on exactly this); the new AA-noise baseline (~2.5-5.5% any-pixel, sub-visible only)
+- Tooling lessons: agent-browser eval output must be JSON-compacted (multi-line wrapping breaks parsing — and the compaction strips spaces INSIDE strings, so text matching needs spaceless needles); a malformed JS IIFE in an eval returns an empty string silently (check_stderr); the live's modals use label+sibling inputs with name attrs (no htmlFor) — label-anchored fills need a walk-forward fallback; the dev daemon needs a true double-fork (a Python daemonizer — plain setsid gets reaped at tool-call boundaries); TW4 compiles bare tokens from test comments (a "resize" word leaked .resize{resize:both} into the CSS — caught by the size gate, reworded)
+
+Stage Summary:
+- TWO findings (F1 both layers, F2) + the redeploy baseline + the methodology correction; both studios left pristine after every probe
+
+---
+Task ID: 18
+Agent: main (Super Z, r33 session)
+Task: r33 TDD remediation (F1 + F2) + the full verification battery
+
+Work Log:
+- RED: 5 intended failures — studio.test.ts's new "list ordering" describe (supplies insertion order under mixed non-chronological stamps X(2020)->Y(2026)->Z(2010); projects insertion order; updatedAt-edits-never-float) + viewport-fidelity's md-crossing block (the matchMedia one-way guard; the reset-stays-local-to-supplies negative pin). Exactly 5 on the first run (after strengthening the first two pins — the initial 2-row pattern couldn't distinguish updatedAt-DESC from insertion)
+- GREEN F1 (query layer): listProjects/listSupplies drop orderBy updatedAt-desc — natural row order renders verbatim, with the measured-contract comments
+- GREEN F2: supplies-view gains the guarded matchMedia("(max-width: 767.98px)") listener — event.matches-gated navigate(null) (one-way, the downward crossing only), with the projects-survive asymmetry documented in the comment
+- GREEN SURFACED THE UI LAYER: the browser verification still showed the inverted order on a fresh daemon server — studio-app's create handlers PREPENDED ([supply,...list] / [saved,...list]). Fixed both to appends; +4 source pins in a new list-order-fidelity.test.ts (no-orderBy, both appends, the sidebar rail's separate updatedAt-DESC); the new-badge test's stale "prepend" comment reworded
+- Gates: vitest 408/408 (399 + 9 net-new), lint/typecheck/build clean; production CSS 151,532 bytes UNCHANGED (the .resize token leak caught by the size gate and reworded — the r20 lesson holds), 0 forced-colors / 0 ::selection
+- E2E 28/28 + smoke 23/23 (the dev server via the Python double-fork daemon — plain setsid/nohup get reaped at tool-call boundaries)
+- Browser verification through the real UI (5/5): three supplies created Ok->Low->Out render Ok,Low,Out; the md-down crossing (1280->700) resets the clone's drill-down to the grid; the up-crossing (drilled at 700 -> 1280) preserves; the projects chip list survives both crossings; cleanup pristine
+- The post-fix paired battery re-run (the corrected mobile methodology — drill AFTER the viewport change): all 7 pairs converged — visible-level residue <=0.344% (1280) / <=0.176% (390) = the email band + the documented gradient family; everything else sub-visible AA noise; a VLM side-by-side of the stock-filter pair reads visually identical; both studios pristine
+- The 9 reference screenshots re-shot with state checks: ALL 9 byte-identical to HEAD (the fixes are order/state-layer only — the empty-studio reference states never exercise them; the r31/r32 precedent). One screenshot-script bug fixed en route: the r32-era "Dashboard" navigation (no such button — the tile is "My Studio") had silently captured the inspiration view for the mobile dashboard shot; the re-shot restored the committed pixel state exactly
+- Docs: session_59.md (new), AGENTS.md (408 count + the r33 pin descriptions + 3 quirk entries + the session_59 pointer), CLAUDE.md (408 + the insertion-order/md-crossing ledger entry), README.md (408 + the r33 status row), PAD (the R33 revision entry + the test matrix 376 unit + 32 action), SKILL.md (metadata, Appendix A r33, the new baselines, the appendix header r1-r33); .env.example re-verified (no new variables — logic-only round)
+
+Stage Summary:
+- r33 complete in code and docs: 2 findings fixed TDD-first on both layers (9 net-new pins), 408 tests, all gates green, browser-verified 5/5, the paired battery converged, both studios pristine

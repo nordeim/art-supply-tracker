@@ -171,7 +171,7 @@ not secret — rotate before any public deployment).
 ### Testing Strategy
 
 Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
-`src/**/*.test.ts`). The suite (399 tests) pins:
+`src/**/*.test.ts`). The suite (408 tests) pins:
 
 - **The SQLite path contract** (`src/lib/db-path.test.ts`) — relative
   `file:` URLs resolve against `prisma/schema.prisma` (so
@@ -341,6 +341,21 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
   destination (the r31 F5 revert — the "data-dependent" reading was
   an agent-browser same-URL no-op artifact; the trap is documented in
   the pin so it cannot be re-derived from same-URL captures).
+- **Insertion-order lists + the md-crossing reset** (r33,
+  `list-order-fidelity.test.ts` + the action pins + the
+  viewport-fidelity md-crossing block) — the live renders BOTH chip
+  lists in INSERTION order (no timestamp sort: UI creates render
+  newest LAST, edits never move an item, an import's first row stays
+  first regardless of its payload stamp). Two layers cooperate: the
+  queries carry NO orderBy (natural row order), and the create
+  handlers APPEND (`[...list, item]` — the r32-era prepend inverted
+  every UI-created row). The sidebar's RECENT rail keeps its own
+  updatedAt-DESC contract (do not unify). The supplies drill-down
+  RESETS when the viewport crosses below md (768) — a one-way reset
+  (`matchMedia("(max-width: 767.98px)")`, `event.matches`-guarded
+  `navigate(null)`); crossing back up preserves the mobile-drilled
+  state, and the projects view keeps its sub-view across BOTH
+  crossings (a live-measured asymmetry).
 - **Sidebar stat-tile fidelity** (`sidebar-tile-fidelity.test.ts`) —
   file-content pins on the live's measured tile contract (r12): the
   ACTIVE view's tile highlights with its OWN accent pair — electric
