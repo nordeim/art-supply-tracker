@@ -15,7 +15,7 @@
  * a supply is created the view switches to the flat list, matching the
  * live app's post-create navigation.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { ProjectDto, SupplyDto } from "@/lib/dto";
 import { isNewSessionItem } from "@/lib/new-badge";
@@ -84,6 +84,25 @@ export function SuppliesView({
     setOpenSupplyId(null);
     setEditingSupplyId(null);
   }
+
+  // The md-crossing reset (r33, measured on the deployed app
+  // 2026-09-29): when the viewport crosses BELOW md (768) the live's
+  // supplies list remounts and its drill-down state dies — the view
+  // returns to the category grid. Crossing back UP preserves whatever
+  // the mobile view held (drilling at 390 and resizing to 1280 keeps the
+  // type list), so the reset is strictly one-way: the `event.matches`
+  // guard fires only on the downward crossing. Note that on the live
+  // the projects view keeps its sub-view across BOTH crossings — a
+  // measured asymmetry that must NOT be "fixed" by extending this
+  // reset to projects-view.
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 767.98px)");
+    const listener = (event: MediaQueryListEvent) => {
+      if (event.matches) navigate(null);
+    };
+    query.addEventListener("change", listener);
+    return () => query.removeEventListener("change", listener);
+  }, []);
 
   const categoryLabel =
     subView && subView.kind !== "list" ? supplyCategoryLabel(subView.category) : "";

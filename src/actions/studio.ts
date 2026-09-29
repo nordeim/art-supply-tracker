@@ -120,9 +120,16 @@ export async function listProjects(): Promise<ActionResult<ProjectDto[]>> {
   if (!user) return unauthorized();
 
   try {
+    // NO orderBy — the live renders its chip lists in INSERTION order
+    // (r33, measured 2026-09-29: UI creates render creation order; edits
+    // never float or sink an item; an import whose first row carries the
+    // NEWER payload stamp renders that row first, so neither createdAt
+    // nor updatedAt sorting matches — the backend returns natural row
+    // order and the app renders it verbatim). The sidebar's "recently
+    // touched" rail is a separate updatedAt-DESC contract that lives in
+    // studio-sidebar; do not re-introduce a timestamp sort here.
     const rows = await db.project.findMany({
       where: { userId: user.id },
-      orderBy: { updatedAt: "desc" },
     });
     return { ok: true, data: rows.map(toProjectDto) };
   } catch (error) {
@@ -234,9 +241,11 @@ export async function listSupplies(): Promise<ActionResult<SupplyDto[]>> {
   if (!user) return unauthorized();
 
   try {
+    // NO orderBy — insertion order, the live's measured list contract
+    // (see listProjects above for the r33 probe record; both lists share
+    // the same no-sort behavior on the deployed app).
     const rows = await db.supply.findMany({
       where: { userId: user.id },
-      orderBy: { updatedAt: "desc" },
     });
     return { ok: true, data: rows.map(toSupplyDto) };
   } catch (error) {

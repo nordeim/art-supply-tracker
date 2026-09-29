@@ -120,7 +120,7 @@ describe("session badge wiring (the four surfaces + the create flows)", () => {
   });
 
   it("both create flows mark the created id in the session registry", () => {
-    // The project create path (the modal's onSaved prepend) and the
+    // The project create path (the modal's onSaved append) and the
     // supply create path (handleSupplyCreated) each mark the created
     // dto's id — the only way an id enters the registry.
     expect(studioApp).toMatch(

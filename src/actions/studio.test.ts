@@ -335,6 +335,102 @@ describe("supply actions", () => {
   });
 });
 
+describe("list ordering (r33 — the live's insertion-order contract)", () => {
+  // Measured on the deployed app 2026-09-29 (r33 battery + order probes):
+  // the live renders BOTH chip lists in INSERTION order — no timestamp
+  // sort at all. Three independent probes pin it:
+  //   1. UI creates Ok->Low->Out render Ok,Low,Out (creation order);
+  //   2. edits never float or sink an item (updateAt-keyed sorts ruled
+  //      out in both directions — editing the first, second, or newest
+  //      item never moves it);
+  //   3. an import whose first row carries the NEWER payload stamp and
+  //      whose second row carries a 2010 stamp renders Newer first —
+  //      a createdAt sort would render Older first.
+  // The sidebar's "recently touched" rail (updatedAt DESC) is a separate
+  // measured contract that lives in studio-sidebar, not in these queries.
+
+  it("lists supplies in insertion order — mixed non-chronological stamps do not re-sort", async () => {
+    // Three rows inserted X(2020) -> Y(2026) -> Z(2010): insertion order
+    // is [X, Y, Z]; every timestamp sort yields a different permutation
+    // (createdAt ASC [Z,X,Y]; DESC [Y,X,Z]) — only the live's no-sort
+    // contract produces the insertion sequence.
+    const rows: Array<{ name: string; stamp: string }> = [
+      { name: "Ord X Stamp", stamp: "2020-06-01T00:00:00.000Z" },
+      { name: "Ord Y Stamp", stamp: "2026-09-28T10:00:00.000Z" },
+      { name: "Ord Z Stamp", stamp: "2010-01-01T00:00:00.000Z" },
+    ];
+    for (const row of rows) {
+      await db.supply.create({
+        data: {
+          userId: TEST_USER.id,
+          name: row.name,
+          category: "Paint",
+          quantity: "2",
+          condition: "ok",
+          createdAt: new Date(row.stamp),
+          updatedAt: new Date(row.stamp),
+        },
+      });
+    }
+    const result = await studio.listSupplies();
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const names = result.data.map((s) => s.name);
+      const seq = ["Ord X Stamp", "Ord Y Stamp", "Ord Z Stamp"].map((n) => names.indexOf(n));
+      expect(seq[0]).toBeLessThan(seq[1]);
+      expect(seq[1]).toBeLessThan(seq[2]);
+    }
+    await db.supply.deleteMany({
+      where: { userId: TEST_USER.id, name: { in: ["Ord X Stamp", "Ord Y Stamp", "Ord Z Stamp"] } },
+    });
+  });
+
+  it("lists projects in insertion order — the same contract on the projects side", async () => {
+    const rows: Array<{ name: string; stamp: string }> = [
+      { name: "Ord X Proj", stamp: "2020-06-01T00:00:00.000Z" },
+      { name: "Ord Y Proj", stamp: "2026-09-28T10:00:00.000Z" },
+      { name: "Ord Z Proj", stamp: "2010-01-01T00:00:00.000Z" },
+    ];
+    for (const row of rows) {
+      await db.project.create({
+        data: {
+          userId: TEST_USER.id,
+          name: row.name,
+          status: "planned",
+          createdAt: new Date(row.stamp),
+          updatedAt: new Date(row.stamp),
+        },
+      });
+    }
+    const result = await studio.listProjects();
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const names = result.data.map((p) => p.name);
+      const seq = ["Ord X Proj", "Ord Y Proj", "Ord Z Proj"].map((n) => names.indexOf(n));
+      expect(seq[0]).toBeLessThan(seq[1]);
+      expect(seq[1]).toBeLessThan(seq[2]);
+    }
+    await db.project.deleteMany({
+      where: { userId: TEST_USER.id, name: { in: ["Ord X Proj", "Ord Y Proj", "Ord Z Proj"] } },
+    });
+  });
+
+  it("updatedAt edits never float an item — creation order survives edits", async () => {
+    const a = await studio.createProject({ name: "Ord Edit A", status: "planned" });
+    const b = await studio.createProject({ name: "Ord Edit B", status: "planned" });
+    if (!a.ok || !b.ok) throw new Error("creates failed");
+    // Edit B (the second item) so its updatedAt becomes the newest row.
+    await studio.updateProject(b.data.id, { name: "Ord Edit B", status: "in-progress" });
+    const list = await studio.listProjects();
+    expect(list.ok).toBe(true);
+    if (list.ok) {
+      const names = list.data.map((p) => p.name);
+      expect(names.indexOf("Ord Edit B")).toBeGreaterThan(names.indexOf("Ord Edit A"));
+    }
+    await db.project.deleteMany({ where: { userId: TEST_USER.id, name: { in: ["Ord Edit A", "Ord Edit B"] } } });
+  });
+});
+
 describe("chat actions", () => {
   it("sends a message with the session-derived username", async () => {
     const result = await studio.sendChatMessage({ message: "Hello from the test" });

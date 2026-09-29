@@ -219,7 +219,11 @@ export function StudioApp({
     // r31: the live's NEW badges are session-scoped — the created id
     // enters the in-memory registry here (a reload drops it).
     markCreatedThisSession(supply.id);
-    setSupplyList((list) => [supply, ...list]);
+    // r33: the live renders its lists in INSERTION order — a created
+    // supply lands at the END of the list (the r33 battery's live
+    // capture: three supplies created Ok -> Low -> Out rendered
+    // Ok, Low, Out). Prepending inverted the in-session order.
+    setSupplyList((list) => [...list, supply]);
     setSupplyModal(false);
     // The live app navigates to the supplies list after creating one.
     setView("supplies");
@@ -411,7 +415,9 @@ export function StudioApp({
             // r31: the session badge registry — the created id badges
             // (chip + detail h2) until the page session ends.
             markCreatedThisSession(saved.id);
-            setProjectList((list) => [saved, ...list]);
+            // r33: insertion order — a created project lands at the END
+            // of the list, exactly like the live's rendered order.
+            setProjectList((list) => [...list, saved]);
             setProjectModal(false);
           }}
         />

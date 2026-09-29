@@ -138,3 +138,48 @@ describe("viewport-band pins (r30: the sub-335 login tab wrap)", () => {
     expect(login).not.toContain(fixedTabHeight);
   });
 });
+
+describe("md-crossing pins (r33: the supplies drill-down reset)", () => {
+  // Measured on the deployed app 2026-09-29 (r33 viewport-crossing probes):
+  //
+  //   crossing              | live supplies sub-view | live projects sub-view
+  //   ----------------------+------------------------+-----------------------
+  //   1280 -> 770 (no md)   | type list preserved    | -
+  //   1280 -> 760 (md-down) | RESET to category grid | chip list PRESERVED
+  //   1280 -> 390  (md-down)| RESET to category grid | -
+  //   390 re-drill -> 1280  | type list preserved    | -
+  //
+  // The live's supplies list REMOUNTS when the viewport crosses below md
+  // (768) — its drill-down state dies with the remount; crossing back UP
+  // preserves whatever the (mobile) view held. The projects view keeps its
+  // sub-view across BOTH crossings — the asymmetry is real and pinned
+  // (data-verified with a live chip probe, not an empty-state read).
+  // The clone holds the drill-down state in SuppliesView's own useState
+  // (it survives viewport changes), so the reset must be explicit.
+  const view = readFileSync(
+    join(libDir, "../components/studio/supplies-view.tsx"),
+    "utf8",
+  );
+
+  it("resets the supplies drill-down on the md-DOWN crossing only (matchMedia guard)", () => {
+    // The boundary is Tailwind's md (min-width: 768) seen from below:
+    // max-width: 767.98px. The `e.matches` guard makes the reset
+    // one-way — the upward crossing (matches -> false) does nothing,
+    // matching the live's preserved-on-the-way-up behavior.
+    expect(view).toMatch(
+      /matchMedia\("\(max-width: 767\.98px\)"\)/,
+    );
+    expect(view).toMatch(/if \(event\.matches\) navigate\(null\)/);
+  });
+
+  it("keeps the reset local to the supplies view (the projects sub-view survives crossings)", () => {
+    // The live's projects chip list survived the 760/700 crossings in the
+    // r33 probes — projects-view must NOT grow a matching effect.
+    const projects = readFileSync(
+      join(libDir, "../components/studio/projects-view.tsx"),
+      "utf8",
+    );
+    expect(projects).not.toContain("matchMedia");
+    expect(view).toContain("the projects view keeps its sub-view");
+  });
+});
