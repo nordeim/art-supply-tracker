@@ -105,12 +105,24 @@ describe("panel mounts (the live's mount semantics)", () => {
     );
   });
 
-  it("mounts the spotlight panel as its own child of the feed container after the whole spotlight section", () => {
-    // The live mounts the spotlight panel at the scroll-container level
-    // (after the spotlight section's closing wrapper), not inside it.
+  it("mounts the spotlight panel inside the section's ALWAYS-RENDERED wrapper div (r36)", () => {
+    // Live DOM probe 2026-09-29: the spotlight section = [header P, tile
+    // grid, PLAIN wrapper div] — the wrapper renders even when closed
+    // (empty) and the panel mounts inside it. The r35 record ("feed-
+    // container child after the whole section") was a mis-reading; the
+    // difference is layout-neutral (margin collapse through the
+    // zero-height wrapper) which is why every pixel pair converged.
     expect(view).toMatch(
-      /\{activeEntry\?\.type === "studio_spotlight" && \(\s*<InspirationDetailPanel/,
+      /<div ref=\{spotlightWrapperRef\}>\s*\{activeEntry\?\.type === "studio_spotlight" && \(/,
     );
+  });
+
+  it("renders no spacer div between the spotlight section and the today grid (r36)", () => {
+    // The live's feed = [quotes-sec, spotlight-sec, today-grid] — no
+    // extra empty child. The scaffold's <div /> spacer collapsed to
+    // nothing (margins collapse through a zero-height div) but the DOM
+    // contract differed.
+    expect(viewCode).not.toContain("<div />");
   });
 
   it("mounts the history-tab panel after the timeline grid, not nested inside it (no col-span-2 wrapper)", () => {
@@ -170,11 +182,30 @@ describe("panel inner structure (the live's per-type layouts)", () => {
     expect(view).toContain('"mb-2 flex items-start justify-between"');
   });
 
-  it("renders tag chips as the live's soft-pill spans, not bordered list items", () => {
+  it("renders quote/history tag chips as the live's lavender soft pills capped at four", () => {
     expect(view).toContain(
       '"text-[10px] uppercase tracking-wide bg-ast-lavender/10 text-ast-muted px-2 py-0.5 rounded-full"',
     );
+    // r36: the live's shared quote/history tag row renders
+    // e.slice(0, 4) — at most four pills (bundle).
+    expect(view).toContain(".slice(0, 4)");
     expect(viewCode).not.toContain("<li");
+  });
+
+  it("renders the SPOTLIGHT tag pills as the live's per-tag colored 9px pills (r36)", () => {
+    // The live's spotlight tags: base `text-[9px] px-2 py-0.5
+    // rounded-full ${tagColors[n]}` from a parallel data array — MIXED
+    // CASE (no uppercase class), no tracking-wide, with a
+    // faint-on-lavender/10 fallback when the data lacks a color. Kevin:
+    // pink/purple/turquoise /20; Kim: turquoise/20, lavender/20,
+    // faint lavender/10. The unified lavender family (the quote panels')
+    // was the r35 mis-generalization — masked until now because the
+    // pills sat below the fold in every prior paired capture.
+    expect(view).toMatch(
+      /`text-\[9px\] px-2 py-0\.5 rounded-full \$\{/,
+    );
+    expect(view).toContain('?? "text-ast-faint bg-ast-lavender/10"');
+    expect(view).toContain("detail.tagColors");
   });
 
   it("renders the citation as the live's underlined external link", () => {
@@ -201,27 +232,39 @@ describe("panel inner structure (the live's per-type layouts)", () => {
     expect(view).not.toContain('"mt-3 space-y-1"');
   });
 
-  it("renders the spotlight external link without underline at the live's /70 opacity", () => {
+  it("renders the spotlight external link without underline at the live's /70 opacity, appending the arrow in JSX (r36)", () => {
     expect(view).toContain(
       '"text-xs text-ast-turquoise/70 hover:text-ast-turquoise transition"',
     );
+    // r36: the live's link renders {websiteLabel} with the arrow
+    // appended by the JSX (bundle: [e.websiteLabel ?? e.website, ` →`])
+    // — the label itself carries no arrow.
+    expect(view).toContain("{detail.linkLabel} →");
+    expect(view).not.toContain("{detail.linkLabel}\"");
   });
 });
 
-describe("the spotlight gallery (r35)", () => {
-  it("renders the main artwork image with the live's classes and height cap", () => {
+describe("the spotlight gallery (r35, r36)", () => {
+  it("renders the main artwork image with the live's classes (incl. ast-img-safe) and height cap", () => {
+    // r36: the live's main img carries the extra `ast-img-safe` class
+    // (a no-op in the clone — TW4 compiles nothing for it — kept for
+    // the DOM class-string contract) and the per-artwork alt with the
+    // entry-name fallback (bundle: alt: a.alt ?? e.name).
     expect(view).toContain(
-      '"w-full rounded-xl object-contain object-center mb-3"',
+      '"ast-img-safe w-full rounded-xl object-contain object-center mb-3"',
     );
     expect(view).toContain('maxHeight: "16rem"');
+    expect(view).toMatch(/alt=\{[^\n]*\.alt \?\? entry\.title\}/);
   });
 
-  it("renders the thumbnail selector with the live's button classes", () => {
+  it("renders the thumbnail selector with the live's button classes and PURPLE hover (r36)", () => {
+    // r36: the live's unselected thumb hovers to ast_purple/40 (bundle),
+    // not turquoise/40.
     expect(view).toContain(
       "w-12 h-12 shrink-0 rounded-lg overflow-hidden border-2 transition ",
     );
     expect(view).toContain('"border-ast-turquoise/60"');
-    expect(view).toContain('"border-transparent hover:border-ast-turquoise/40"');
+    expect(view).toContain('"border-transparent hover:border-ast-purple/40"');
   });
 
   it("renders the thumb strip in the live's flex gap-2 mb-3 row", () => {
@@ -233,9 +276,19 @@ describe("the spotlight gallery (r35)", () => {
     expect(viewCode).not.toContain("scrollTo(");
   });
 
-  it("scrolls the spotlight panel into view when it opens (the live's document scroll)", () => {
-    expect(view).toContain("scrollIntoView");
-    expect(view).toContain('block: "nearest"');
+  it("scrolls the spotlight wrapper via the live's unified 60ms-debounced effect (r36)", () => {
+    // The live's bundle: ONE effect keyed on the active id —
+    // setTimeout(() => wrapper.scrollIntoView({behavior:'smooth',
+    // block:'nearest'}), 60). The 60ms delay lets the artwork image size
+    // before `nearest` computes; the clone's synchronous mount-time
+    // panel scroll computed against the unsized image and landed 256px
+    // short (measured: live scrollY 317 vs clone 63 on the Kim pair).
+    // The wrapper always renders, so the INERT spotlight rail
+    // navigation (no panel) still scrolls it — the live's own behavior.
+    expect(view).toMatch(
+      /setTimeout\(\(\) => \{\s*spotlightWrapperRef\.current\?\.scrollIntoView\(\{\s*behavior: "smooth",\s*block: "nearest",\s*\}\);\s*\}, 60\)/,
+    );
+    expect(viewCode).not.toMatch(/panelRef\.current\?\.scrollIntoView/);
   });
 });
 

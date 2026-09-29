@@ -303,16 +303,31 @@ const INSPIRATION_ENTRIES: SeedEntry[] = [
     sortOrder: 14,
     detail: {
       subtitle: "@kims_studio_labs · Kim Wyatt Studio Art Labs",
+      // r36: the live's gallery is {url, alt} objects (bundle) — Kim's
+      // single external artwork carries its title as the alt.
       gallery: [
-        "https://static.wixstatic.com/media/0669c1_26396aee2e914839814b379e8efd0070~mv2.jpg/v1/fill/w_460,h_800,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/Liberty With Mask by Kim Wyatt.jpg",
+        {
+          url: "https://static.wixstatic.com/media/0669c1_26396aee2e914839814b379e8efd0070~mv2.jpg/v1/fill/w_460,h_800,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/Liberty With Mask by Kim Wyatt.jpg",
+          alt: "Liberty With Mask by Kim Wyatt",
+        },
       ],
       body:
         "Artist and founder behind AST Studio. Kim Wyatt Studio Art Labs is the real-world studio practice this app was built to support.",
       tags: ["Founder", "Studio Artist", "Beta"],
+      // r36: the live's parallel tagColors array (bundle, hyphenated here
+      // — the clone's token spelling family): turquoise/20, lavender/20,
+      // and faint-text-on-lavender/10 for the third pill.
+      tagColors: [
+        "text-ast-turquoise bg-ast-turquoise/20",
+        "text-ast-lavender bg-ast-lavender/20",
+        "text-ast-faint bg-ast-lavender/10",
+      ],
       attribution:
         "Artwork by Kim Wyatt. Used with artist permission for Art Supply Tracker beta testing.",
-      linkLabel: "kimwyatt.art →",
-      linkUrl: "kimwyatt.art",
+      // r36: the live's data carries website `https://www.kimwyatt.art/`
+      // + websiteLabel `kimwyatt.art` — the view appends the arrow.
+      linkLabel: "kimwyatt.art",
+      linkUrl: "https://www.kimwyatt.art/",
     },
   },
   {
@@ -323,16 +338,26 @@ const INSPIRATION_ENTRIES: SeedEntry[] = [
     sortOrder: 13,
     detail: {
       subtitle: "@kevinlewisart · Kevin Lewis Studio",
+      // r36: the live's gallery objects carry per-artwork alts (bundle):
+      // "Kevin Lewis — artwork 1".."Kevin Lewis — artwork 4" and
+      // "Kevin Lewis's studio" for the studio shot.
       gallery: [
-        "/assets/artwork-01.jpg",
-        "/assets/artwork-02.jpg",
-        "/assets/artwork-03.jpg",
-        "/assets/artwork-04.jpg",
-        "/assets/studio-01.jpeg",
+        { url: "/assets/artwork-01.jpg", alt: "Kevin Lewis — artwork 1" },
+        { url: "/assets/artwork-02.jpg", alt: "Kevin Lewis — artwork 2" },
+        { url: "/assets/artwork-03.jpg", alt: "Kevin Lewis — artwork 3" },
+        { url: "/assets/artwork-04.jpg", alt: "Kevin Lewis — artwork 4" },
+        { url: "/assets/studio-01.jpeg", alt: "Kevin Lewis's studio" },
       ],
       body:
         "Kevin Lewis is a San Diego artist whose work is vivid, intense, and sometimes frightening. His imagery carries forward the ideas, moods, and theatrical instincts he developed while working in makeup and costume design on horror movie sets.",
       tags: ["Mixed Media", "Textile", "Spotlight"],
+      // r36: the live's parallel tagColors (bundle, hyphenated — the
+      // clone's token family): pink/20, purple/20, turquoise/20.
+      tagColors: [
+        "text-ast-pink bg-ast-pink/20",
+        "text-ast-purple bg-ast-purple/20",
+        "text-ast-turquoise bg-ast-turquoise/20",
+      ],
       attribution: "Artwork by Kevin Lewis. Used with artist permission.",
     },
   },

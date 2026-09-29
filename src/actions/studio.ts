@@ -416,24 +416,29 @@ export async function listChatMessages(): Promise<ActionResult<ChatMessageDto[]>
 export async function sendChatMessage(
   input: unknown,
 ): Promise<ActionResult<ChatMessageDto>> {
-  const user = await requireUser();
-  if (!user) return unauthorized();
-
-  const parsed = chatMessageSchema.safeParse(input);
-  if (!parsed.success) {
-    return validationError(parsed.error.issues[0]?.message ?? "Message cannot be empty.");
-  }
-
-  // Username mirrors the original: email local-part.
-  const username = user.email.split("@")[0] ?? user.displayName;
-
+  // r36: the try wraps the WHOLE send path — the live's catch covers its
+  // entire send flow, and a failure BEFORE the insert (the session read
+  // throwing P1008 under a locked db, driven 2026-09-29) previously
+  // escaped as a POST 500 with NO client feedback: the draft froze, no
+  // error rendered. Every failure now answers with the live's copy.
   try {
+    const user = await requireUser();
+    if (!user) return unauthorized();
+
+    const parsed = chatMessageSchema.safeParse(input);
+    if (!parsed.success) {
+      return validationError(parsed.error.issues[0]?.message ?? "Message cannot be empty.");
+    }
+
+    // Username mirrors the original: email local-part.
+    const username = user.email.split("@")[0] ?? user.displayName;
+
     const row = await db.chatMessage.create({
       data: { username, email: user.email, message: parsed.data.message },
     });
     return { ok: true, data: toChatDto(row) };
   } catch (error) {
-    console.error("[chat:send] failed", { userId: user.id, error });
+    console.error("[chat:send] failed", { error });
     // r35: the live's composer catch renders "Could not send message."
     // (bundle source, verified 2026-09-29) — the customer-safe copy for
     // the chat send path, replacing the generic INTERNAL flattening.

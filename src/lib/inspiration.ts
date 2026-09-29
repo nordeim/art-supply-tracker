@@ -29,20 +29,40 @@ export const inspirationDetailSchema = z.object({
   citationUrl: detailText(600),
   /** Rights / public-domain notice. */
   rights: detailText(600),
-  /** Uppercase tag chips rendered under the panel body. */
+  /** Tag chips rendered under the panel body. The quote/history panels
+   * render them as uppercase lavender pills (capped at four); the
+   * spotlight panels render them MIXED CASE with per-tag colors from
+   * the parallel tagColors array (r36 — the live's data contract). */
   tags: z.array(z.string().max(60)).max(12).optional(),
+  /** r36: the spotlight panels' per-tag pill colors — a parallel array
+   * of class fragments (e.g. "text-ast-pink bg-ast-pink/20"), one per
+   * tag, with a faint-on-lavender/10 fallback when absent (the live's
+   * bundle: `${e.tagColors[n] ?? 'text-ast_faint bg-ast_lavender/10'}`).
+   * Hyphenated spellings — the clone's token family. */
+  tagColors: z.array(z.string().max(120)).max(12).optional(),
   /** Attribution notice, e.g. "Artwork by Kevin Lewis. Used with artist permission." */
   attribution: detailText(300),
-  /** External link label, e.g. "kimwyatt.art →". */
+  /** External link label (the live's websiteLabel — e.g. "kimwyatt.art";
+   * the view appends the arrow). */
   linkLabel: detailText(120),
   /** External link target (https or bare host). */
   linkUrl: detailText(300),
-  /** r35: the spotlight panel's artwork gallery — the live renders a
-   * full-width main image plus a thumbnail selector whenever the entry
-   * carries more than one artwork (Kevin Lewis's five app-CDN pieces;
-   * Kim Wyatt's single external wixstatic image renders without the
-   * thumb strip). */
-  gallery: z.array(z.string().max(600)).max(12).optional(),
+  /** r35/r36: the spotlight panel's artwork gallery — {url, alt} objects
+   * (the live's data carries per-artwork alts: "Kevin Lewis — artwork 1"
+   * .. "Kevin Lewis's studio"; the alt falls back to the entry name).
+   * The live renders a full-width main image plus a thumbnail selector
+   * whenever the entry carries more than one artwork (Kevin Lewis's
+   * five app-CDN pieces; Kim Wyatt's single external wixstatic image
+   * renders without the thumb strip). */
+  gallery: z
+    .array(
+      z.object({
+        url: z.string().max(600),
+        alt: z.string().max(200).optional(),
+      }),
+    )
+    .max(12)
+    .optional(),
 });
 
 export type InspirationDetail = z.infer<typeof inspirationDetailSchema>;

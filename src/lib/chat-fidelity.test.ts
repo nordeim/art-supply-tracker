@@ -121,4 +121,21 @@ describe("StudioChat card (live bundle verbatim)", () => {
     );
     expect(actions).toContain('"Could not send message."');
   });
+
+  it("swaps the Send button's label to the live's Sending while pending (r36)", () => {
+    // The live's composer submit renders {d ? `Sending` : `Send`} — the
+    // label swaps for the whole in-flight window (bundle, r36). The
+    // clone rendered a constant "Send".
+    expect(chat).toContain('{pending ? "Sending" : "Send"}');
+  });
+
+  it("catches a rejected action promise — transport failures render the live's copy instead of crashing (r36)", () => {
+    // The live's catch wraps the create AND its transport: any failure
+    // answers "Could not send message." with the draft preserved. A
+    // rejected Server Action promise (offline / 5xx) previously escaped
+    // the transition and unmounted the whole app ("Application error: a
+    // client-side exception" — driven with agent-browser set offline).
+    expect(chat).toContain('setError("Could not send message.")');
+    expect(chat).toMatch(/}\s*catch\s*(\([^)]*\))?\s*\{/);
+  });
 });

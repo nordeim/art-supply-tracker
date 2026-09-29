@@ -95,6 +95,38 @@ describe("seed fidelity — the r35 inspiration gallery + citation links", () =>
     expect(seed).toContain("static.wixstatic.com");
   });
 
+  it("seeds the spotlight galleries as {url, alt} objects with the live's per-artwork alts (r36)", () => {
+    // The live's gallery data is {url, alt} objects (bundle): Kevin's
+    // five carry "Kevin Lewis — artwork 1".."Kevin Lewis's studio"; Kim's
+    // single artwork carries "Liberty With Mask by Kim Wyatt".
+    expect(seed).toContain('alt: "Kevin Lewis — artwork 1"');
+    expect(seed).toContain('alt: "Kevin Lewis — artwork 2"');
+    expect(seed).toContain("alt: \"Kevin Lewis's studio\"");
+    expect(seed).toContain('alt: "Liberty With Mask by Kim Wyatt"');
+  });
+
+  it("seeds the spotlights' per-tag colored pill classes (r36 — the live's tagColors data)", () => {
+    // The live's data carries parallel tagColors arrays (bundle): Kevin
+    // pink/purple/turquoise /20; Kim turquoise/20, lavender/20, and
+    // faint-text-on-lavender/10. Hyphenated here — the clone's token
+    // spelling family (compiles the same values).
+    expect(seed).toContain('"text-ast-pink bg-ast-pink/20"');
+    expect(seed).toContain('"text-ast-purple bg-ast-purple/20"');
+    expect(seed).toContain('"text-ast-turquoise bg-ast-turquoise/20"');
+    expect(seed).toContain('"text-ast-lavender bg-ast-lavender/20"');
+    expect(seed).toContain('"text-ast-faint bg-ast-lavender/10"');
+  });
+
+  it("seeds Kim's website as the live's full URL with the bare label (r36)", () => {
+    // The live's data: website `https://www.kimwyatt.art/` +
+    // websiteLabel `kimwyatt.art` — the JSX appends the arrow. The old
+    // seed carried the arrow inside the label and the bare host as the
+    // target (href https://kimwyatt.art — no www).
+    expect(seed).toContain('linkUrl: "https://www.kimwyatt.art/"');
+    expect(seed).toContain('linkLabel: "kimwyatt.art"');
+    expect(seed).not.toContain("kimwyatt.art →");
+  });
+
   it("seeds the live's citation links (the underlined external hrefs)", () => {
     expect(seed).toContain(
       "citationUrl: \"https://www.artic.edu/artworks/111442/the-child-s-bath\"",

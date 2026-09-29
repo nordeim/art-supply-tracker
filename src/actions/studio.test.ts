@@ -463,6 +463,24 @@ describe("chat actions", () => {
     expect(source).toContain('"Could not send message."');
     expect(source).not.toContain('"Message is too long (500 characters max)."');
   });
+
+  it("wraps the WHOLE send path in the try — the session read included (r36)", async () => {
+    // The live's catch covers its entire send flow. The clone's try only
+    // wrapped the INSERT: a P1008 socket timeout on the session read
+    // escaped as a POST 500 with NO client feedback (driven with a BEGIN
+    // EXCLUSIVE db lock — the draft froze, no error rendered). The try
+    // must now open before the requireUser call.
+    const source = readFileSync(join(__dirname, "studio.ts"), "utf8");
+    const sendMatch = source.match(
+      /export async function sendChatMessage\([\s\S]*?\n\}/,
+    );
+    expect(sendMatch).not.toBeNull();
+    const sendBody = sendMatch?.[0] ?? "";
+    const tryIdx = sendBody.indexOf("try {");
+    const userIdx = sendBody.indexOf("await requireUser()");
+    expect(tryIdx).toBeGreaterThanOrEqual(0);
+    expect(userIdx).toBeGreaterThan(tryIdx);
+  });
 });
 
 describe("import action", () => {

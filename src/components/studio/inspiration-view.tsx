@@ -64,7 +64,7 @@ export function InspirationView({
     const focusId = resolveInspirationFocus(initialSection, inspiration);
     if (focusId) setActiveId(focusId);
   }
-  const spotlightRowRef = useRef<HTMLDivElement | null>(null);
+  const spotlightWrapperRef = useRef<HTMLDivElement | null>(null);
 
   const quotes = inspiration.filter((e) => e.type === "artist_quote");
   const spotlights = inspiration.filter((e) => e.type === "studio_spotlight");
@@ -74,21 +74,32 @@ export function InspirationView({
   const partners = inspiration.filter((e) => e.type === "partner");
   const today = pickToday(history);
   const activeEntry = inspiration.find((e) => e.id === activeId) ?? null;
+  const activeType = activeEntry?.type ?? null;
 
-  // Spotlight sections scroll their row into view even when the hardcoded
-  // id resolves to no panel — the live app's scrollIntoView behavior (a DOM
-  // side effect, so an effect is the right home for it; the timeout matches
-  // the live's 60ms debounce).
+  // r36: the live's scroll contract — ONE effect keyed on the active id
+  // (the live's `r`; its ids are `spotlight-*` slugs, ours are DB ids, so
+  // the condition tests the active entry's type), debounced 60ms so the
+  // artwork image has sized before `nearest` computes — the clone's old
+  // synchronous mount-time panel scroll computed against the unsized
+  // image and landed 256px short (measured 2026-09-29: live scrollY 317
+  // vs clone 63 on the Kim pair; the live's panel bottom sits EXACTLY at
+  // the viewport bottom). The wrapper ALWAYS renders (empty when
+  // closed), so the INERT spotlight rail navigation (the hardcoded
+  // `spotlight-kevin-lewis` resolving to no panel) still scrolls it —
+  // the live's own behavior (bundle: setTimeout(() =>
+  // p.current?.scrollIntoView({behavior:'smooth', block:'nearest'}), 60)
+  // keyed on [r]).
   useEffect(() => {
-    if (!initialSection?.startsWith("spotlight-")) return;
+    const inertSpotlightNav = initialSection?.startsWith("spotlight-") ?? false;
+    if (activeType !== "studio_spotlight" && !inertSpotlightNav) return;
     const timer = setTimeout(() => {
-      spotlightRowRef.current?.scrollIntoView({
+      spotlightWrapperRef.current?.scrollIntoView({
         behavior: "smooth",
         block: "nearest",
       });
     }, 60);
     return () => clearTimeout(timer);
-  }, [initialSection]);
+  }, [activeId, initialSection, activeType]);
 
   return (
     <div className="flex h-full flex-col">
@@ -166,7 +177,7 @@ export function InspirationView({
               )}
             </div>
 
-            <div ref={spotlightRowRef}>
+            <div>
               <p className="mb-2 px-0.5 text-[10px] font-bold uppercase tracking-wider text-ast-faint">
                 Studio Spotlight
               </p>
@@ -212,21 +223,22 @@ export function InspirationView({
                   </div>
                 ))}
               </div>
+              {/* r36: the live's spotlight section = [header, tile grid,
+                  ALWAYS-RENDERED plain wrapper] — the panel mounts inside
+                  the wrapper when open (DOM probe + bundle; the r35 record
+                  placed it as a feed-container sibling — a mis-reading,
+                  layout-neutral either way). The wrapper is also the
+                  scroll target for the unified 60ms effect above. */}
+              <div ref={spotlightWrapperRef}>
+                {activeEntry?.type === "studio_spotlight" && (
+                  <InspirationDetailPanel
+                    key={activeEntry.id}
+                    entry={activeEntry}
+                    onClose={() => setActiveId(null)}
+                  />
+                )}
+              </div>
             </div>
-
-            {/* r35: the live's spotlight panel mounts as its own child of
-                the feed container AFTER the whole spotlight section (the
-                section's header + tiles stay visible), carrying its own
-                mt-3 — and the document scrolls it into view. */}
-            {activeEntry?.type === "studio_spotlight" && (
-              <InspirationDetailPanel
-                key={activeEntry.id}
-                entry={activeEntry}
-                onClose={() => setActiveId(null)}
-              />
-            )}
-
-            <div />
 
             <div className="grid grid-cols-2 gap-3">
               {today && (
@@ -430,16 +442,10 @@ function InspirationDetailPanel({
   const detail = entry.detail;
   const gallery = detail?.gallery ?? [];
   const [artworkIdx, setArtworkIdx] = useState(0);
-  const panelRef = useRef<HTMLDivElement | null>(null);
-
-  // The live scrolls the spotlight panel into view when it opens (the
-  // document scroll measured 2026-09-29 — the panel's bottom aligns to
-  // the viewport's bottom, i.e. block "nearest"). Only that family
-  // scrolls; the quote/history/partner panels mount in place.
-  useEffect(() => {
-    if (entry.type !== "studio_spotlight") return;
-    panelRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }, [entry.type, entry.id]);
+  // r36: the panel no longer scrolls itself — the live's scroll lives in
+  // the Feed component as ONE 60ms-debounced effect on the always-
+  // rendered spotlight wrapper (see above); the panel's mount-time
+  // scroll computed against the unsized image and landed 256px short.
 
   const caption = detail?.artwork ? splitArtworkCaption(detail.artwork) : null;
   const linkHref = detail?.linkUrl
@@ -449,7 +455,7 @@ function InspirationDetailPanel({
     : null;
 
   return (
-    <div ref={panelRef} className={PANEL_CHROME[entry.type]}>
+    <div className={PANEL_CHROME[entry.type]}>
       <div
         className={
           entry.type === "partner"
@@ -527,7 +533,9 @@ function InspirationDetailPanel({
           )}
           {detail?.tags && detail.tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-3">
-              {detail.tags.map((tag) => (
+              {/* r36: the live's shared quote/history tag row renders
+                  e.slice(0, 4) — at most four pills (bundle). */}
+              {detail.tags.slice(0, 4).map((tag) => (
                 <span
                   key={tag}
                   className="text-[10px] uppercase tracking-wide bg-ast-lavender/10 text-ast-muted px-2 py-0.5 rounded-full"
@@ -547,31 +555,37 @@ function InspirationDetailPanel({
               {/* The live's main artwork: a plain img, natural aspect,
                   capped at 16rem, letterboxed by object-contain (measured
                   2026-09-29). Plain <img> matches the live's DOM — no
-                  intrinsic-dimension attributes to drift the box. */}
+                  intrinsic-dimension attributes to drift the box. r36: the
+                  live carries the ast-img-safe class (a no-op here — TW4
+                  compiles nothing for it — kept for the class-string
+                  contract) and the per-artwork alt with the entry-name
+                  fallback (bundle: alt: a.alt ?? e.name). */}
               <img
-                src={gallery[Math.min(artworkIdx, gallery.length - 1)] ?? gallery[0]}
-                alt={entry.title}
-                className="w-full rounded-xl object-contain object-center mb-3"
+                src={gallery[Math.min(artworkIdx, gallery.length - 1)]?.url ?? gallery[0]?.url}
+                alt={gallery[Math.min(artworkIdx, gallery.length - 1)]?.alt ?? entry.title}
+                className="ast-img-safe w-full rounded-xl object-contain object-center mb-3"
                 style={{ maxHeight: "16rem" }}
               />
               {gallery.length > 1 && (
                 <div className="flex gap-2 mb-3">
-                  {gallery.map((src, i) => (
+                  {gallery.map((artwork, i) => (
                     <button
-                      key={src}
+                      key={artwork.url}
                       type="button"
                       onClick={() => setArtworkIdx(i)}
                       aria-label={`Artwork ${i + 1}`}
+                      // r36: the live's unselected thumb hovers to
+                      // ast_purple/40 (bundle), not turquoise/40.
                       className={`w-12 h-12 shrink-0 rounded-lg overflow-hidden border-2 transition ${
                         i === artworkIdx
                           ? "border-ast-turquoise/60"
-                          : "border-transparent hover:border-ast-turquoise/40"
+                          : "border-transparent hover:border-ast-purple/40"
                       }`}
                     >
                       <img
-                        src={src}
-                        alt=""
-                        className="block w-full h-full object-cover"
+                        src={artwork.url}
+                        alt={artwork.alt ?? ""}
+                        className="ast-img-safe block w-full h-full object-cover"
                       />
                     </button>
                   ))}
@@ -594,10 +608,17 @@ function InspirationDetailPanel({
           )}
           {detail?.tags && detail.tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mb-2">
-              {detail.tags.map((tag) => (
+              {/* r36: the live's spotlight tags are PER-TAG COLORED pills
+                  from the parallel tagColors data array — 9px, MIXED CASE
+                  (no uppercase class), fallback faint-on-lavender/10
+                  (bundle: `${e.tagColors[n] ?? ...}`). The unified
+                  lavender family belongs to the quote/history panels. */}
+              {detail.tags.map((tag, i) => (
                 <span
                   key={tag}
-                  className="text-[10px] uppercase tracking-wide bg-ast-lavender/10 text-ast-muted px-2 py-0.5 rounded-full"
+                  className={`text-[9px] px-2 py-0.5 rounded-full ${
+                    detail.tagColors?.[i] ?? "text-ast-faint bg-ast-lavender/10"
+                  }`}
                 >
                   {tag}
                 </span>
@@ -611,7 +632,7 @@ function InspirationDetailPanel({
               rel="noopener noreferrer"
               className="text-xs text-ast-turquoise/70 hover:text-ast-turquoise transition"
             >
-              {detail.linkLabel}
+              {detail.linkLabel} →
             </a>
           )}
           {detail?.attribution && (
@@ -669,7 +690,9 @@ function InspirationDetailPanel({
           )}
           {detail?.tags && detail.tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-3">
-              {detail.tags.map((tag) => (
+              {/* r36: the live's shared quote/history tag row renders
+                  e.slice(0, 4) — at most four pills (bundle). */}
+              {detail.tags.slice(0, 4).map((tag) => (
                 <span
                   key={tag}
                   className="text-[10px] uppercase tracking-wide bg-ast-lavender/10 text-ast-muted px-2 py-0.5 rounded-full"

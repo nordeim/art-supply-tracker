@@ -28,22 +28,33 @@ describe("inspirationDetailSchema", () => {
     expect(parsed.success).toBe(true);
   });
 
-  it("accepts a spotlight detail with handle, link, and the r35 artwork gallery", () => {
+  it("accepts a spotlight detail with handle, link, tagColors, and the {url, alt} artwork gallery (r36)", () => {
     const parsed = inspirationDetailSchema.safeParse({
       subtitle: "@kevinlewisart · Kevin Lewis Studio",
       body: "Kevin Lewis is a San Diego artist whose work is vivid and intense.",
       tags: ["Mixed Media", "Textile", "Spotlight"],
+      tagColors: [
+        "text-ast-pink bg-ast-pink/20",
+        "text-ast-purple bg-ast-purple/20",
+        "text-ast-turquoise bg-ast-turquoise/20",
+      ],
       attribution: "Artwork by Kevin Lewis. Used with artist permission.",
       gallery: [
-        "/assets/artwork-01.jpg",
-        "/assets/artwork-02.jpg",
-        "https://static.wixstatic.com/media/example.jpg",
+        { url: "/assets/artwork-01.jpg", alt: "Kevin Lewis — artwork 1" },
+        { url: "/assets/artwork-02.jpg" },
+        {
+          url: "https://static.wixstatic.com/media/example.jpg",
+          alt: "Liberty With Mask by Kim Wyatt",
+        },
       ],
     });
     expect(parsed.success).toBe(true);
     if (parsed.success) {
       expect(parsed.data.subtitle).toContain("@kevinlewisart");
       expect(parsed.data.gallery).toHaveLength(3);
+      expect(parsed.data.gallery?.[0]?.alt).toBe("Kevin Lewis — artwork 1");
+      expect(parsed.data.gallery?.[1]?.alt).toBeUndefined();
+      expect(parsed.data.tagColors).toHaveLength(3);
     }
   });
 
@@ -54,9 +65,16 @@ describe("inspirationDetailSchema", () => {
     expect(parsed.success).toBe(false);
   });
 
+  it("rejects a gallery of bare strings (the live's gallery is {url, alt} objects — r36)", () => {
+    const parsed = inspirationDetailSchema.safeParse({
+      gallery: ["/assets/artwork-01.jpg"],
+    });
+    expect(parsed.success).toBe(false);
+  });
+
   it("caps the gallery count (the live's panel renders at most a dozen thumbs)", () => {
     const parsed = inspirationDetailSchema.safeParse({
-      gallery: Array.from({ length: 13 }, (_, i) => `/a-${i}.jpg`),
+      gallery: Array.from({ length: 13 }, (_, i) => ({ url: `/a-${i}.jpg` })),
     });
     expect(parsed.success).toBe(false);
   });

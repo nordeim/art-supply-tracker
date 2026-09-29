@@ -66,13 +66,26 @@ export function StudioChat({ initialMessages }: { initialMessages: ChatMessageDt
     if (!text || pending) return;
     setError(null);
     startTransition(async () => {
-      const result = await sendChatMessage({ message: text });
-      if (!result.ok) {
-        setError(result.error.message);
-        return;
+      // r36: the live's catch wraps the create AND its transport — any
+      // failure answers "Could not send message." with the draft
+      // preserved for retry. A rejected Server Action promise (offline /
+      // 5xx) previously escaped the transition and unmounted the whole
+      // app ("Application error: a client-side exception" — driven with
+      // agent-browser set offline). The live's own offline behavior is
+      // DataStore's silent local queue (an Amplify-specific mechanism the
+      // clone cannot replicate — documented divergence); its ERROR
+      // rendering is the contract replicated here.
+      try {
+        const result = await sendChatMessage({ message: text });
+        if (!result.ok) {
+          setError(result.error.message);
+          return;
+        }
+        setMessages((list) => [...list, result.data]);
+        setDraft("");
+      } catch {
+        setError("Could not send message.");
       }
-      setMessages((list) => [...list, result.data]);
-      setDraft("");
     });
   }
 
@@ -133,7 +146,10 @@ export function StudioChat({ initialMessages }: { initialMessages: ChatMessageDt
           disabled={draft.trim().length === 0 || pending}
           className="shrink-0 rounded-lg border border-ast-turquoise bg-ast-turquoise/20 px-3 py-2 text-xs font-medium text-ast-turquoise transition hover:bg-ast-turquoise/30 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Send
+          {/* r36: the live's submit label swaps while pending (bundle:
+              children: d ? `Sending` : `Send`) — the in-flight window
+              shows "Sending". */}
+          {pending ? "Sending" : "Send"}
         </button>
       </form>
     </div>
