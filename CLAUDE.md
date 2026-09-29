@@ -171,7 +171,7 @@ not secret — rotate before any public deployment).
 ### Testing Strategy
 
 Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
-`src/**/*.test.ts`). The suite (459 tests) pins:
+`src/**/*.test.ts`). The suite (468 tests) pins:
 
 - **The SQLite path contract** (`src/lib/db-path.test.ts`) — relative
   `file:` URLs resolve against `prisma/schema.prisma` (so
@@ -367,8 +367,9 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
 - **The inspiration detail panel family** (r35,
   `inspiration-view-fidelity.test.ts`) — the live's four overlay panels
   are PER-TYPE contracts: quote `turquoise/40 p-5` (no top margin, gap 0
-  below the tiles), spotlight `purple/50 p-4 mt-3` (after the whole
-  spotlight section + scrollIntoView, with the artwork gallery — main
+  below the tiles), spotlight `purple/50 p-4 mt-3` (inside
+  the section's ALWAYS-RENDERED wrapper after the tile grid — the r36
+  correction of the r35 mount record — with the artwork gallery: main
   image capped at 16rem + the w-12 thumb selector), history
   `lavender/40` (after the timeline grid, with the image-unavailable
   notice), partner `blue/40` (flat, #8D5CFF title). Plain divs, soft
@@ -378,12 +379,28 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
   The feed tabs are plain buttons (the orphan tab role removed); the
   quote-tile + close-button aria-labels stay as the documented a11y
   additions.
-- **The chat send contract** (r35) — no maxLength on the composer, no
+- **The chat send contract** (r35, r36) — no maxLength on the composer, no
   schema cap (the live posts 600-char messages verbatim), and the
   catch-path copy "Could not send message." (the live's composer,
   bundle-verified) instead of the generic INTERNAL flattening. The
   live's error state CANNOT be driven offline (DataStore queues the
-  mutation and pends) — the copy is bundle-pinned.
+  mutation and pends) — the copy is bundle-pinned. r36 drove the
+  CLONE's failure paths for real: the action's try now wraps the WHOLE
+  send path (a P1008 on the session read under a locked db previously
+  escaped as a 500 with no client feedback) and the client catches
+  rejected action promises (an offline send previously CRASHED the app
+  — the whole tree unmounted); both paths render the live's copy with
+  the draft preserved. The Send label swaps to "Sending" while pending.
+- **The spotlight scroll + tag pills** (r36, `inspiration-view-fidelity
+  .test.ts`) — the panel scroll is the live's unified 60ms-debounced
+  effect on the always-rendered wrapper (a synchronous mount-time scroll
+  computes against the unsized image and lands 256px short); the
+  spotlight tag pills are PER-TAG colored (9px mixed case, tagColors
+  data array, faint/lavender-10 fallback) while the quote/history tags
+  keep the lavender family capped at four (slice(0,4)); the gallery
+  data is {url, alt} objects with the ast-img-safe class on the imgs
+  and the thumb hover at purple/40; Kim's link href is the live's full
+  https://www.kimwyatt.art/ with the JSX-appended arrow.
 - **Sidebar stat-tile fidelity** (`sidebar-tile-fidelity.test.ts`) —
   file-content pins on the live's measured tile contract (r12): the
   ACTIVE view's tile highlights with its OWN accent pair — electric
