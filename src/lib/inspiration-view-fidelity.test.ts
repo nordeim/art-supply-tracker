@@ -99,9 +99,11 @@ describe("panel chrome (the live's per-type contracts)", () => {
 describe("panel mounts (the live's mount semantics)", () => {
   it("mounts the quote panel inside the Artist Quotes section below the tile grid with no margin class", () => {
     // The quotes section wrapper renders the panel after the tile grid;
-    // the live's quote panel carries no mt (gap 0 below the grid).
+    // the live's quote panel carries no mt (gap 0 below the grid). r37:
+    // the panel mounts for the quote whose quote-<date> key matches the
+    // active key (the live's d.map(e => r === `quote-${e.date}` ? ...)).
     expect(view).toMatch(
-      /\{activeEntry\?\.type === "artist_quote" && \(\s*<InspirationDetailPanel/,
+      /\{activeQuote && \(\s*<InspirationDetailPanel/,
     );
   });
 
@@ -112,8 +114,10 @@ describe("panel mounts (the live's mount semantics)", () => {
     // container child after the whole section") was a mis-reading; the
     // difference is layout-neutral (margin collapse through the
     // zero-height wrapper) which is why every pixel pair converged.
+    // r37: the panel mounts for the spotlight whose spotlight-<slug> key
+    // matches (the live's sB.map(e => r === `spotlight-${e.id}` ? ...)).
     expect(view).toMatch(
-      /<div ref=\{spotlightWrapperRef\}>\s*\{activeEntry\?\.type === "studio_spotlight" && \(/,
+      /<div ref=\{spotlightWrapperRef\}>\s*\{activeSpotlight && \(/,
     );
   });
 
@@ -276,19 +280,157 @@ describe("the spotlight gallery (r35, r36)", () => {
     expect(viewCode).not.toContain("scrollTo(");
   });
 
-  it("scrolls the spotlight wrapper via the live's unified 60ms-debounced effect (r36)", () => {
+  it("scrolls the spotlight wrapper via the live's unified 60ms-debounced effect (r36, r37)", () => {
     // The live's bundle: ONE effect keyed on the active id —
     // setTimeout(() => wrapper.scrollIntoView({behavior:'smooth',
     // block:'nearest'}), 60). The 60ms delay lets the artwork image size
     // before `nearest` computes; the clone's synchronous mount-time
     // panel scroll computed against the unsized image and landed 256px
     // short (measured: live scrollY 317 vs clone 63 on the Kim pair).
-    // The wrapper always renders, so the INERT spotlight rail
-    // navigation (no panel) still scrolls it — the live's own behavior.
+    // r37: the condition is the live's RAW PREFIX TEST —
+    // r?.startsWith('spotlight-') — which covers the tile clicks and the
+    // DASHBOARD card's 'spotlight-kevin-lewis' (the panel opens + the
+    // page scrolls) and EXCLUDES the sidebar rail's 'featured-artist'
+    // (no scroll — the r36 "inert rail navigation scrolls" note was
+    // based on the wrong section string, corrected r37).
     expect(view).toMatch(
       /setTimeout\(\(\) => \{\s*spotlightWrapperRef\.current\?\.scrollIntoView\(\{\s*behavior: "smooth",\s*block: "nearest",\s*\}\);\s*\}, 60\)/,
     );
+    expect(view).toMatch(
+      /if \(!activeKey\?\.startsWith\("spotlight-"\)\) return;/,
+    );
+    expect(view).toMatch(/\}, \[activeKey\]\);/);
     expect(viewCode).not.toMatch(/panelRef\.current\?\.scrollIntoView/);
+  });
+});
+
+describe("the r37 raw-string active-key contract", () => {
+  it("keys the active panel on the RAW section string — no entry-id resolution", () => {
+    // The live's Feed (bundle fn TB): r = location.state.section VERBATIM
+    // via useEffect(() => { e && i(e) }, [e]) — never a resolved entry id.
+    // The section-string comparison IS the live's [e] dependency, so a
+    // same-section re-click does nothing and a null section (the plain
+    // stat-tile navigation) never clears the key.
+    expect(view).toContain(
+      'const [activeKey, setActiveKey] = useState<string | null>(initialSection);',
+    );
+    expect(view).toMatch(/if \(initialSection\) setActiveKey\(initialSection\);/);
+    expect(viewCode).not.toContain("resolveInspirationFocus");
+    expect(viewCode).not.toContain("activeId");
+  });
+
+  it("toggles the quote tiles on the live's quote-<date> keys", () => {
+    expect(view).toContain("quoteKey(");
+    expect(view).toMatch(
+      /setActiveKey\(activeKey === quoteKey\(quote\.date \?\? ""\) \? null : quoteKey\(quote\.date \?\? ""\)\)/,
+    );
+  });
+
+  it("toggles the spotlight tiles on the live's spotlight-<slug> keys", () => {
+    expect(view).toMatch(
+      /setActiveKey\(activeKey === spotlightKey\(spotlight\) \? null : spotlightKey\(spotlight\)\)/,
+    );
+  });
+
+  it("toggles the today card on the live's art-history-today key", () => {
+    expect(view).toMatch(
+      /setActiveKey\(activeKey === "art-history-today" \? null : "art-history-today"\)/,
+    );
+  });
+
+  it("toggles the partner card on the live's partner key", () => {
+    expect(view).toMatch(
+      /setActiveKey\(activeKey === "partner" \? null : "partner"\)/,
+    );
+  });
+
+  it("toggles the timeline tiles on the live's bare-date keys", () => {
+    // The live's timeline tiles key on e.date (bundle: r === e.date,
+    // onSelect: () => f(e.date)) — NOT the today key. This is what makes
+    // the rail's art-history-today click from the Art History tab open
+    // NO panel on the live ('art-history-today' matches no date).
+    expect(view).toMatch(
+      /setActiveKey\(activeKey === entry\.date \? null : entry\.date\)/,
+    );
+  });
+
+  it("mounts the today panel only on the art-history-today key with the today entry", () => {
+    expect(view).toMatch(
+      /\{activeKey === "art-history-today" && today && \(/,
+    );
+  });
+
+  it("mounts the partner panel only on the partner key", () => {
+    expect(view).toMatch(/\{activeKey === "partner" && partners\.length > 0 && \(/);
+  });
+
+  it("mounts the history-tab panel for the timeline entry whose date matches", () => {
+    expect(view).toMatch(
+      /const activeTimeline = history\.find\(\(e\) => activeKey === e\.date\) \?\? null;/,
+    );
+  });
+
+  it("computes the quote tiles in the live's date order (past desc + upcoming asc, capped at 4)", () => {
+    // The live's d = [...past(desc), ...upcoming(asc)].slice(0, 4) — the
+    // seeded four are all past, so the order matches the seed's
+    // insertion order, but the computation is date-driven like the live.
+    expect(view).toMatch(
+      /const quoteTiles = \[\.\.\.pastQuotes, \.\.\.upcomingQuotes\]\.slice\(0, 4\);/,
+    );
+  });
+});
+
+describe("the r37 timeline artwork images (the live's fB contract)", () => {
+  it("mirrors the live's fB image component — (!src || error) ? fallback : img", () => {
+    // The live's fB: a load error swaps to the fallback (the quote
+    // panels' wikimedia images fail → the null fallback renders
+    // nothing — why the quote panels converge with no image).
+    expect(view).toContain("function AstImg(");
+    expect(view).toMatch(/if \(!src \|\| errored\) return fallback;/);
+    expect(view).toMatch(/onError=\{\(\) => setErrored\(true\)\}/);
+  });
+
+  it("renders the timeline tile's image thumb with the live's exact class contract", () => {
+    // Live tile 1/3 (Van Gogh + Monet): the img at
+    // ast-img-safe shrink-0 w-14 rounded-xl object-contain
+    // object-center bg-transparent + maxHeight 3.5rem.
+    expect(view).toContain(
+      '"ast-img-safe shrink-0 w-14 rounded-xl object-contain object-center bg-transparent"',
+    );
+    expect(view).toContain('maxHeight: "3.5rem"');
+  });
+
+  it("renders the timeline tile's gradient fallback with the live's inline height (no h-14 class)", () => {
+    // The live's fallback div: shrink-0 w-14 rounded-xl + gradient +
+    // INLINE style height 3.5rem — the height comes from the style attr,
+    // not an h-14 class (the clone's old form; renders identically but
+    // the DOM contract differed).
+    expect(view).toContain(
+      '"shrink-0 w-14 rounded-xl bg-gradient-to-br from-ast-purple/20 via-ast-lavender/15 to-ast-blue/20"',
+    );
+    expect(view).toContain('style={{ height: "3.5rem" }}');
+    expect(viewCode).not.toContain('"h-14 w-14 shrink-0 rounded-xl');
+  });
+
+  it("renders the history panel's artwork image with the live's w-full maxHeight-11rem contract", () => {
+    // The live's bB panel: the fB image at ast-img-safe w-full
+    // rounded-xl object-contain object-center mb-4 + maxHeight 11rem —
+    // the Van Gogh panel measures h 565 (vs 490 for the image-less
+    // Carmen Herrera panel).
+    expect(view).toContain(
+      '"ast-img-safe w-full rounded-xl object-contain object-center mb-4"',
+    );
+    expect(view).toContain('maxHeight: "11rem"');
+  });
+
+  it("keeps the rights notice as the history panel image's FALLBACK (not a sibling)", () => {
+    // The live's bB: the notice is the fB fallback — an entry WITH an
+    // image renders the image INSTEAD of the notice (r37's Van Gogh
+    // panel pair), an imageless entry renders the notice.
+    expect(view).toMatch(
+      /fallback=\{\s*<p className="text-\[10px\] text-ast-faint\/60 italic mb-3 leading-snug">/,
+    );
+    expect(viewCode).not.toMatch(/\{!entry\.imageUrl && \(/);
   });
 });
 
@@ -348,5 +490,43 @@ describe("header accents (the live's per-type header colors)", () => {
   it("renders the spotlight header in faint (not pink)", () => {
     expect(view).toContain('"text-ast-faint"');
     expect(viewCode).not.toContain('"text-ast-pink"');
+  });
+});
+
+describe("the sidebar rail's section strings (r37)", () => {
+  // The live's rail cards (bundle, drawer + desktop copies): the
+  // spotlight card passes 'featured-artist' — NOT 'spotlight-kevin-lewis'
+  // (that string belongs to the DASHBOARD's Studio Spotlight card, and it
+  // MATCHES the live's Kevin Lewis spotlight: id 'kevin-lewis'). The r35
+  // record assigned the wrong string to the rail; corrected r37.
+  const sidebar = readFileSync(
+    join(libDir, "../components/studio/studio-sidebar.tsx"),
+    "utf8",
+  );
+  const sidebarCode = sidebar.replace(/\/\*[\s\S]*?\*\//g, "");
+
+  it("passes the live's featured-artist section from the rail's spotlight card", () => {
+    expect(sidebar).toContain(
+      'onOpenInspirationSection("featured-artist")',
+    );
+    expect(sidebarCode).not.toContain(
+      'onOpenInspirationSection("spotlight-kevin-lewis")',
+    );
+  });
+
+  it("keeps the rail's other three section strings", () => {
+    expect(sidebar).toContain('onOpenInspirationSection("quote")');
+    expect(sidebar).toContain('onOpenInspirationSection("art-history-today")');
+    expect(sidebar).toContain('onOpenInspirationSection("partner")');
+  });
+
+  it("keeps the dashboard's Studio Spotlight card on the live's spotlight-kevin-lewis section (the panel-opening one)", () => {
+    const app = readFileSync(
+      join(libDir, "../components/studio/studio-app.tsx"),
+      "utf8",
+    );
+    expect(app).toContain(
+      'openInspirationSection("spotlight-kevin-lewis")',
+    );
   });
 });

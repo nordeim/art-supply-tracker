@@ -12,8 +12,10 @@ interface DashboardViewProps {
   onExport: () => void;
   onImportClick: () => void;
   /** The Studio Spotlight card navigates to the inspiration Feed on the
-   * live app (with a hardcoded "spotlight-kevin-lewis" section that matches
-   * no seeded entry — the feed opens without a panel). */
+   * live app with the hardcoded "spotlight-kevin-lewis" section — which
+   * MATCHES the live's Kevin Lewis spotlight (its seed id IS the slug
+   * "kevin-lewis"): his panel opens and the page scrolls (r37 re-measure
+   * — the r35/r36 "inert" record was a mis-reading). */
   onOpenSpotlight: () => void;
 }
 

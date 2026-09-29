@@ -2,9 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   inspirationDetailSchema,
+  inspirationEntryForKey,
   parseInspirationDetail,
   pickToday,
-  resolveInspirationFocus,
+  quoteKey,
+  spotlightKey,
+  spotlightSlug,
 } from "@/lib/inspiration";
 import type { InspirationEntryDto } from "@/lib/dto";
 
@@ -149,27 +152,60 @@ describe("pickToday", () => {
 });
 
 /**
- * resolveInspirationFocus maps a sidebar/dashboard rail navigation "section"
- * to the Feed entry whose detail panel should auto-expand — mirroring the
- * live app's Feed component (extracted from the deployed bundle):
- *   - "art-history-today" → the pickToday art-history entry
- *   - "partner" → the first partner entry
- *   - "spotlight-<id>" → that spotlight entry when the id matches a seeded
- *     one (the live's two callers pass the hardcoded "spotlight-kevin-lewis",
- *     which matches none of its seeded entries → no panel — the live quirk
- *     this suite pins)
- *   - "quote" is never consumed by the live Feed → no panel (pinned quirk)
+ * r37: the section→panel contract re-measured against the live's bundle
+ * (Feed fn TB) and driven on the deployed app. The live's Feed keys its
+ * active panel on a RAW STRING r set directly from location.state.section
+ * (useEffect(() => { e && i(e) }, [e])) — NOT a resolved entry id. Panels
+ * mount on per-tab string equality: quote panels "quote-<date>", spotlight
+ * panels "spotlight-<slug>" (the live's spotlight seed ids ARE the slugs
+ * "kevin-lewis"/"kim-wyatt"), the today panel "art-history-today", the
+ * partner panel "partner", and the timeline panels the bare entry date.
+ * The scroll effect fires when r?.startsWith("spotlight-").
+ *
+ * The r35/r36 record ("the hardcoded spotlight-kevin-lewis id matches no
+ * seeded entry — inert") was a MIS-READING, corrected r37: the live's
+ * DASHBOARD Studio Spotlight card navigates with "spotlight-kevin-lewis"
+ * which MATCHES its Kevin Lewis spotlight — the panel opens and the page
+ * scrolls (measured: panel y517 h539, scrollY 109). The SIDEBAR RAIL's
+ * spotlight card passes "featured-artist" — THAT is the inert string (no
+ * panel, no scroll). The rail's quote card passes plain "quote" — also
+ * inert (matches no quote-<date> key).
+ *
+ * inspirationEntryForKey is the inverted lookup: given a raw key, the
+ * entry whose panel should render (null = no panel).
  */
-describe("resolveInspirationFocus", () => {
+describe("spotlightSlug + spotlightKey", () => {
+  it("derives the live's slug ids from the spotlight titles", () => {
+    // The live's seed carries id "kevin-lewis" / "kim-wyatt"; the clone's
+    // DB rows use cuids, so the spotlight panel key derives the slug from
+    // the title — identical strings for both seeded spotlights.
+    expect(spotlightSlug({ title: "Kevin Lewis" })).toBe("kevin-lewis");
+    expect(spotlightSlug({ title: "Kim Wyatt" })).toBe("kim-wyatt");
+  });
+
+  it("composes the spotlight tile key the live's panels key on", () => {
+    expect(spotlightKey({ title: "Kevin Lewis" })).toBe("spotlight-kevin-lewis");
+    expect(spotlightKey({ title: "Kim Wyatt" })).toBe("spotlight-kim-wyatt");
+  });
+});
+
+describe("quoteKey", () => {
+  it("composes the live's quote tile key from the quote date", () => {
+    expect(quoteKey("2026-07-26")).toBe("quote-2026-07-26");
+  });
+});
+
+describe("inspirationEntryForKey (the r37 raw-string contract)", () => {
   const entry = (
     id: string,
     type: InspirationEntryDto["type"],
     date: string | null = null,
+    title?: string,
   ): InspirationEntryDto => ({
     id,
     type,
     date,
-    title: `Entry ${id}`,
+    title: title ?? `Entry ${id}`,
     body: null,
     author: null,
     imageUrl: null,
@@ -178,7 +214,8 @@ describe("resolveInspirationFocus", () => {
 
   const feed: InspirationEntryDto[] = [
     entry("q1", "artist_quote", "2026-09-01"),
-    entry("s1", "studio_spotlight"),
+    entry("s1", "studio_spotlight", null, "Kevin Lewis"),
+    entry("s2", "studio_spotlight", null, "Kim Wyatt"),
     entry("h1", "art_history", "2026-01-01"),
     entry("h2", "art_history", "2026-06-01"),
     entry("h3", "art_history", "2026-12-31"),
@@ -186,57 +223,68 @@ describe("resolveInspirationFocus", () => {
     entry("p2", "partner"),
   ];
 
-  it("returns null for a null section (plain INSPO stat-tile navigation)", () => {
-    expect(resolveInspirationFocus(null, feed)).toBeNull();
+  it("returns null for a null key (plain INSPO stat-tile navigation)", () => {
+    expect(inspirationEntryForKey(null, feed)).toBeNull();
   });
 
-  it("maps art-history-today to the pickToday art-history entry", () => {
-    const focus = resolveInspirationFocus("art-history-today", feed);
+  it("maps art-history-today to the pickToday art-history entry (r37 contract)", () => {
+    const found = inspirationEntryForKey("art-history-today", feed);
     const expected = pickToday(
       feed.filter((e) => e.type === "art_history" && e.date),
     );
-    expect(focus).toBe(expected?.id ?? null);
-    expect(focus).not.toBeNull();
+    expect(found?.id).toBe(expected?.id ?? null);
+    expect(found).not.toBeNull();
   });
 
   it("maps art-history-today to null when the timeline is empty", () => {
     const withoutHistory = feed.filter((e) => e.type !== "art_history");
-    expect(
-      resolveInspirationFocus("art-history-today", withoutHistory),
-    ).toBeNull();
+    expect(inspirationEntryForKey("art-history-today", withoutHistory)).toBeNull();
   });
 
   it("maps partner to the first partner entry", () => {
-    expect(resolveInspirationFocus("partner", feed)).toBe("p1");
+    expect(inspirationEntryForKey("partner", feed)?.id).toBe("p1");
   });
 
   it("maps partner to null when no partner entries exist", () => {
     const withoutPartners = feed.filter((e) => e.type !== "partner");
-    expect(resolveInspirationFocus("partner", withoutPartners)).toBeNull();
+    expect(inspirationEntryForKey("partner", withoutPartners)).toBeNull();
   });
 
-  it("maps spotlight-<id> to the entry only when a seeded spotlight has that id", () => {
-    expect(resolveInspirationFocus("spotlight-s1", feed)).toBe("s1");
+  it("CORRECTED r37: spotlight-kevin-lewis MATCHES the Kevin Lewis spotlight (the live's dashboard card opens his panel)", () => {
+    // The r35/r36 "inert" record was a mis-reading: the live's spotlight
+    // seed id IS "kevin-lewis", so the dashboard card's section matches —
+    // the panel opens and the page scrolls (driven on the live r37).
+    expect(inspirationEntryForKey("spotlight-kevin-lewis", feed)?.id).toBe("s1");
+    expect(inspirationEntryForKey("spotlight-kim-wyatt", feed)?.id).toBe("s2");
   });
 
-  it("keeps the live quirk: the hardcoded spotlight-kevin-lewis id matches no seeded entry", () => {
-    // The live app's dashboard card and sidebar rail navigate with this
-    // hardcoded section; its seed (and ours — cuid ids) has no such entry,
-    // so nothing expands. Pinned so the quirk cannot silently "improve".
-    expect(resolveInspirationFocus("spotlight-kevin-lewis", feed)).toBeNull();
+  it("keeps the live quirk: the sidebar rail's featured-artist section matches nothing (r37)", () => {
+    // The SIDEBAR RAIL's spotlight card passes "featured-artist" — no
+    // panel, no scroll (it does not even start with "spotlight-").
+    expect(inspirationEntryForKey("featured-artist", feed)).toBeNull();
   });
 
-  it("keeps the live quirk: the quote section is never consumed", () => {
-    expect(resolveInspirationFocus("quote", feed)).toBeNull();
+  it("keeps the live quirk: the bare quote section matches no quote tile key", () => {
+    // The rail's quote card passes plain "quote"; the quote panels key on
+    // "quote-<date>" — no match, so an open panel CLOSES instead.
+    expect(inspirationEntryForKey("quote", feed)).toBeNull();
   });
 
-  it("returns null for unknown sections", () => {
-    expect(resolveInspirationFocus("made-up-section", feed)).toBeNull();
-    expect(resolveInspirationFocus("", feed)).toBeNull();
+  it("maps a quote-<date> key to the quote with that date (the live's quote tile key)", () => {
+    expect(inspirationEntryForKey("quote-2026-09-01", feed)?.id).toBe("q1");
   });
 
-  it("returns null for an empty feed regardless of section", () => {
-    expect(resolveInspirationFocus("art-history-today", [])).toBeNull();
-    expect(resolveInspirationFocus("partner", [])).toBeNull();
+  it("maps a bare date key to the timeline entry with that date (the live's timeline tile key)", () => {
+    expect(inspirationEntryForKey("2026-06-01", feed)?.id).toBe("h2");
+  });
+
+  it("returns null for unknown keys", () => {
+    expect(inspirationEntryForKey("made-up-section", feed)).toBeNull();
+    expect(inspirationEntryForKey("", feed)).toBeNull();
+  });
+
+  it("returns null for an empty feed regardless of key", () => {
+    expect(inspirationEntryForKey("art-history-today", [])).toBeNull();
+    expect(inspirationEntryForKey("partner", [])).toBeNull();
   });
 });

@@ -29,18 +29,20 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
 import type { InspirationEntryDto } from "@/lib/dto";
-import { pickToday, resolveInspirationFocus } from "@/lib/inspiration";
+import { pickToday, quoteKey, spotlightKey } from "@/lib/inspiration";
 
 type FeedTab = "today" | "history" | "inspire";
 
 interface InspirationViewProps {
   inspiration: InspirationEntryDto[];
   /** The rail navigation section (the live app's location state):
-   * "art-history-today" / "partner" auto-expand their detail panels;
-   * "quote" and "spotlight-*" are the live's inert sections (the quote
-   * section is never consumed; the hardcoded "spotlight-kevin-lewis" id
-   * matches no seeded entry) — the spotlight ones still scroll the Studio
-   * Spotlight row into view, exactly like the deployed app. */
+   * r37 — the section is a RAW STRING key consumed verbatim by the Feed
+   * (the live's useEffect(() => { e && i(e) }, [e])). "art-history-today" /
+   * "partner" expand their detail panels; "spotlight-kevin-lewis" (the
+   * DASHBOARD card) opens the Kevin Lewis spotlight panel + scrolls;
+   * "featured-artist" (the SIDEBAR RAIL's spotlight card) and "quote"
+   * (the rail's quote card) match no panel key — inert by design. Null
+   * sections — plain stat-tile navigation — never touch the current key. */
   initialSection: string | null;
 }
 
@@ -49,49 +51,72 @@ export function InspirationView({
   initialSection,
 }: InspirationViewProps) {
   const [tab, setTab] = useState<FeedTab>("today");
-  // The live Feed's section semantics: a rail navigation auto-expands the
-  // matching detail panel (art-history-today / partner); "quote" and the
-  // hardcoded "spotlight-kevin-lewis" resolve to no panel (the live's
-  // inert sections). Null sections — plain stat-tile navigation — never
-  // touch the current panel. Implemented with React's "adjust state during
-  // render" pattern (initializers cover the mount, the comparison updates).
-  const [activeId, setActiveId] = useState<string | null>(() =>
-    resolveInspirationFocus(initialSection, inspiration),
-  );
+  // r37: the live's active-key contract — a RAW STRING (the location
+  // state's section verbatim, or a tile's key), never a resolved entry
+  // id (bundle fn TB: [r, i] = useState(null); useEffect(() => { e &&
+  // i(e) }, [e])). Implemented with React's "adjust state during render"
+  // pattern (the initializer covers the mount, the comparison updates);
+  // the section-string comparison IS the live's [e] dependency, so a
+  // same-section re-click does nothing and a null section (the plain
+  // stat-tile navigation) never clears the key.
+  const [activeKey, setActiveKey] = useState<string | null>(initialSection);
   const [prevSection, setPrevSection] = useState<string | null>(initialSection);
   if (initialSection !== prevSection) {
     setPrevSection(initialSection);
-    const focusId = resolveInspirationFocus(initialSection, inspiration);
-    if (focusId) setActiveId(focusId);
+    if (initialSection) setActiveKey(initialSection);
   }
   const spotlightWrapperRef = useRef<HTMLDivElement | null>(null);
 
-  const quotes = inspiration.filter((e) => e.type === "artist_quote");
+  const quotes = inspiration.filter(
+    (e) => e.type === "artist_quote" && e.date,
+  );
+  // r37: the live's quote-tile computation — past quotes date-DESC, then
+  // upcoming ASC, capped at four (bundle: l = c.filter(e => e.date <= s)
+  // .sort(desc); u = c.filter(e => e.date > s).sort(asc); d = [...l,
+  // ...u].slice(0, 4)). The seeded four are all past, so the order equals
+  // the seed's insertion order (Cassatt, Degas, Kollwitz, Klee).
+  const now = new Date().toISOString().split("T")[0] ?? "";
+  const pastQuotes = quotes
+    .filter((e) => (e.date ?? "") <= now)
+    .sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
+  const upcomingQuotes = quotes
+    .filter((e) => (e.date ?? "") > now)
+    .sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""));
+  const quoteTiles = [...pastQuotes, ...upcomingQuotes].slice(0, 4);
   const spotlights = inspiration.filter((e) => e.type === "studio_spotlight");
   const history = inspiration
     .filter((e) => e.type === "art_history" && e.date)
     .sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""));
   const partners = inspiration.filter((e) => e.type === "partner");
   const today = pickToday(history);
-  const activeEntry = inspiration.find((e) => e.id === activeId) ?? null;
-  const activeType = activeEntry?.type ?? null;
 
-  // r36: the live's scroll contract — ONE effect keyed on the active id
-  // (the live's `r`; its ids are `spotlight-*` slugs, ours are DB ids, so
-  // the condition tests the active entry's type), debounced 60ms so the
-  // artwork image has sized before `nearest` computes — the clone's old
-  // synchronous mount-time panel scroll computed against the unsized
-  // image and landed 256px short (measured 2026-09-29: live scrollY 317
-  // vs clone 63 on the Kim pair; the live's panel bottom sits EXACTLY at
-  // the viewport bottom). The wrapper ALWAYS renders (empty when
-  // closed), so the INERT spotlight rail navigation (the hardcoded
-  // `spotlight-kevin-lewis` resolving to no panel) still scrolls it —
-  // the live's own behavior (bundle: setTimeout(() =>
-  // p.current?.scrollIntoView({behavior:'smooth', block:'nearest'}), 60)
-  // keyed on [r]).
+  // r37: the per-tab panel lookups — the live's per-tab string equality
+  // (the quote panels key on `quote-${date}`, the spotlight panels on
+  // `spotlight-${slug}`, the today panel on "art-history-today", the
+  // partner panel on "partner", and the timeline panels on the bare
+  // date). A key matching nothing on the current tab renders NO panel
+  // (the live's behavior — e.g. the rail's art-history-today click while
+  // on the Art History tab opens nothing: no timeline date equals it).
+  const activeQuote =
+    quoteTiles.find((q) => activeKey === quoteKey(q.date ?? "")) ?? null;
+  const activeSpotlight =
+    spotlights.find((s) => activeKey === spotlightKey(s)) ?? null;
+  const activeTimeline = history.find((e) => activeKey === e.date) ?? null;
+
+  // r36/r37: the live's scroll contract — ONE effect keyed on the active
+  // key (the live's `r`), debounced 60ms so the artwork image has sized
+  // before `nearest` computes — the clone's old synchronous mount-time
+  // panel scroll computed against the unsized image and landed 256px
+  // short (measured: live scrollY 317 vs clone 63 on the Kim pair). The
+  // wrapper ALWAYS renders (empty when closed), so a spotlight-* key
+  // still scrolls it. r37: the condition is the live's RAW PREFIX TEST
+  // (r?.startsWith('spotlight-')) — it covers the tile clicks AND the
+  // dashboard card's 'spotlight-kevin-lewis' (panel + scroll) and
+  // EXCLUDES the sidebar rail's 'featured-artist' (no scroll — the r36
+  // "inert rail navigation scrolls" note was based on the wrong section
+  // string, corrected r37).
   useEffect(() => {
-    const inertSpotlightNav = initialSection?.startsWith("spotlight-") ?? false;
-    if (activeType !== "studio_spotlight" && !inertSpotlightNav) return;
+    if (!activeKey?.startsWith("spotlight-")) return;
     const timer = setTimeout(() => {
       spotlightWrapperRef.current?.scrollIntoView({
         behavior: "smooth",
@@ -99,7 +124,7 @@ export function InspirationView({
       });
     }, 60);
     return () => clearTimeout(timer);
-  }, [activeId, initialSection, activeType]);
+  }, [activeKey]);
 
   return (
     <div className="flex h-full flex-col">
@@ -126,7 +151,7 @@ export function InspirationView({
             type="button"
             onClick={() => {
               setTab(item.value);
-              setActiveId(null);
+              setActiveKey(null);
             }}
             className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
               tab === item.value
@@ -147,19 +172,20 @@ export function InspirationView({
                 Artist Quotes
               </p>
               <div className="grid grid-cols-4 gap-2">
-                {quotes.map((quote) => (
+                {quoteTiles.map((quote) => (
                   <button
                     key={quote.id}
                     type="button"
-                    onClick={() => setActiveId(activeId === quote.id ? null : quote.id)}
+                    onClick={() => setActiveKey(activeKey === quoteKey(quote.date ?? "") ? null : quoteKey(quote.date ?? ""))}
                     // Kept a11y addition (r35, the aria-pressed class): the
                     // live's gradient tiles carry no text, so this label is
                     // the button's only accessible name.
                     aria-label={`Quote by ${quote.author ?? quote.title}`}
                     // r35: the live marks the tile whose panel is open with
-                    // the turquoise/60 border (measured 2026-09-29).
+                    // the turquoise/60 border (measured 2026-09-29). r37:
+                    // the selected test is the live's quote-<date> key.
                     className={`aspect-square w-full overflow-hidden rounded-2xl border-2 transition ${
-                      activeId === quote.id
+                      activeKey === quoteKey(quote.date ?? "")
                         ? "border-ast-turquoise/60"
                         : "border-transparent hover:border-ast-turquoise/25"
                     }`}
@@ -168,11 +194,11 @@ export function InspirationView({
                   </button>
                 ))}
               </div>
-              {activeEntry?.type === "artist_quote" && (
+              {activeQuote && (
                 <InspirationDetailPanel
-                  key={activeEntry.id}
-                  entry={activeEntry}
-                  onClose={() => setActiveId(null)}
+                  key={activeQuote.id}
+                  entry={activeQuote}
+                  onClose={() => setActiveKey(null)}
                 />
               )}
             </div>
@@ -187,8 +213,10 @@ export function InspirationView({
                     key={spotlight.id}
                     // r35: the selected spotlight's gradient frame goes
                     // full-opacity and drops its hover tokens (measured).
+                    // r37: the selected test is the live's spotlight-<slug>
+                    // key.
                     className={`rounded-2xl bg-gradient-to-br p-1 transition ${
-                      activeId === spotlight.id
+                      activeKey === spotlightKey(spotlight)
                         ? "from-ast-electric-blue via-ast-purple to-ast-pink"
                         : "from-ast-electric-blue/70 via-ast-purple/70 to-ast-pink/60 hover:from-ast-electric-blue/90 hover:via-ast-purple/90 hover:to-ast-pink/80"
                     }`}
@@ -198,7 +226,7 @@ export function InspirationView({
                         tile carries none either; the label was redundant). */}
                     <button
                       type="button"
-                      onClick={() => setActiveId(activeId === spotlight.id ? null : spotlight.id)}
+                      onClick={() => setActiveKey(activeKey === spotlightKey(spotlight) ? null : spotlightKey(spotlight))}
                       className="relative block aspect-square w-full overflow-hidden rounded-[12px] bg-[#120724]"
                     >
                       {spotlight.imageUrl ? (
@@ -228,13 +256,16 @@ export function InspirationView({
                   the wrapper when open (DOM probe + bundle; the r35 record
                   placed it as a feed-container sibling — a mis-reading,
                   layout-neutral either way). The wrapper is also the
-                  scroll target for the unified 60ms effect above. */}
+                  scroll target for the unified 60ms effect above. r37: the
+                  panel mounts for the spotlight whose spotlight-<slug> key
+                  matches (the live's sB.map(e => r === `spotlight-${e.id}`
+                  ? panel : null)). */}
               <div ref={spotlightWrapperRef}>
-                {activeEntry?.type === "studio_spotlight" && (
+                {activeSpotlight && (
                   <InspirationDetailPanel
-                    key={activeEntry.id}
-                    entry={activeEntry}
-                    onClose={() => setActiveId(null)}
+                    key={activeSpotlight.id}
+                    entry={activeSpotlight}
+                    onClose={() => setActiveKey(null)}
                   />
                 )}
               </div>
@@ -244,11 +275,12 @@ export function InspirationView({
               {today && (
                 <button
                   type="button"
-                  onClick={() => setActiveId(activeId === today.id ? null : today.id)}
+                  onClick={() => setActiveKey(activeKey === "art-history-today" ? null : "art-history-today")}
                   // r35: the selected card carries the lavender/60 border +
-                  // a white/10 ring and drops its hover (measured).
+                  // a white/10 ring and drops its hover (measured). r37: the
+                  // selected test is the live's art-history-today key.
                   className={`w-full rounded-2xl border bg-[#120724] p-4 text-left transition ${
-                    activeId === today.id
+                    activeKey === "art-history-today"
                       ? "border-ast-lavender/60 ring-1 ring-white/10"
                       : "border-ast-purple/40 hover:brightness-110"
                   }`}
@@ -267,9 +299,23 @@ export function InspirationView({
                         </p>
                       )}
                     </div>
-                    <div
-                      aria-hidden="true"
-                      className="h-14 w-14 shrink-0 rounded-xl bg-gradient-to-br from-ast-purple/20 via-ast-lavender/15 to-ast-blue/20"
+                    {/* r37: the live's mB thumb contract — the artwork img
+                        when the entry carries one, else the gradient
+                        fallback div with the INLINE height (the live's
+                        fallback carries style={{height:'3.5rem'}}, not an
+                        h-14 class; the today entry is imageless so the
+                        fallback renders — measured identical). */}
+                    <AstImg
+                      src={today.imageUrl}
+                      alt={today.detail?.imageAlt ?? undefined}
+                      className="ast-img-safe shrink-0 w-14 rounded-xl object-contain object-center bg-transparent"
+                      style={{ maxHeight: "3.5rem" }}
+                      fallback={
+                        <div
+                          className="shrink-0 w-14 rounded-xl bg-gradient-to-br from-ast-purple/20 via-ast-lavender/15 to-ast-blue/20"
+                          style={{ height: "3.5rem" }}
+                        />
+                      }
                     />
                   </div>
                 </button>
@@ -278,10 +324,11 @@ export function InspirationView({
                 <button
                   key={partner.id}
                   type="button"
-                  onClick={() => setActiveId(activeId === partner.id ? null : partner.id)}
+                  onClick={() => setActiveKey(activeKey === "partner" ? null : "partner")}
                   // r35: the selected partner card carries blue/60 + ring.
+                  // r37: the selected test is the live's partner key.
                   className={`w-full rounded-2xl border bg-[#120724] p-4 text-left transition ${
-                    activeId === partner.id
+                    activeKey === "partner"
                       ? "border-ast-blue/60 ring-1 ring-white/10"
                       : "border-ast-blue/20 hover:brightness-110"
                   }`}
@@ -300,11 +347,23 @@ export function InspirationView({
                 </button>
               ))}
             </div>
-            {(activeEntry?.type === "art_history" || activeEntry?.type === "partner") && (
+            {/* r37: the live's per-key mounts — the today panel keys on
+                "art-history-today" (with the pickToday entry), the partner
+                panel on "partner" (bundle: r === 'art-history-today' && a
+                && bB; r === 'partner' && CB). A timeline date key on this
+                tab mounts NOTHING (no per-type fallback). */}
+            {activeKey === "art-history-today" && today && (
               <InspirationDetailPanel
-                key={activeEntry.id}
-                entry={activeEntry}
-                onClose={() => setActiveId(null)}
+                key={today.id}
+                entry={today}
+                onClose={() => setActiveKey(null)}
+              />
+            )}
+            {activeKey === "partner" && partners.length > 0 && (
+              <InspirationDetailPanel
+                key={partners[0]!.id}
+                entry={partners[0]!}
+                onClose={() => setActiveKey(null)}
               />
             )}
           </>
@@ -317,11 +376,14 @@ export function InspirationView({
                 <button
                   key={entry.id}
                   type="button"
-                  onClick={() => setActiveId(activeId === entry.id ? null : entry.id)}
+                  onClick={() => setActiveKey(activeKey === entry.date ? null : entry.date)}
                   // r35: the selected timeline entry carries the lavender/60
-                  // border + ring, like the today card (measured).
+                  // border + ring, like the today card (measured). r37: the
+                  // tile keys on the bare DATE — the live's r === e.date
+                  // (NOT the entry id or the today key — this is why the
+                  // rail's art-history-today click opens nothing here).
                   className={`w-full rounded-2xl border bg-[#120724] p-4 text-left transition ${
-                    activeId === entry.id
+                    activeKey === entry.date
                       ? "border-ast-lavender/60 ring-1 ring-white/10"
                       : "border-ast-purple/30 hover:brightness-110"
                   }`}
@@ -340,9 +402,22 @@ export function InspirationView({
                         </p>
                       )}
                     </div>
-                    <div
-                      aria-hidden="true"
-                      className="h-14 w-14 shrink-0 rounded-xl bg-gradient-to-br from-ast-purple/20 via-ast-lavender/15 to-ast-blue/20"
+                    {/* r37: the live's mB thumb contract — the artwork img
+                        (the Van Gogh + Monet entries' wikimedia images,
+                        measured 56×44 / 56×43 object-contain) when the
+                        entry carries one, else the gradient fallback div
+                        with the INLINE height style. */}
+                    <AstImg
+                      src={entry.imageUrl}
+                      alt={entry.detail?.imageAlt ?? undefined}
+                      className="ast-img-safe shrink-0 w-14 rounded-xl object-contain object-center bg-transparent"
+                      style={{ maxHeight: "3.5rem" }}
+                      fallback={
+                        <div
+                          className="shrink-0 w-14 rounded-xl bg-gradient-to-br from-ast-purple/20 via-ast-lavender/15 to-ast-blue/20"
+                          style={{ height: "3.5rem" }}
+                        />
+                      }
                     />
                   </div>
                 </button>
@@ -355,12 +430,15 @@ export function InspirationView({
             </div>
             {/* r35: the live's history-tab panel mounts AFTER the timeline
                 grid as its own child of the feed container — not nested
-                inside the grid as a col-span-2 row. */}
-            {activeEntry?.type === "art_history" && (
+                inside the grid as a col-span-2 row. r37: the panel mounts
+                for the timeline entry whose DATE matches the active key
+                (the live's o.filter(e => r === e.date)) — the today key
+                and any other string mount nothing on this tab. */}
+            {activeTimeline && (
               <InspirationDetailPanel
-                key={activeEntry.id}
-                entry={activeEntry}
-                onClose={() => setActiveId(null)}
+                key={activeTimeline.id}
+                entry={activeTimeline}
+                onClose={() => setActiveKey(null)}
               />
             )}
           </>
@@ -430,6 +508,41 @@ function splitArtworkCaption(artwork: string): {
     year: artwork.slice(yearIdx, dotIdx),
     author: artwork.slice(dotIdx),
   };
+}
+
+/**
+ * r37: the live's fB image component, mirrored — (!src || errored)
+ * ? fallback : <img>. A load error swaps to the fallback element (the
+ * live's quote-panel wikimedia images fail → their null fallback renders
+ * nothing, which is why the quote panels converge with no image); a
+ * missing src renders the fallback immediately. Plain <img> (no
+ * next/image) matches the live's DOM — remote wikimedia/wixstatic URLs
+ * render without any remotePatterns config.
+ */
+function AstImg({
+  src,
+  alt,
+  className,
+  style,
+  fallback = null,
+}: {
+  src: string | null;
+  alt?: string;
+  className?: string;
+  style?: React.CSSProperties;
+  fallback?: React.ReactNode;
+}) {
+  const [errored, setErrored] = useState(false);
+  if (!src || errored) return fallback;
+  return (
+    <img
+      src={src}
+      alt={alt ?? ""}
+      className={className}
+      style={style}
+      onError={() => setErrored(true)}
+    />
+  );
 }
 
 function InspirationDetailPanel({
@@ -645,11 +758,23 @@ function InspirationDetailPanel({
 
       {entry.type === "art_history" && (
         <>
-          {!entry.imageUrl && (
-            <p className="text-[10px] text-ast-faint/60 italic mb-3 leading-snug">
-              Image unavailable · rights protected — search the web to discover this artist's work.
-            </p>
-          )}
+          {/* r37: the live's bB artwork image — ast-img-safe w-full
+              rounded-xl object-contain object-center mb-4, capped at
+              maxHeight 11rem (the Van Gogh panel measures h 565 vs the
+              image-less 490). The rights notice is the fB FALLBACK: an
+              entry WITH an image renders the artwork instead of the
+              notice; an imageless entry renders the notice. */}
+          <AstImg
+            src={entry.imageUrl}
+            alt={detail?.imageAlt ?? undefined}
+            className="ast-img-safe w-full rounded-xl object-contain object-center mb-4"
+            style={{ maxHeight: "11rem" }}
+            fallback={
+              <p className="text-[10px] text-ast-faint/60 italic mb-3 leading-snug">
+                Image unavailable · rights protected — search the web to discover this artist's work.
+              </p>
+            }
+          />
           <h3 className="text-base font-bold text-ast-body mb-2 leading-snug">
             {entry.title}
           </h3>

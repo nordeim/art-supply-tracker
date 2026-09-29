@@ -106,9 +106,17 @@ const INSPIRATION_ENTRIES: SeedEntry[] = [
     title: "Van Gogh Completes The Starry Night",
     author: "Vincent van Gogh",
     sortOrder: 2,
+    // r37: the live's Van Gogh entry carries a WORKING wikimedia
+    // image_url — its timeline tile renders the IMG thumb (measured
+    // 56×44) and its panel renders the artwork image (h 565 vs the
+    // image-less 490) instead of the rights notice.
+    imageUrl:
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/1280px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg",
     detail: {
       body:
         "In June 1889, Vincent van Gogh completed The Starry Night while voluntarily committed at the Saint-Paul-de-Mausole asylum in Saint-Rémy-de-Provence. Painted from memory rather than direct observation — van Gogh rarely painted at night — it depicts a swirling nocturnal sky over a village, with a luminous crescent moon and a cypress tree dominating the foreground. Van Gogh himself was ambivalent about the work, calling it an 'exaggeration' in a letter to his brother Theo. He sent it to Theo in Paris, where it passed through several hands before entering the collection of the Museum of Modern Art in New York in 1941. It is now one of the most recognized paintings in Western art.",
+      imageAlt:
+        "The Starry Night by Vincent van Gogh, 1889, oil on canvas, 73.7 x 92.1 cm, Museum of Modern Art, New York",
       artwork: "The Starry Night (1889) · Vincent van Gogh",
       citation: "Vincent van Gogh, Public domain, via Wikimedia Commons",
       citationUrl:
@@ -142,9 +150,15 @@ const INSPIRATION_ENTRIES: SeedEntry[] = [
     title: "The First Impressionist Exhibition, 1874",
     author: "Claude Monet",
     sortOrder: 4,
+    // r37: the live's Monet entry carries a WORKING wikimedia image_url
+    // (the second of the only two image-bearing timeline entries).
+    imageUrl:
+        "https://upload.wikimedia.org/wikipedia/commons/5/59/Monet_-_Impression%2C_Sunrise.jpg",
     detail: {
       body:
         "On April 15, 1874, a group of French artists including Claude Monet, Edgar Degas, Camille Pissarro, Berthe Morisot, and Pierre-Auguste Renoir opened an independent exhibition at the studio of photographer Nadar in Paris. Dismissed by critics—one derided Monet's 'Impression, Sunrise' (1872) as a mere 'impression'—the show nonetheless changed art history permanently. The eight Impressionist exhibitions held between 1874 and 1886 dismantled the stranglehold of the Paris Salon and established the model of the independent artist-organized show.",
+      imageAlt:
+        "Impression, Sunrise by Claude Monet, 1872, oil on canvas, 48 x 63 cm, Musée Marmottan Monet, Paris",
       artwork: "Impression, Sunrise (1872) · Claude Monet",
       citation: "Musée Marmottan Monet / Wikimedia Commons",
       citationUrl:
@@ -228,6 +242,7 @@ const INSPIRATION_ENTRIES: SeedEntry[] = [
     type: "artist_quote",
     title: "I am independent! I can live alone and I love to work.",
     author: "Mary Cassatt",
+    date: "2026-07-26",
     sortOrder: 9,
     detail: {
       title: "Mary Cassatt on Solitude, Independence, and Work",
@@ -245,6 +260,7 @@ const INSPIRATION_ENTRIES: SeedEntry[] = [
     type: "artist_quote",
     title: "Painting is easy when you don't know how, but very difficult when you do.",
     author: "Edgar Degas",
+    date: "2026-07-19",
     sortOrder: 10,
     detail: {
       title: "Edgar Degas on the Paradox of Mastery",
@@ -262,6 +278,7 @@ const INSPIRATION_ENTRIES: SeedEntry[] = [
     type: "artist_quote",
     title: "I want to do something that will have repercussions in my time.",
     author: "Käthe Kollwitz",
+    date: "2026-07-13",
     sortOrder: 11,
     detail: {
       title: "Käthe Kollwitz on Making Art That Matters",
@@ -280,6 +297,7 @@ const INSPIRATION_ENTRIES: SeedEntry[] = [
     type: "artist_quote",
     title: "A drawing is simply a line going for a walk.",
     author: "Paul Klee",
+    date: "2026-06-27",
     sortOrder: 12,
     detail: {
       title: "Paul Klee on Drawing as an Active Line",

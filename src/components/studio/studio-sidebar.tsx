@@ -28,9 +28,12 @@ interface StudioSidebarProps {
   /** Recent Projects rail click — the live app focuses the project (list +
    * detail panel) instead of just switching views. */
   onFocusProject: (projectId: string) => void;
-  /** Inspiration rail click — navigates with the live app's section state
-   * ("art-history-today" / "partner" expand their detail panels; the
-   * quote and spotlight sections resolve to no panel by design). */
+  /** Inspiration rail click — navigates with the live app's section
+   * state (r37: the section is a RAW STRING key). "art-history-today" /
+   * "partner" expand their detail panels; "featured-artist" (the rail's
+   * spotlight card — the live's string, NOT spotlight-kevin-lewis which
+   * belongs to the DASHBOARD card) and "quote" match no panel key —
+   * inert by design. */
   onOpenInspirationSection: (section: string) => void;
   onNewProject: () => void;
   sidebarOpen: boolean;
@@ -212,7 +215,14 @@ function SidebarContent({
             {spotlight && (
               <button
                 type="button"
-                onClick={() => onOpenInspirationSection("spotlight-kevin-lewis")}
+                // r37: the live's RAIL spotlight card navigates with
+                // "featured-artist" (bundle: n('/inspiration',
+                // {state:{section:'featured-artist'}})) — an inert key
+                // (no panel mounts, no spotlight scroll). The
+                // "spotlight-kevin-lewis" string belongs to the
+                // DASHBOARD's Studio Spotlight card, which MATCHES the
+                // live's Kevin Lewis spotlight and opens his panel.
+                onClick={() => onOpenInspirationSection("featured-artist")}
                 className="w-full overflow-hidden rounded-xl border border-ast-purple/30 bg-[#120724] text-left transition hover:border-ast-purple/60"
               >
                 <div className="h-9 bg-gradient-to-r from-ast-electric-blue/50 via-ast-purple/50 to-ast-pink/40" />

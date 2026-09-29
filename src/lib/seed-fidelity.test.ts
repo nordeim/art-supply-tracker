@@ -145,3 +145,69 @@ describe("seed fidelity — the r35 inspiration gallery + citation links", () =>
     );
   });
 });
+
+describe("seed fidelity — the r37 timeline artwork images + quote dates", () => {
+  it("seeds the live's working wikimedia image for the Van Gogh entry (r37)", () => {
+    // Measured on the live r37: the Van Gogh timeline tile (2026-05-31)
+    // renders an IMG thumb from this exact URL (naturalWidth 1280) and
+    // its history panel renders the artwork image (h 565 vs the
+    // image-less 490) instead of the rights notice.
+    expect(seed).toContain(
+      'imageUrl:\n        "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/1280px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg",',
+    );
+  });
+
+  it("seeds the live's working wikimedia image for the Monet entry (r37)", () => {
+    // The Monet tile (2026-06-17) renders an IMG thumb from this URL
+    // (naturalWidth 5773) — the other six timeline entries render the
+    // gradient fallback on the live (no image_url).
+    expect(seed).toContain(
+      'imageUrl:\n        "https://upload.wikimedia.org/wikipedia/commons/5/59/Monet_-_Impression%2C_Sunrise.jpg",',
+    );
+  });
+
+  it("seeds the live's image_alt_texts for the two artwork images (r37)", () => {
+    // The live's img alt (its image_alt_text field, verbatim).
+    expect(seed).toContain(
+      'imageAlt:\n        "The Starry Night by Vincent van Gogh, 1889, oil on canvas, 73.7 x 92.1 cm, Museum of Modern Art, New York"',
+    );
+    expect(seed).toContain(
+      'imageAlt:\n        "Impression, Sunrise by Claude Monet, 1872, oil on canvas, 48 x 63 cm, Musée Marmottan Monet, Paris"',
+    );
+  });
+
+  it("seeds the four quote dates (r37 — the live's quote tile keys are quote-<date>)", () => {
+    // The live's quote entries carry dates; the Feed's quote tiles key
+    // on "quote-<date>" (bundle: let t = `quote-${e.date}`). The clone's
+    // quotes need the same dates: Cassatt 2026-07-26, Degas 2026-07-19,
+    // Kollwitz 2026-07-13, Klee 2026-06-27 (the seed's insertion order
+    // already matches the live's date-desc tile order).
+    expect(seed).toMatch(
+      /type: "artist_quote",\s*\n\s*title: "I am independent! I can live alone and I love to work\.",\s*\n\s*author: "Mary Cassatt",\s*\n\s*date: "2026-07-26",/,
+    );
+    expect(seed).toMatch(
+      /type: "artist_quote",\s*\n\s*title: "Painting is easy when you don't know how, but very difficult when you do\.",\s*\n\s*author: "Edgar Degas",\s*\n\s*date: "2026-07-19",/,
+    );
+    expect(seed).toMatch(
+      /type: "artist_quote",\s*\n\s*title: "I want to do something that will have repercussions in my time\.",\s*\n\s*author: "Käthe Kollwitz",\s*\n\s*date: "2026-07-13",/,
+    );
+    expect(seed).toMatch(
+      /type: "artist_quote",\s*\n\s*title: "A drawing is simply a line going for a walk\.",\s*\n\s*author: "Paul Klee",\s*\n\s*date: "2026-06-27",/,
+    );
+  });
+
+  it("keeps the other six timeline entries imageless (the live renders their gradient fallbacks)", () => {
+    // Only Van Gogh + Monet carry image_urls on the live; Carmen
+    // Herrera, Courbet, Hopper, Guerrilla Girls, Kollwitz, and
+    // Rembrandt render the gradient fallback thumbs + the rights
+    // notice in their panels. The seed must not grow extra images.
+    const inline = seed.match(/imageUrl: "\//g) ?? [];
+    const wrapped = seed.match(/imageUrl:\n/g) ?? [];
+    // Kim Wyatt + Kevin Lewis (spotlights, inline /assets paths) +
+    // Van Gogh + Monet (wikimedia URLs, wrapped by prettier) = 4 entry
+    // occurrences total — the DB write's `imageUrl: e.imageUrl ?? null`
+    // line is not a seed entry and must not be counted.
+    expect(inline).toHaveLength(2);
+    expect(wrapped).toHaveLength(2);
+  });
+});

@@ -40,6 +40,10 @@ export const inspirationDetailSchema = z.object({
    * bundle: `${e.tagColors[n] ?? 'text-ast_faint bg-ast_lavender/10'}`).
    * Hyphenated spellings — the clone's token family. */
   tagColors: z.array(z.string().max(120)).max(12).optional(),
+  /** r37: the artwork image's alt text (the live's image_alt_text) —
+   * used by the timeline tile thumbs and the history panel artwork
+   * images (the Van Gogh + Monet entries' wikimedia artworks). */
+  imageAlt: detailText(300),
   /** Attribution notice, e.g. "Artwork by Kevin Lewis. Used with artist permission." */
   attribution: detailText(300),
   /** External link label (the live's websiteLabel — e.g. "kimwyatt.art";
@@ -99,40 +103,83 @@ export function pickToday<
 }
 
 /**
- * Resolves a sidebar/dashboard rail navigation "section" to the Feed entry
- * whose detail panel should auto-expand — mirroring the live app's Feed
- * component (extracted from the deployed bundle):
+ * r37: the section→panel contract, re-measured against the live's bundle
+ * (Feed fn TB) and driven on the deployed app. The live's Feed keys its
+ * active panel on a RAW STRING r set directly from location.state.section
+ * (useEffect(() => { e && i(e) }, [e])) — NEVER a resolved entry id.
+ * Panels mount on per-tab string equality:
  *
- * - "art-history-today" → the pickToday art-history entry's id
- * - "partner" → the first partner entry's id
- * - "spotlight-<id>" → that spotlight entry's id when a seeded spotlight
- *   carries it (the live's two callers pass the hardcoded
- *   "spotlight-kevin-lewis", which matches none of its seeded entries —
- *   and none of ours, whose ids are cuids — so nothing expands there)
- * - "quote" is never consumed by the live Feed → no panel (pinned quirk)
+ * - quote panels → `quote-<date>` (the quote tiles' key)
+ * - spotlight panels → `spotlight-<slug>` — the live's spotlight seed ids
+ *   ARE the slugs "kevin-lewis"/"kim-wyatt" (the clone's DB rows use
+ *   cuids, so the slug derives from the title — identical strings)
+ * - the today panel → "art-history-today" (with the pickToday entry)
+ * - the partner panel → "partner"
+ * - the timeline panels → the bare entry date
  *
- * Precondition: like pickToday, the art-history slice is sorted ascending
- * by date before it reaches this function (the caller passes the view's
- * already-sorted timeline).
+ * The r35/r36 record ("the hardcoded spotlight-kevin-lewis id matches no
+ * seeded entry — inert") was a MIS-READING, corrected r37: the DASHBOARD's
+ * Studio Spotlight card navigates with "spotlight-kevin-lewis", which
+ * MATCHES the live's Kevin Lewis spotlight — the panel opens and the page
+ * scrolls (driven: panel y517 h539, scrollY 109). The SIDEBAR RAIL's
+ * spotlight card passes "featured-artist" — THAT is the inert string (no
+ * panel, no scroll; it does not even start with "spotlight-"). The rail's
+ * quote card passes plain "quote" — also inert (no quote-<date> key ever
+ * equals "quote"), so an open panel CLOSES on that navigation.
+ *
+ * inspirationEntryForKey is the inverted lookup — given a raw key, the
+ * entry whose panel should render (null = no panel). The view implements
+ * the per-tab lookups directly (as the live's JSX does); this helper is
+ * the tested single-source spec of the key grammar.
  */
-export function resolveInspirationFocus<
-  T extends { id: string; type: string; date: string | null },
->(section: string | null, entries: T[]): string | null {
-  if (!section) return null;
-  if (section === "art-history-today") {
+export function inspirationEntryForKey<
+  T extends { title: string; type: string; date: string | null },
+>(key: string | null, entries: T[]): T | null {
+  if (!key) return null;
+  if (key === "art-history-today") {
     const history = entries
       .filter((e) => e.type === "art_history" && e.date)
       .sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""));
-    return pickToday(history)?.id ?? null;
+    return pickToday(history);
   }
-  if (section === "partner") {
-    return entries.find((e) => e.type === "partner")?.id ?? null;
+  if (key === "partner") {
+    return entries.find((e) => e.type === "partner") ?? null;
   }
-  if (section.startsWith("spotlight-")) {
-    const id = section.slice("spotlight-".length);
-    return entries.some((e) => e.type === "studio_spotlight" && e.id === id)
-      ? id
-      : null;
+  if (key.startsWith("spotlight-")) {
+    const slug = key.slice("spotlight-".length);
+    return (
+      entries.find(
+        (e) => e.type === "studio_spotlight" && spotlightSlug(e) === slug,
+      ) ?? null
+    );
   }
-  return null;
+  if (key.startsWith("quote-")) {
+    const date = key.slice("quote-".length);
+    return entries.find((e) => e.type === "artist_quote" && e.date === date) ?? null;
+  }
+  // A bare date key → the timeline entry with that date (the timeline
+  // tiles' key). "quote" / "featured-artist" / anything else matches
+  // nothing → null (the live's inert strings).
+  return entries.find((e) => e.type === "art_history" && e.date === key) ?? null;
+}
+
+/**
+ * The live's spotlight slug — its seed ids are the lowercased hyphenated
+ * names ("kevin-lewis" / "kim-wyatt"); the clone's DB rows use cuids, so
+ * the spotlight tile/panel key derives the slug from the title. The
+ * derivation is deterministic and pinned by seed-fidelity (both seeded
+ * spotlight titles map to the live's exact slugs).
+ */
+export function spotlightSlug(entry: { title: string }): string {
+  return entry.title.trim().toLowerCase().replace(/\s+/g, "-");
+}
+
+/** The spotlight tile/panel key the live's Feed keys on: `spotlight-${e.id}`. */
+export function spotlightKey(entry: { title: string }): string {
+  return `spotlight-${spotlightSlug(entry)}`;
+}
+
+/** The quote tile/panel key the live's Feed keys on: `quote-${e.date}`. */
+export function quoteKey(date: string): string {
+  return `quote-${date}`;
 }
