@@ -171,7 +171,7 @@ not secret — rotate before any public deployment).
 ### Testing Strategy
 
 Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
-`src/**/*.test.ts`). The suite (468 tests) pins:
+`src/**/*.test.ts`). The suite (496 tests) pins:
 
 - **The SQLite path contract** (`src/lib/db-path.test.ts`) — relative
   `file:` URLs resolve against `prisma/schema.prisma` (so
@@ -260,11 +260,13 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
 - **Rate limiting** (`rate-limit.test.ts`) — fixed-window allow/block,
   rollover, per-key isolation, cooldown reporting, bounded memory.
 - **Inspiration detail** — schema acceptance, corrupt-JSON degradation to
-  null, today-entry selection, and the rail section resolver
-  (`resolveInspirationFocus`: "art-history-today" → the pickToday entry,
-  "partner" → the first partner, "spotlight-<id>" only when a seeded
-  spotlight carries it, and the live's inert "quote" /
-  "spotlight-kevin-lewis" sections resolving to no panel — pinned
+  null, today-entry selection, and the r37 raw-string key grammar
+  (`inspirationEntryForKey`: "art-history-today" → the pickToday entry,
+  "partner" → the first partner, `spotlight-<slug>` → the matching
+  spotlight (the dashboard card's "spotlight-kevin-lewis" MATCHES Kevin
+  Lewis — the r35/r36 "inert" record was a mis-reading), `quote-<date>`
+  → the quote, a bare date → the timeline entry, and the RAIL's inert
+  "featured-artist" / "quote" strings matching nothing — pinned
   quirks).
 - **Seed fidelity** (`seed-fidelity.test.ts`) — the seeded community chat
   mirrors the live app's five messages byte-for-byte, the live author's
@@ -401,6 +403,20 @@ Vitest is configured (`vitest.config.ts`, node environment, `@/` alias,
   data is {url, alt} objects with the ast-img-safe class on the imgs
   and the thumb hover at purple/40; Kim's link href is the live's full
   https://www.kimwyatt.art/ with the JSX-appended arrow.
+- **The inspiration section's raw-string keying + the timeline artwork
+  images** (r37, `inspiration.test.ts` +
+  `inspiration-view-fidelity.test.ts` + `seed-fidelity.test.ts`) — the
+  active panel keys on the RAW section/tile string (quote-<date>,
+  spotlight-<slug>, art-history-today, partner, or the bare timeline
+  date), never a resolved entry id; the scroll fires on the raw
+  `spotlight-` prefix (the dashboard card's "spotlight-kevin-lewis"
+  opens Kevin's panel + scrolls; the RAIL's "featured-artist" does
+  neither); the quote tiles render in the live's date order; the Van
+  Gogh + Monet entries carry the live's wikimedia imageUrls/imageAlts —
+  their tiles render IMG thumbs (the AstImg fB mirror with the gradient
+  fallback's INLINE height style) and their panels the artwork image
+  (maxHeight 11rem) with the rights notice as the FALLBACK; the four
+  quotes carry the live's dates (the quote tile keys).
 - **Sidebar stat-tile fidelity** (`sidebar-tile-fidelity.test.ts`) —
   file-content pins on the live's measured tile contract (r12): the
   ACTIVE view's tile highlights with its OWN accent pair — electric
